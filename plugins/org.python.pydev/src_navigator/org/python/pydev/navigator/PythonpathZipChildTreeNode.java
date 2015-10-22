@@ -9,10 +9,10 @@ package org.python.pydev.navigator;
 import java.util.List;
 
 import org.eclipse.swt.graphics.Image;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
 import org.python.pydev.navigator.elements.ISortedElement;
 import org.python.pydev.plugin.PydevPlugin;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.TreeNode;
 import org.python.pydev.shared_ui.ImageCache;
 import org.python.pydev.shared_ui.UIConstants;
@@ -20,7 +20,7 @@ import org.python.pydev.shared_ui.UIConstants;
 /**
  * This class represents a file or folder that's inside a zip file.
  */
-public class PythonpathZipChildTreeNode extends TreeNode<LabelAndImage> implements ISortedElement {
+public class PythonpathZipChildTreeNode extends TreeNode<LabelAndImage>implements ISortedElement {
 
     /**
      * Identifies whether we already calculated the children
@@ -134,8 +134,8 @@ public class PythonpathZipChildTreeNode extends TreeNode<LabelAndImage> implemen
         return isDir ? ISortedElement.RANK_PYTHON_FOLDER : ISortedElement.RANK_PYTHON_FILE;
     }
 
-    @Override
     @SuppressWarnings("rawtypes")
+    @Override
     public synchronized List<TreeNode/*LabelAndImage*/> getChildren() {
         if (!calculated) {
             this.calculated = true;

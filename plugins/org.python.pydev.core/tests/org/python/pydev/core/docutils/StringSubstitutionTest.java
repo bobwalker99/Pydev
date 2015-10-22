@@ -124,6 +124,11 @@ public class StringSubstitutionTest extends TestCase {
                 throw new RuntimeException("Not implemented");
             }
 
+            @Override
+            public Object getAdapter(Class adapter) {
+                throw new RuntimeException("Not implemented");
+            }
+
             public IInterpreterInfo getProjectInterpreter() throws MisconfigurationException,
                     PythonNatureWithoutProjectException {
                 throw new RuntimeException("Not implemented");
@@ -193,6 +198,11 @@ public class StringSubstitutionTest extends TestCase {
                     public OrderedMap<String, String> getProjectSourcePathResolvedToUnresolvedMap()
                             throws CoreException {
                         throw new RuntimeException("Not implemented");
+                    }
+
+                    @Override
+                    public Set<IResource> getProjectSourcePathFolderSet() throws CoreException {
+                        throw new RuntimeException("not implemented");
                     }
 
                 };

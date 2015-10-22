@@ -10,7 +10,6 @@
  */
 package com.python.pydev.refactoring.wizards.rename;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -25,17 +24,17 @@ import org.python.pydev.editor.codecompletion.revisited.visitors.Definition;
 import org.python.pydev.editor.refactoring.RefactoringRequest;
 import org.python.pydev.parser.visitors.scope.ASTEntry;
 import org.python.pydev.plugin.nature.PythonNature;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 
 import com.python.pydev.refactoring.actions.PyFindAllOccurrences;
-import com.python.pydev.refactoring.refactorer.AstEntryRefactorerRequestConstants;
 
 /**
- * This class provides helper methods for finding things in the workspace. 
- * 
+ * This class provides helper methods for finding things in the workspace.
+ *
  * The user is only required to implement {@link #getEntryOccurrences(String, SourceModule)} to
  * return the available references in the given module.
- * 
+ *
  * @author Fabio
  */
 public abstract class AbstractRenameWorkspaceRefactorProcess extends AbstractRenameRefactorProcess {
@@ -57,10 +56,10 @@ public abstract class AbstractRenameWorkspaceRefactorProcess extends AbstractRen
      * Gets and returns only the occurrences that point to what we're looking for, meaning that
      * we have to filter out references that may be pointing to some other definition,
      * and not the one we're actually refering to.
-     * 
+     *
      * @param initialName the name we're looking for
      * @param module the module we're analyzing right now
-     * @return a list with the references that point to the definition we're renaming. 
+     * @return a list with the references that point to the definition we're renaming.
      */
     protected List<ASTEntry> getOccurrencesInOtherModule(RefactoringStatus status, RefactoringRequest request,
             String initialName, SourceModule module, PythonNature nature) {
@@ -84,14 +83,14 @@ public abstract class AbstractRenameWorkspaceRefactorProcess extends AbstractRen
         //                        if(def instanceof Definition){
         //                            Definition localDefinition = (Definition) def;
         //                            //if within one module any of the definitions pointed to some class in some other module,
-        //                            //that means that the tokens in this module actually point to some other class 
+        //                            //that means that the tokens in this module actually point to some other class
         //                            //(with the same name), and we can't actually rename them.
         //                            String foundModName = localDefinition.module.getName();
         //                            if(foundModName != null && !foundModName.equals(this.definition.module.getName())){
         //                                if(DEBUG_FILTERED_MODULES){
         //                                    System.out.println("The entries found on module:"+module.getName()+" had the definition found on module:"+
         //                                            foundModName+" and were removed from the elements to be renamed.");
-        //                                    
+        //
         //                                }
         //                                return new ArrayList<ASTEntry>();
         //                            }
@@ -100,7 +99,7 @@ public abstract class AbstractRenameWorkspaceRefactorProcess extends AbstractRen
         //                } catch (Exception e) {
         //                    throw new RuntimeException(e);
         //                }
-        //                
+        //
         //            }
         //        }
         return entryOccurrences;
@@ -129,7 +128,7 @@ public abstract class AbstractRenameWorkspaceRefactorProcess extends AbstractRen
             //if the user has set that we should only find references in the local scope in the checkInitialOnLocalScope
             //we should not try to find other references in the workspace.
             boolean onlyInLocalScope = (Boolean) request.getAdditionalInfo(
-                    AstEntryRefactorerRequestConstants.FIND_REFERENCES_ONLY_IN_LOCAL_SCOPE, false);
+                    RefactoringRequest.FIND_REFERENCES_ONLY_IN_LOCAL_SCOPE, false);
             if (!onlyInLocalScope && !status.hasFatalError()) {
                 request.pushMonitor(new SubProgressMonitor(request.getMonitor(), 80));
                 try {
@@ -145,12 +144,12 @@ public abstract class AbstractRenameWorkspaceRefactorProcess extends AbstractRen
 
     /**
      * This method is made to be used in the checkInitialOnWorkspace implementation.
-     * 
+     *
      * It will find files with possible references in the workspace (from the token
-     * name we're searching) and for each file that maps to a module it will 
+     * name we're searching) and for each file that maps to a module it will
      * call getOccurrencesInOtherModule, and will add those occurrences to
      * the map with the file pointing to the entries.
-     * 
+     *
      * @param status used to add some error status to the refactoring
      * @param request the request used for the refactoring
      */
@@ -158,11 +157,14 @@ public abstract class AbstractRenameWorkspaceRefactorProcess extends AbstractRen
         try {
             request.getMonitor().beginTask("Check references on workspace", 100);
 
-            ArrayList<Tuple<List<ModulesKey>, IPythonNature>> references;
+            List<Tuple<List<ModulesKey>, IPythonNature>> references;
 
             try {
                 request.pushMonitor(new SubProgressMonitor(request.getMonitor(), 90));
                 references = findFilesWithPossibleReferences(request);
+                if (request.getMonitor().isCanceled()) {
+                    return;
+                }
             } finally {
                 request.popMonitor().done();
             }
@@ -174,7 +176,7 @@ public abstract class AbstractRenameWorkspaceRefactorProcess extends AbstractRen
                 int i = 0;
                 for (Tuple<List<ModulesKey>, IPythonNature> file : references) {
                     i++;
-                    request.communicateWork(org.python.pydev.shared_core.string.StringUtils.format(
+                    request.communicateWork(StringUtils.format(
                             "Analyzing %s (%s of %s)", file.o2.getProject(), i,
                             total));
                     PythonNature nature = (PythonNature) file.o2;
@@ -200,6 +202,11 @@ public abstract class AbstractRenameWorkspaceRefactorProcess extends AbstractRen
 
                                         if (module instanceof SourceModule) {
 
+                                            SourceModule sourceModule = (SourceModule) module;
+                                            if (sourceModule.getAst() == null) {
+                                                status.addWarning("Unable to get AST for: " + modName);
+                                                continue;
+                                            }
                                             request.checkCancelled();
                                             List<ASTEntry> entryOccurrences = getOccurrencesInOtherModule(status,
                                                     request, request.initialName, (SourceModule) module, nature);
@@ -231,11 +238,11 @@ public abstract class AbstractRenameWorkspaceRefactorProcess extends AbstractRen
 
     /**
      * This method is called for each module that may have some reference to the definition
-     * we're looking for. 
-     * 
+     * we're looking for.
+     *
      * It will be called for all the modules but the one in the request (for that one
      * the findReferencesToRenameOnLocalScope is called).
-     * 
+     *
      * @param initialName this is the name of the token we're looking for
      * @param module this is the module that may contain references to that module
      * @return a list of entries that are references to the given module.

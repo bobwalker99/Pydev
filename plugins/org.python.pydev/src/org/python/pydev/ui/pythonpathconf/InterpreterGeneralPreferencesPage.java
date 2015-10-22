@@ -2,7 +2,7 @@
 * Copyright (C) 2013  Andrew Ferrazzutti
 *
 * All rights reserved. This program and the accompanying materials
-* are made available under the terms of the Ecliplse Public License v1.0
+* are made available under the terms of the Eclipse Public License v1.0
 * which accompanies this distribution, and is available at
 * http://www.eclipse.org/legal/epl-v10.html
 *
@@ -73,7 +73,7 @@ public class InterpreterGeneralPreferencesPage extends FieldEditorPreferencePage
 
             @Override
             public void widgetSelected(SelectionEvent e) {
-                PydevPlugin.getDefault().synchScheduler.checkAllNow();
+                PydevPlugin.getDefault().syncScheduler.checkAllNow();
             }
 
             @Override

@@ -13,6 +13,7 @@ package org.python.pydev.editor.codecompletion.revisited;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -28,16 +29,17 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.text.IDocument;
 import org.python.pydev.core.FileUtilsFileBuffer;
 import org.python.pydev.core.FullRepIterable;
+import org.python.pydev.core.IGrammarVersionProvider;
 import org.python.pydev.core.IModule;
 import org.python.pydev.core.IModulesManager;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.ModulesKey;
 import org.python.pydev.core.ModulesKeyForZip;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.codecompletion.revisited.ModulesFoundStructure.ZipContents;
 import org.python.pydev.editor.codecompletion.revisited.PyPublicTreeMap.Entry;
@@ -47,16 +49,26 @@ import org.python.pydev.editor.codecompletion.revisited.modules.CompiledModule;
 import org.python.pydev.editor.codecompletion.revisited.modules.EmptyModule;
 import org.python.pydev.editor.codecompletion.revisited.modules.EmptyModuleForZip;
 import org.python.pydev.editor.codecompletion.revisited.modules.SourceModule;
+import org.python.pydev.parser.PyParser;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.Assign;
 import org.python.pydev.parser.jython.ast.ClassDef;
+import org.python.pydev.parser.jython.ast.Import;
 import org.python.pydev.parser.jython.ast.Module;
 import org.python.pydev.parser.jython.ast.Name;
+import org.python.pydev.parser.jython.ast.NameTok;
+import org.python.pydev.parser.jython.ast.aliasType;
 import org.python.pydev.parser.jython.ast.exprType;
 import org.python.pydev.parser.jython.ast.stmtType;
 import org.python.pydev.parser.visitors.NodeUtils;
+import org.python.pydev.plugin.PydevPlugin;
+import org.python.pydev.shared_core.cache.LRUMap;
+import org.python.pydev.shared_core.callbacks.ICallbackListener;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_core.out_of_memory.OnExpectedOutOfMemory;
+import org.python.pydev.shared_core.parsing.BaseParser.ParseOutput;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.ui.filetypes.FileTypesPreferencesPage;
 
@@ -77,6 +89,17 @@ public abstract class ModulesManager implements IModulesManager {
     private final static boolean DEBUG_TEMPORARY_MODULES = false;
 
     private final static boolean DEBUG_ZIP = false;
+
+    static {
+        OnExpectedOutOfMemory.clearCacheOnOutOfMemory.registerListener(new ICallbackListener<Object>() {
+
+            @Override
+            public Object call(Object obj) {
+                clearCache();
+                return null;
+            }
+        });
+    }
 
     public ModulesManager() {
     }
@@ -271,7 +294,8 @@ public abstract class ModulesManager implements IModulesManager {
 
         String fileContents = FileUtils.getFileContents(modulesKeysFile);
         if (!fileContents.startsWith(MODULES_MANAGER_V2)) {
-            throw new RuntimeException("Could not load modules manager from " + modulesKeysFile + " (version changed).");
+            throw new RuntimeException(
+                    "Could not load modules manager from " + modulesKeysFile + " (version changed).");
         }
 
         HashMap<Integer, String> intToString = new HashMap<Integer, String>();
@@ -488,12 +512,13 @@ public abstract class ModulesManager implements IModulesManager {
         }
 
         pythonPathHelper.setPythonPath(pythonpath);
-        ModulesFoundStructure modulesFound = pythonPathHelper.getModulesFoundStructure(monitor);
+        ModulesFoundStructure modulesFound = pythonPathHelper.getModulesFoundStructure(project, monitor);
 
         PyPublicTreeMap<ModulesKey, ModulesKey> keys = buildKeysFromModulesFound(monitor, modulesFound);
         onChangePythonpath(keys);
 
         synchronized (modulesKeysLock) {
+            cache.clear();
             //assign to instance variable
             this.modulesKeys.clear();
             this.modulesKeys.putAll(keys);
@@ -506,7 +531,7 @@ public abstract class ModulesManager implements IModulesManager {
      * modules manager) and the keys to be removed from the modules manager (i.e.: found in the modules manager but
      * not in the keysFound)
      */
-    public Tuple<List<ModulesKey>, List<ModulesKey>> diffModules(PyPublicTreeMap<ModulesKey, ModulesKey> keysFound) {
+    public Tuple<List<ModulesKey>, List<ModulesKey>> diffModules(AbstractMap<ModulesKey, ModulesKey> keysFound) {
         ArrayList<ModulesKey> newKeys = new ArrayList<ModulesKey>();
         ArrayList<ModulesKey> removedKeys = new ArrayList<ModulesKey>();
         Iterator<ModulesKey> it = keysFound.keySet().iterator();
@@ -524,7 +549,7 @@ public abstract class ModulesManager implements IModulesManager {
             it = modulesKeys.keySet().iterator();
             while (it.hasNext()) {
                 ModulesKey next = it.next();
-                ModulesKey modulesKey = modulesKeys.get(next);
+                ModulesKey modulesKey = keysFound.get(next);
                 if (modulesKey == null || modulesKey.getClass() != next.getClass()) {
                     removedKeys.add(next);
                 }
@@ -538,7 +563,7 @@ public abstract class ModulesManager implements IModulesManager {
             ModulesFoundStructure modulesFound) {
         //now, on to actually filling the module keys
         PyPublicTreeMap<ModulesKey, ModulesKey> keys = new PyPublicTreeMap<ModulesKey, ModulesKey>();
-        buildKeysForRegularEntries(monitor, modulesFound, keys);
+        buildKeysForRegularEntries(monitor, modulesFound, keys, false);
 
         for (ZipContents zipContents : modulesFound.zipContents) {
             if (monitor.isCanceled()) {
@@ -551,7 +576,9 @@ public abstract class ModulesManager implements IModulesManager {
     }
 
     public static void buildKeysForRegularEntries(IProgressMonitor monitor, ModulesFoundStructure modulesFound,
-            PyPublicTreeMap<ModulesKey, ModulesKey> keys) {
+            PyPublicTreeMap<ModulesKey, ModulesKey> keys, boolean includeOnlySourceModules) {
+        String[] dottedValidSourceFiles = FileTypesPreferencesPage.getDottedValidSourceFiles();
+
         int j = 0;
         FastStringBuffer buffer = new FastStringBuffer();
         //now, create in memory modules for all the loaded files (empty modules).
@@ -560,24 +587,32 @@ public abstract class ModulesManager implements IModulesManager {
             Map.Entry<File, String> entry = iterator.next();
             String m = entry.getValue();
 
-            if (j % 20 == 0) {
-                //no need to report all the time (that's pretty fast now)
-                buffer.clear();
-                monitor.setTaskName(buffer.append("Module resolved: ").append(m).toString());
-                monitor.worked(1);
-            }
-
             if (m != null) {
+                if (j % 20 == 0) {
+                    //no need to report all the time (that's pretty fast now)
+                    buffer.clear();
+                    monitor.setTaskName(buffer.append("Module resolved: ").append(m).toString());
+                    monitor.worked(1);
+                }
+
                 //we don't load them at this time.
                 File f = entry.getKey();
+
+                if (includeOnlySourceModules) {
+                    //check if we should include only source modules
+                    if (!PythonPathHelper.isValidSourceFile(f.getName())) {
+                        continue;
+                    }
+                }
                 ModulesKey modulesKey = new ModulesKey(m, f);
 
                 //no conflict (easy)
                 if (!keys.containsKey(modulesKey)) {
                     keys.put(modulesKey, modulesKey);
+
                 } else {
                     //we have a conflict, so, let's resolve which one to keep (the old one or this one)
-                    if (PythonPathHelper.isValidSourceFile(f.getName())) {
+                    if (PythonPathHelper.isValidSourceFile(f.getName(), dottedValidSourceFiles)) {
                         //source files have priority over other modules (dlls) -- if both are source, there is no real way to resolve
                         //this priority, so, let's just add it over.
                         keys.put(modulesKey, modulesKey);
@@ -651,6 +686,13 @@ public abstract class ModulesManager implements IModulesManager {
         return ret;
     }
 
+    @Override
+    public boolean hasModule(ModulesKey key) {
+        synchronized (modulesKeysLock) {
+            return this.modulesKeys.containsKey(key);
+        }
+    }
+
     /**
      * This is the only method that should add / update a module.
      * No other method should add it directly (unless it is loading or rebuilding it).
@@ -694,7 +736,7 @@ public abstract class ModulesManager implements IModulesManager {
             }
         }
         ModulesKey startingWith = new ModulesKey(strStartingWith, null);
-        ModulesKey endingWith = new ModulesKey(startingWith + "z", null);
+        ModulesKey endingWith = new ModulesKey(strStartingWith + "\uffff\uffff\uffff\uffff", null);
         synchronized (modulesKeysLock) {
             //we don't want it to be backed up by the same set (because it may be changed, so, we may get
             //a java.util.ConcurrentModificationException on places that use it)
@@ -778,7 +820,8 @@ public abstract class ModulesManager implements IModulesManager {
      * NOTE: isLookingForRelative description was: when looking for relative imports, we don't check for __init__
      * @return the module represented by this name
      */
-    protected IModule getModule(boolean acceptCompiledModule, String name, IPythonNature nature, boolean dontSearchInit) {
+    protected IModule getModule(boolean acceptCompiledModule, String name, IPythonNature nature,
+            boolean dontSearchInit) {
         synchronized (lockTemporaryModules) {
             SortedMap<Integer, IModule> map = temporaryModules.get(name);
             if (map != null && map.size() > 0) {
@@ -816,7 +859,6 @@ public abstract class ModulesManager implements IModulesManager {
 
         if (n instanceof EmptyModule) {
             EmptyModule e = (EmptyModule) n;
-
             if (e.f != null) {
 
                 if (!e.f.exists()) {
@@ -837,8 +879,15 @@ public abstract class ModulesManager implements IModulesManager {
 
                             if (emptyModuleForZip.pathInZip.endsWith(".class") || !emptyModuleForZip.isFile) {
                                 //handle java class... (if it's a class or a folder in a jar)
-                                n = JythonModulesManagerUtils.createModuleFromJar(emptyModuleForZip);
-                                n = decorateModule(n, nature);
+                                try {
+                                    n = JythonModulesManagerUtils.createModuleFromJar(emptyModuleForZip);
+                                    n = decorateModule(n, nature);
+                                } catch (Throwable e1) {
+                                    Log.log("Unable to create module from jar (note: JDT is required for Jython development): "
+                                            + emptyModuleForZip + " project: "
+                                            + (nature != null ? nature.getProject() : "null"), e1);
+                                    n = null;
+                                }
 
                             } else if (FileTypesPreferencesPage.isValidDll(emptyModuleForZip.pathInZip)) {
                                 //.pyd
@@ -929,35 +978,90 @@ public abstract class ModulesManager implements IModulesManager {
      * so, the solution found is creating the objects by decorating the module with that info.
      */
     private AbstractModule decorateModule(AbstractModule n, IPythonNature nature) {
-        if (n instanceof SourceModule && "django.db.models.base".equals(n.getName())) {
-            SourceModule sourceModule = (SourceModule) n;
-            SimpleNode ast = sourceModule.getAst();
-            for (SimpleNode node : ((Module) ast).body) {
-                if (node instanceof ClassDef && "Model".equals(NodeUtils.getRepresentationString(node))) {
-                    Object[][] metaclassAttrs = new Object[][] {
-                            { "objects", NodeUtils.makeAttribute("django.db.models.manager.Manager()") },
-                            { "DoesNotExist", new Name("Exception", Name.Load, false) },
-                            { "MultipleObjectsReturned", new Name("Exception", Name.Load, false) }, };
+        if (n instanceof SourceModule) {
+            if ("django.db.models.base".equals(n.getName())) {
+                SourceModule sourceModule = (SourceModule) n;
+                SimpleNode ast = sourceModule.getAst();
+                boolean found = false;
+                Module module = (Module) ast;
+                stmtType[] body = module.body;
+                for (SimpleNode node : body) {
+                    if (node instanceof ClassDef && "Model".equals(NodeUtils.getRepresentationString(node))) {
+                        found = true;
+                        Object[][] metaclassAttrs = new Object[][] {
+                                { "objects", NodeUtils.makeAttribute("django.db.models.manager.Manager()") },
+                                { "DoesNotExist", new Name("Exception", Name.Load, false) },
+                                { "MultipleObjectsReturned", new Name("Exception", Name.Load, false) }, };
 
-                    ClassDef classDef = (ClassDef) node;
-                    stmtType[] newBody = new stmtType[classDef.body.length + metaclassAttrs.length];
-                    System.arraycopy(classDef.body, 0, newBody, metaclassAttrs.length, classDef.body.length);
+                        ClassDef classDef = (ClassDef) node;
+                        stmtType[] newBody = new stmtType[classDef.body.length + metaclassAttrs.length];
+                        System.arraycopy(classDef.body, 0, newBody, metaclassAttrs.length, classDef.body.length);
 
-                    int i = 0;
-                    for (Object[] objAndType : metaclassAttrs) {
-                        //Note that the line/col is important so that we correctly acknowledge it inside the "class Model" scope.
-                        Name name = new Name((String) objAndType[0], Name.Store, false);
-                        name.beginColumn = classDef.beginColumn + 4;
-                        name.beginLine = classDef.beginLine + 1;
-                        newBody[i] = new Assign(new exprType[] { name }, (exprType) objAndType[1]);
-                        newBody[i].beginColumn = classDef.beginColumn + 4;
-                        newBody[i].beginLine = classDef.beginLine + 1;
+                        int i = 0;
+                        for (Object[] objAndType : metaclassAttrs) {
+                            //Note that the line/col is important so that we correctly acknowledge it inside the "class Model" scope.
+                            Name name = new Name((String) objAndType[0], Name.Store, false);
+                            name.beginColumn = classDef.beginColumn + 4;
+                            name.beginLine = classDef.beginLine + 1;
+                            newBody[i] = new Assign(new exprType[] { name }, (exprType) objAndType[1]);
+                            newBody[i].beginColumn = classDef.beginColumn + 4;
+                            newBody[i].beginLine = classDef.beginLine + 1;
 
-                        i += 1;
+                            i += 1;
+                        }
+
+                        classDef.body = newBody;
+                        break;
                     }
+                }
 
-                    classDef.body = newBody;
-                    break;
+                if (found) {
+                    stmtType[] newBody = new stmtType[body.length + 1];
+                    System.arraycopy(body, 0, newBody, 1, body.length);
+                    Import importNode = new Import(new aliasType[] { new aliasType(new NameTok(
+                            "django.db.models.manager",
+                            NameTok.ImportModule), null) });
+                    newBody[0] = importNode;
+                    module.body = newBody;
+                }
+
+            } else if ("django.db.models.manager".equals(n.getName())) {
+                SourceModule sourceModule = (SourceModule) n;
+                SimpleNode ast = sourceModule.getAst();
+                Module module = (Module) ast;
+                stmtType[] body = module.body;
+                for (SimpleNode node : body) {
+                    if (node instanceof ClassDef && "Manager".equals(NodeUtils.getRepresentationString(node))) {
+                        ClassDef classDef = (ClassDef) node;
+                        stmtType[] newBody = null;
+                        try {
+                            File managerBody = PydevPlugin.getBundleInfo().getRelativePath(
+                                    new Path("pysrc/stubs/_django_manager_body.py"));
+                            IDocument doc = FileUtilsFileBuffer.getDocFromFile(managerBody);
+                            IGrammarVersionProvider provider = new IGrammarVersionProvider() {
+
+                                public int getGrammarVersion() throws MisconfigurationException {
+                                    return IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0; // Always Python 3.0 here
+                                }
+                            };
+                            ParseOutput obj = PyParser.reparseDocument(new PyParser.ParserInfo(doc, provider,
+                                    "_django_manager_body", managerBody));
+                            Module ast2 = (Module) obj.ast;
+                            newBody = ast2.body;
+
+                            for (stmtType b : newBody) {
+                                //Note that the line/col is important so that we correctly acknowledge it inside the "class Manager" scope.
+                                b.beginColumn = classDef.beginColumn + 4;
+                                b.beginLine = classDef.beginLine + 1;
+                            }
+
+                            classDef.body = newBody;
+                            break;
+                        } catch (Exception e) {
+                            Log.log(e);
+                        }
+
+                    }
                 }
             }
         }
@@ -1003,7 +1107,7 @@ public abstract class ModulesManager implements IModulesManager {
      */
     public String resolveModule(IResource member, IProject container) {
         File inOs = member.getRawLocation().toFile();
-        return resolveModule(FileUtils.getFileAbsolutePath(inOs));
+        return pythonPathHelper.resolveModule(FileUtils.getFileAbsolutePath(inOs), false, container);
     }
 
     protected String getResolveModuleErr(IResource member) {
@@ -1016,7 +1120,21 @@ public abstract class ModulesManager implements IModulesManager {
      * @return
      */
     public String resolveModule(String full) {
-        return pythonPathHelper.resolveModule(full, false);
+        return pythonPathHelper.resolveModule(full, false, null);
     }
 
+    private final Object lockAccessCreateCompiledModuleLock = new Object();
+    private final Map<String, Object> createCompiledModuleLock = new LRUMap<String, Object>(50);
+
+    @Override
+    public Object getCompiledModuleCreationLock(String name) {
+        synchronized (lockAccessCreateCompiledModuleLock) {
+            Object lock = createCompiledModuleLock.get(name);
+            if (lock == null) {
+                lock = new Object();
+                createCompiledModuleLock.put(name, lock);
+            }
+            return lock;
+        }
+    }
 }

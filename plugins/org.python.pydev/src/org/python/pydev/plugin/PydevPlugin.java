@@ -7,6 +7,7 @@
 package org.python.pydev.plugin;
 
 import java.io.File;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,6 +32,8 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.util.IPropertyChangeListener;
+import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.Bundle;
@@ -40,7 +43,7 @@ import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.editor.codecompletion.revisited.SynchSystemModulesManagerScheduler;
+import org.python.pydev.editor.codecompletion.revisited.SyncSystemModulesManagerScheduler;
 import org.python.pydev.editor.codecompletion.shell.AbstractShell;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.plugin.nature.SystemPythonNature;
@@ -185,7 +188,7 @@ public class PydevPlugin extends AbstractUIPlugin {
 
     private ResourceBundle resourceBundle; //Resource bundle.
 
-    public final SynchSystemModulesManagerScheduler synchScheduler = new SynchSystemModulesManagerScheduler();
+    public final SyncSystemModulesManagerScheduler syncScheduler = new SyncSystemModulesManagerScheduler();
 
     public static final String DEFAULT_PYDEV_SCOPE = "org.python.pydev";
 
@@ -203,7 +206,7 @@ public class PydevPlugin extends AbstractUIPlugin {
 
         @Override
         protected IStatus run(IProgressMonitor monitor) {
-            synchScheduler.start();
+            syncScheduler.start();
             return Status.OK_STATUS;
         }
 
@@ -278,7 +281,7 @@ public class PydevPlugin extends AbstractUIPlugin {
      */
     @Override
     public void stop(BundleContext context) throws Exception {
-        synchScheduler.stop();
+        syncScheduler.stop();
         IPath stateLocation = getStateLocation();
         File file = stateLocation.toFile();
         for (String prefix : erasePrefixes) {
@@ -392,41 +395,45 @@ public class PydevPlugin extends AbstractUIPlugin {
      */
     public static Tuple<IPythonNature, String> getInfoForFile(File file) {
 
-        //Check if we can resolve the manager for the passed file...
         IInterpreterManager pythonInterpreterManager2 = getPythonInterpreterManager(false);
-        Tuple<IPythonNature, String> infoForManager = getInfoForManager(file, pythonInterpreterManager2);
-        if (infoForManager != null) {
-            return infoForManager;
-        }
-
         IInterpreterManager jythonInterpreterManager2 = getJythonInterpreterManager(false);
-        infoForManager = getInfoForManager(file, jythonInterpreterManager2);
-        if (infoForManager != null) {
-            return infoForManager;
-        }
-
         IInterpreterManager ironpythonInterpreterManager2 = getIronpythonInterpreterManager(false);
-        infoForManager = getInfoForManager(file, ironpythonInterpreterManager2);
-        if (infoForManager != null) {
-            return infoForManager;
-        }
 
-        //Ok, the file is not part of the interpreter configuration, but it's still possible that it's part of a
-        //project... (external projects), so, let's go on and see if there's some match there.
+        if (file != null) {
+            //Check if we can resolve the manager for the passed file...
+            Tuple<IPythonNature, String> infoForManager = getInfoForManager(file, pythonInterpreterManager2);
+            if (infoForManager != null) {
+                return infoForManager;
+            }
 
-        List<IPythonNature> allPythonNatures = PythonNature.getAllPythonNatures();
-        int size = allPythonNatures.size();
-        for (int i = 0; i < size; i++) {
-            IPythonNature nature = allPythonNatures.get(i);
-            try {
-                //Note: only resolve in the project sources, as we've already checked the system and we'll be
-                //checking all projects anyways.
-                String modName = nature.resolveModuleOnlyInProjectSources(FileUtils.getFileAbsolutePath(file), true);
-                if (modName != null) {
-                    return new Tuple<IPythonNature, String>(nature, modName);
+            infoForManager = getInfoForManager(file, jythonInterpreterManager2);
+            if (infoForManager != null) {
+                return infoForManager;
+            }
+
+            infoForManager = getInfoForManager(file, ironpythonInterpreterManager2);
+            if (infoForManager != null) {
+                return infoForManager;
+            }
+
+            //Ok, the file is not part of the interpreter configuration, but it's still possible that it's part of a
+            //project... (external projects), so, let's go on and see if there's some match there.
+
+            List<IPythonNature> allPythonNatures = PythonNature.getAllPythonNatures();
+            int size = allPythonNatures.size();
+            for (int i = 0; i < size; i++) {
+                IPythonNature nature = allPythonNatures.get(i);
+                try {
+                    //Note: only resolve in the project sources, as we've already checked the system and we'll be
+                    //checking all projects anyways.
+                    String modName = nature
+                            .resolveModuleOnlyInProjectSources(FileUtils.getFileAbsolutePath(file), true);
+                    if (modName != null) {
+                        return new Tuple<IPythonNature, String>(nature, modName);
+                    }
+                } catch (Exception e) {
+                    Log.log(e);
                 }
-            } catch (Exception e) {
-                Log.log(e);
             }
         }
 
@@ -509,6 +516,11 @@ public class PydevPlugin extends AbstractUIPlugin {
      * Given a resource get the string in the filesystem for it.
      */
     public static String getIResourceOSString(IResource f) {
+        URI locationURI = f.getLocationURI();
+        if (locationURI != null) {
+            return FileUtils.getFileAbsolutePath(new File(locationURI));
+        }
+
         IPath rawLocation = f.getRawLocation();
         if (rawLocation == null) {
             return null; //yes, we could have a resource that was deleted but we still have it's representation...
@@ -570,7 +582,19 @@ public class PydevPlugin extends AbstractUIPlugin {
     public static ColorCache getColorCache() {
         PydevPlugin plugin = getDefault();
         if (plugin.colorCache == null) {
-            plugin.colorCache = new ColorCache(PydevPrefs.getChainedPrefStore()) {
+            final IPreferenceStore chainedPrefStore = PydevPrefs.getChainedPrefStore();
+            plugin.colorCache = new ColorCache(chainedPrefStore) {
+                {
+                    chainedPrefStore.addPropertyChangeListener(new IPropertyChangeListener() {
+
+                        @Override
+                        public void propertyChange(PropertyChangeEvent event) {
+                            if (fNamedColorTable.containsKey(event.getProperty())) {
+                                reloadProperty(event.getProperty());
+                            }
+                        }
+                    });
+                }
             };
         }
         return plugin.colorCache;
@@ -602,6 +626,6 @@ public class PydevPlugin extends AbstractUIPlugin {
             }
         }
         return managerToNameToInfo;
-    };
+    }
 
 }

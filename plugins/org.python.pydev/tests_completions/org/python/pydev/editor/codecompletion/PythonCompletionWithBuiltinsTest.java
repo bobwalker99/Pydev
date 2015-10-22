@@ -22,8 +22,10 @@ import org.python.pydev.core.ICompletionState;
 import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.IModule;
 import org.python.pydev.core.IPythonNature;
+import org.python.pydev.core.ISystemModulesManager;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.TestDependent;
+import org.python.pydev.core.concurrency.RunnableAsJobsPoolThread;
 import org.python.pydev.core.structure.CompletionRecursionException;
 import org.python.pydev.editor.codecompletion.revisited.AbstractASTManager;
 import org.python.pydev.editor.codecompletion.revisited.CodeCompletionTestsBase;
@@ -95,8 +97,8 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
             try {
                 FileUtils.copyFile(TestDependent.PYTHON_NUMPY_PACKAGES +
                         "numpy/core/umath.pyd", TestDependent.TEST_PYSRC_LOC
-                        +
-                        "extendable/bootstrap_dll/umath.pyd");
+                                +
+                                "extendable/bootstrap_dll/umath.pyd");
             } catch (RuntimeException e) {
                 //Ignore: it's being already used by some process (which means it's probably already correct anyways).
             }
@@ -112,7 +114,7 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
                 + TestDependent.PYTHON_OPENGL_PACKAGES +
                 "|" + TestDependent.PYTHON_DJANGO_PACKAGES
 
-                , false);
+        , false);
 
         codeCompletion = new PyCodeCompletion();
 
@@ -120,7 +122,7 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
         if (shell == null) {
             shell = PythonShellTest.startShell();
         }
-        AbstractShell.putServerShell(nature, AbstractShell.COMPLETION_SHELL, shell);
+        AbstractShell.putServerShell(nature, AbstractShell.getShellId(), shell);
 
     }
 
@@ -131,7 +133,7 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
     public void tearDown() throws Exception {
         CompiledModule.COMPILED_MODULES_ENABLED = false;
         super.tearDown();
-        AbstractShell.putServerShell(nature, AbstractShell.COMPLETION_SHELL, null);
+        AbstractShell.putServerShell(nature, AbstractShell.getShellId(), null);
     }
 
     public void testRecursion() throws FileNotFoundException, Exception, CompletionRecursionException {
@@ -184,7 +186,7 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
         //look...
         s = "" +
 
-                "class bla(object):pass\n" +
+        "class bla(object):pass\n" +
                 "\n" +
                 "def newFunc(): \n"
                 +
@@ -474,7 +476,8 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
                 "";
 
         //should keep the variables from the __builtins__ in this module
-        ICompletionProposal[] codeCompletionProposals = requestCompl(s, -1, new String[] { "ThisGoes", "RuntimeError" });
+        ICompletionProposal[] codeCompletionProposals = requestCompl(s, -1,
+                new String[] { "ThisGoes", "RuntimeError" });
         assertNotContains("ThisDoesnt", codeCompletionProposals);
     }
 
@@ -483,7 +486,8 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
                 "";
 
         //should keep the variables from the __builtins__ in this module
-        ICompletionProposal[] codeCompletionProposals = requestCompl(s, -1, new String[] { "ThisGoes", "RuntimeError" });
+        ICompletionProposal[] codeCompletionProposals = requestCompl(s, -1,
+                new String[] { "ThisGoes", "RuntimeError" });
         assertNotContains("ThisDoesnt", codeCompletionProposals);
 
     }
@@ -592,6 +596,16 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
         requestCompl(s, -1, new String[] { "append(object)", "reverse()" });
     }
 
+    public void testBuiltinCached() throws Exception {
+        IModule module = nature.getAstManager().getModule("__builtin__", nature, true);
+        assertTrue(module instanceof CompiledModule);
+        ISystemModulesManager systemModulesManager = nature.getAstManager().getModulesManager()
+                .getSystemModulesManager();
+        RunnableAsJobsPoolThread.getSingleton().waitToFinishCurrent();
+        File file = systemModulesManager.getCompiledModuleCacheFile(module.getName());
+        assertTrue(file.exists());
+    }
+
     public void testAssignToFuncCompletion() throws Exception {
         String s = "" +
                 "def aFunction(a, b, c):\n" +
@@ -614,6 +628,42 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
                 "tup";
 
         requestCompl(s, -1, new String[] { "tup1" });
+    }
+
+    public void testCodeCompletionForCompoundObjectsDocstring() throws Exception {
+        String s;
+        s = ""
+                + "class F:\n"
+                + "    def m1(self):\n"
+                + "        pass\n"
+                + "\n"
+                + "def foo(a):\n"
+                + "    ':type a: list of F'\n"
+                + "    a."
+                + "";
+        ICompletionProposal[] comps = requestCompl(s, s.length(), -1, new String[] { "append(object)" });
+        assertTrue(comps.length > 10); //list completions
+    }
+
+    public void testCodeCompletionForCompoundObjectsBuiltin() throws Exception {
+        String s;
+        s = ""
+                + "x = ''\n"
+                + "for a in x.splitlines()\n"
+                + "    a."
+                + "";
+        ICompletionProposal[] comps = requestCompl(s, s.length(), -1, new String[] { "title()", "upper()" });
+        assertTrue(comps.length > 10); //str completions
+    }
+
+    public void testCodeCompletionForCompoundObjectsBuiltin2() throws Exception {
+        String s;
+        s = ""
+                + "d = {i: str(i) for i in xrange(10)}\n"
+                + "d."
+                + "";
+        ICompletionProposal[] comps = requestCompl(s, s.length(), -1, new String[] { "items()" });
+        assertTrue(comps.length > 10); //dict completions
     }
 
 }

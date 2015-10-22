@@ -32,10 +32,10 @@ import org.eclipse.swt.graphics.Image;
 import org.python.pydev.core.ExtensionHelper;
 import org.python.pydev.core.IInterpreterInfo;
 import org.python.pydev.core.IInterpreterManager;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.preferences.PydevPrefs;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.DataAndImageTreeNode;
 import org.python.pydev.shared_core.structure.OrderedSet;
 import org.python.pydev.shared_core.structure.TreeNode;
@@ -219,8 +219,7 @@ public class SynchSystemModulesManager {
                     manager.setInfos(
                             newInfos.toArray(new IInterpreterInfo[newInfos.size()]),
                             changedNames,
-                            monitor
-                            );
+                            monitor);
                 }
             }
         }
@@ -388,7 +387,7 @@ public class SynchSystemModulesManager {
                 System.out.println("Synchronizing PYTHONPATH info: " + info.getNameForUI());
             }
             long initial = System.currentTimeMillis();
-            builder.synchInfoToPythonPath(monitor, info);
+            builder.syncInfoToPythonPath(monitor, info);
             if (DEBUG) {
                 System.out.println("End Synchronizing PYTHONPATH info (" + (System.currentTimeMillis() - initial)
                         / 1000.0 + " secs.)");

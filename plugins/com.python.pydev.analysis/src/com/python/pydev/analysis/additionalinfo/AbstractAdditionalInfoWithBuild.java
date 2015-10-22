@@ -25,6 +25,7 @@ import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.model.ErrorDescription;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 
 /**
@@ -151,7 +152,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
                                 ModulesKey modName = (ModulesKey) tuple.o1;
                                 List<IInfo> l = (List<IInfo>) tuple.o2;
                                 String infoToString = InfoStrFactory.infoToString(l);
-                                String fileStr = modName.file.toString();
+                                String fileStr = modName.file != null ? modName.file.toString() : "no_source_available";
 
                                 FastStringBuffer buf = new FastStringBuffer("TUP", modName.name.length()
                                         + fileStr.length()
@@ -234,7 +235,10 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
             }
             i++;
 
-            if (PythonPathHelper.canAddAstInfoFor(key)) { //otherwise it should be treated as a compiled module (no ast generation)
+            if (PythonPathHelper.canAddAstInfoForSourceModule(key)) {
+                //Note: at this point (on the interpreter configuration), we only add the tokens for source modules
+                //but later on in InterpreterInfoBuilder, it'll actually go on and create the contents for compiled modules
+                //(which is a slower process as it has to connect through a shell).
 
                 if (i % 17 == 0) {
                     msgBuffer.clear();
@@ -254,7 +258,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
                     if (info.addAstInfo(key, false) == null) {
                         String str = "Unable to generate ast -- using %s.\nError:%s";
                         ErrorDescription errorDesc = null;
-                        throw new RuntimeException(org.python.pydev.shared_core.string.StringUtils.format(str, PyParser
+                        throw new RuntimeException(StringUtils.format(str, PyParser
                                 .getGrammarVersionStr(grammarVersion),
                                 (errorDesc != null && errorDesc.message != null) ? errorDesc.message
                                         : "unable to determine"));

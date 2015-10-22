@@ -37,14 +37,12 @@ import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.ModulesKey;
 import org.python.pydev.core.TestDependent;
 import org.python.pydev.core.docutils.PySelection;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.editor.codecompletion.revisited.ASTManager;
 import org.python.pydev.editor.codecompletion.revisited.ProjectStub;
 import org.python.pydev.editor.codecompletion.revisited.modules.ASTEntryWithSourceModule;
 import org.python.pydev.editor.codecompletion.revisited.modules.AbstractModule;
 import org.python.pydev.editor.codecompletion.revisited.modules.SourceModule;
 import org.python.pydev.editor.refactoring.RefactoringRequest;
-import org.python.pydev.navigator.FileStub;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.ClassDef;
 import org.python.pydev.parser.jython.ast.FunctionDef;
@@ -52,7 +50,9 @@ import org.python.pydev.parser.visitors.scope.ASTEntry;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_core.resource_stubs.FileStub;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.ui.pythonpathconf.InterpreterInfo;
 import org.python.pydev.utils.PyFileListing;
@@ -61,7 +61,6 @@ import org.python.pydev.utils.PyFileListing.PyFileInfo;
 import com.python.pydev.analysis.additionalinfo.AbstractAdditionalTokensInfo;
 import com.python.pydev.analysis.additionalinfo.AdditionalProjectInterpreterInfo;
 import com.python.pydev.analysis.scopeanalysis.AstEntryScopeAnalysisConstants;
-import com.python.pydev.refactoring.refactorer.AstEntryRefactorerRequestConstants;
 import com.python.pydev.refactoring.refactorer.refactorings.renamelocal.RefactoringLocalTestBase;
 import com.python.pydev.refactoring.wizards.IRefactorRenameProcess;
 import com.python.pydev.refactoring.wizards.rename.PyRenameEntryPoint;
@@ -69,7 +68,7 @@ import com.python.pydev.refactoring.wizards.rename.TextEditCreation;
 
 /**
  * A class used for the refactorings that need the rename project (in pysrcrefactoring)
- * 
+ *
  * @author Fabio
  */
 public abstract class RefactoringRenameTestBase extends RefactoringLocalTestBase {
@@ -136,10 +135,10 @@ public abstract class RefactoringRenameTestBase extends RefactoringLocalTestBase
         setUpConfigWorkspaceFiles();
     }
 
-    private org.python.pydev.navigator.ProjectStub projectStub;
+    private org.python.pydev.shared_core.resource_stubs.ProjectStub projectStub;
 
     public void setUpConfigWorkspaceFiles() throws Exception {
-        projectStub = new org.python.pydev.navigator.ProjectStub(
+        projectStub = new org.python.pydev.shared_core.resource_stubs.ProjectStub(
                 new File(TestDependent.TEST_COM_REFACTORING_PYSRC_LOC),
                 natureRefactoring);
         TextEditCreation.createWorkspaceFile = new ICallback<IFile, File>() {
@@ -151,6 +150,7 @@ public abstract class RefactoringRenameTestBase extends RefactoringLocalTestBase
                     public IPath getFullPath() {
                         return Path.fromOSString(this.file.getAbsolutePath());
                     }
+
                 };
             }
         };
@@ -172,7 +172,7 @@ public abstract class RefactoringRenameTestBase extends RefactoringLocalTestBase
             Class processUnderTest = getProcessUnderTest();
             if (processUnderTest != null) {
                 for (IRefactorRenameProcess p : processes) {
-                    assertTrue(org.python.pydev.shared_core.string.StringUtils.format("Expected %s. Received:%s",
+                    assertTrue(StringUtils.format("Expected %s. Received:%s",
                             processUnderTest, p.getClass()),
                             processUnderTest.isInstance(p)); //we should only activate the rename class process in this test case
                 }
@@ -186,8 +186,8 @@ public abstract class RefactoringRenameTestBase extends RefactoringLocalTestBase
     protected abstract Class getProcessUnderTest();
 
     /**
-     * A method that creates a project that references no other project 
-     * 
+     * A method that creates a project that references no other project
+     *
      * @param force whether the creation of the new nature should be forced
      * @param path the pythonpath for the new nature
      * @param name the name for the project
@@ -207,7 +207,7 @@ public abstract class RefactoringRenameTestBase extends RefactoringLocalTestBase
 
     /**
      * Overriden so that the pythonpath is only restored for the system and the refactoring nature
-     * 
+     *
      * @param force whether this should be forced, even if it was previously created for this class
      */
     @Override
@@ -291,7 +291,7 @@ public abstract class RefactoringRenameTestBase extends RefactoringLocalTestBase
     /**
      * Goes through all the workspace (in this case the refactoring project) and gathers the references
      * for the current selection.
-     * 
+     *
      * @param moduleName the name of the module we're currently in
      * @param line the line we're in
      * @param col the col we're in
@@ -315,7 +315,7 @@ public abstract class RefactoringRenameTestBase extends RefactoringLocalTestBase
             PySelection ps = new PySelection(doc, line, col);
 
             RefactoringRequest request = new RefactoringRequest(null, ps, natureRefactoring);
-            request.setAdditionalInfo(AstEntryRefactorerRequestConstants.FIND_REFERENCES_ONLY_IN_LOCAL_SCOPE, false);
+            request.setAdditionalInfo(RefactoringRequest.FIND_REFERENCES_ONLY_IN_LOCAL_SCOPE, false);
             request.moduleName = moduleName;
             request.inputName = "new_name";
             request.fillInitialNameAndOffset();
@@ -326,7 +326,7 @@ public abstract class RefactoringRenameTestBase extends RefactoringLocalTestBase
             lastProcessorUsed = processor;
             checkProcessors();
 
-            checkStatus(processor.checkFinalConditions(nullProgressMonitor, null, true), expectError);
+            checkStatus(processor.checkFinalConditions(nullProgressMonitor, null), expectError);
             occurrencesToReturn = processor.getOccurrencesInOtherFiles();
             occurrencesToReturn.put(new Tuple<String, File>(moduleName, module.getFile()),
                     processor.getOccurrences());
@@ -353,7 +353,7 @@ public abstract class RefactoringRenameTestBase extends RefactoringLocalTestBase
                 return;
             }
         }
-        fail(org.python.pydev.shared_core.string.StringUtils.format("Unable to find line:%s col:%s in %s", line, col,
+        fail(StringUtils.format("Unable to find line:%s col:%s in %s", line, col,
                 names));
 
     }

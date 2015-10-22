@@ -1,3 +1,14 @@
+/******************************************************************************
+* Copyright (C) 2013  Fabio Zadrozny
+*
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Eclipse Public License v1.0
+* which accompanies this distribution, and is available at
+* http://www.eclipse.org/legal/epl-v10.html
+*
+* Contributors:
+*     Fabio Zadrozny <fabiofz@gmail.com> - initial API and implementation
+******************************************************************************/
 package org.python.pydev.shared_ui.dialogs;
 
 import java.util.List;
@@ -47,8 +58,10 @@ public class SelectElementDialog extends ElementListSelectionDialog {
     @Override
     protected void updateStatus(IStatus status) {
         super.updateStatus(status);
-        SharedUiPlugin.fixSelectionStatusDialogStatusLineColor(this, this.getDialogArea()
-                .getBackground());
+        Control area = this.getDialogArea();
+        if (area != null) {
+            SharedUiPlugin.fixSelectionStatusDialogStatusLineColor(this, area.getBackground());
+        }
     }
 
     /**

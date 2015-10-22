@@ -28,7 +28,6 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
-import org.python.pydev.core.FileUtilsFileBuffer;
 import org.python.pydev.core.IInterpreterInfo;
 import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.IPythonNature;
@@ -42,6 +41,7 @@ import org.python.pydev.plugin.PydevTestUtils;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.ui.BundleInfoStub;
 import org.python.pydev.ui.interpreters.PythonInterpreterManager;
 import org.python.pydev.ui.pythonpathconf.InterpreterInfo;
@@ -116,7 +116,7 @@ public class CodeCompletionTestsBase extends TestCase {
         super.setUp();
         PydevPlugin.setBundleInfo(new BundleInfoStub());
         ProjectModulesManager.IN_TESTS = true;
-        FileUtilsFileBuffer.IN_TESTS = true;
+        FileUtils.IN_TESTS = true;
         PydevTestUtils.setTestPlatformStateLocation();
     }
 
@@ -128,7 +128,7 @@ public class CodeCompletionTestsBase extends TestCase {
         super.tearDown();
         PydevPlugin.setBundleInfo(null);
         ProjectModulesManager.IN_TESTS = false;
-        FileUtilsFileBuffer.IN_TESTS = false;
+        FileUtils.IN_TESTS = false;
     }
 
     /**
@@ -632,7 +632,7 @@ public class CodeCompletionTestsBase extends TestCase {
             available.append(o.toString());
             available.append('\n');
         }
-        fail(org.python.pydev.shared_core.string.StringUtils.format("Object: %s not found. Available:\n%s", toFind,
+        fail(StringUtils.format("Object: %s not found. Available:\n%s", toFind,
                 available));
     }
 

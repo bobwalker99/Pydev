@@ -22,6 +22,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.IInputValidator;
@@ -567,7 +568,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
 
         leftComposite = new Composite(parent, SWT.MULTI);
         layout = new GridLayout();
-        layout.numColumns = 2;
+        layout.numColumns = 3;
         layout.verticalSpacing = 2;
         layout.marginWidth = 0;
         layout.marginHeight = 2;
@@ -621,8 +622,14 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         parent = leftComposite;
 
         //all the runs from now on go through coverage?
+        Label label = new Label(parent, SWT.None);
+        label.setText("Enable code coverage for new launches?");
+        layoutData = new GridData();
+        layoutData.grabExcessHorizontalSpace = true;
+        layoutData.horizontalAlignment = GridData.FILL;
+        label.setLayoutData(layoutData);
+
         allRunsGoThroughCoverage = new Button(parent, SWT.CHECK);
-        allRunsGoThroughCoverage.setText("Enable code coverage for new launches?");
         allRunsGoThroughCoverage.setSelection(PyCoveragePreferences.getInternalAllRunsDoCoverage());
         allRunsGoThroughCoverage.addSelectionListener(new SelectionAdapter() {
             @Override
@@ -632,15 +639,20 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
             }
         });
         layoutData = new GridData();
-        layoutData.grabExcessHorizontalSpace = true;
-        layoutData.horizontalAlignment = GridData.FILL;
         layoutData.horizontalSpan = 2;
+        layoutData.grabExcessHorizontalSpace = false;
         allRunsGoThroughCoverage.setLayoutData(layoutData);
         //end all runs go through coverage
 
         //Clear the coverage info on each launch?
+        label = new Label(parent, SWT.None);
+        label.setText("Auto clear on a new launch?");
+        layoutData = new GridData();
+        layoutData.grabExcessHorizontalSpace = true;
+        layoutData.horizontalAlignment = GridData.FILL;
+        label.setLayoutData(layoutData);
+
         clearCoverageInfoOnNextLaunch = new Button(parent, SWT.CHECK);
-        clearCoverageInfoOnNextLaunch.setText("Auto clear on a new launch?");
         clearCoverageInfoOnNextLaunch.setSelection(PyCoveragePreferences.getClearCoverageInfoOnNextLaunch());
         clearCoverageInfoOnNextLaunch.addSelectionListener(new SelectionAdapter() {
             @Override
@@ -651,7 +663,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
 
         PythonRunnerCallbacks.onCreatedCommandLine.registerListener(onCreatedCommandLineListener);
         layoutData = new GridData();
-        layoutData.grabExcessHorizontalSpace = true;
+        layoutData.grabExcessHorizontalSpace = false;
         layoutData.horizontalAlignment = GridData.FILL;
         clearCoverageInfoOnNextLaunch.setLayoutData(layoutData);
 
@@ -671,8 +683,14 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         //end all runs go through coverage
 
         //Refresh the coverage info on each launch?
+        label = new Label(parent, SWT.None);
+        label.setText("Auto refresh on new launch?");
+        layoutData = new GridData();
+        layoutData.grabExcessHorizontalSpace = true;
+        layoutData.horizontalAlignment = GridData.FILL;
+        label.setLayoutData(layoutData);
+
         refreshCoverageInfoOnNextLaunch = new Button(parent, SWT.CHECK);
-        refreshCoverageInfoOnNextLaunch.setText("Auto refresh on new launch?");
         refreshCoverageInfoOnNextLaunch.setSelection(PyCoveragePreferences.getRefreshAfterNextLaunch());
         refreshCoverageInfoOnNextLaunch.addSelectionListener(new SelectionAdapter() {
             @Override
@@ -715,7 +733,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         layoutData.grabExcessVerticalSpace = true;
         layoutData.horizontalAlignment = GridData.FILL;
         layoutData.verticalAlignment = GridData.FILL;
-        layoutData.horizontalSpan = 2;
+        layoutData.horizontalSpan = 3;
         filter.setLayoutData(layoutData);
 
         viewer = filter.getViewer();
@@ -801,7 +819,8 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
                         File file = new File(files[0]);
                         if (file.isDirectory()) {
                             PySourceLocatorBase locator = new PySourceLocatorBase();
-                            IContainer container = locator.getWorkspaceContainer(file);
+                            IContainer container = locator.getContainerForLocation(
+                                    Path.fromOSString(file.getAbsolutePath()), null);
                             if (container != null && container.exists()) {
                                 setSelectedContainer(container);
                             }
@@ -854,7 +873,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         layoutData = new GridData();
         layoutData.grabExcessHorizontalSpace = true;
         layoutData.horizontalAlignment = GridData.FILL;
-        layoutData.horizontalSpan = 2;
+        layoutData.horizontalSpan = 3;
         button.setLayoutData(layoutData);
     }
 

@@ -1,12 +1,11 @@
 from __future__ import nested_scopes
+
 import fnmatch
 import os.path
-import re
-import unittest
-import pydev_runfiles_unittest
-from pydevd_constants import *  #@UnusedWildImport
-import time
 from pydev_runfiles_coverage import StartCoverageSupport
+from pydevd_constants import * #@UnusedWildImport
+import re
+import time
 
 
 #=======================================================================================================================
@@ -330,6 +329,10 @@ class PydevTestRunner(object):
             elif os.path.isfile(dir_name):
                 path_to_append = os.path.dirname(dir_name)
             else:
+                if not os.path.exists(dir_name):
+                    block_line = '*' * 120
+                    sys.stderr.write('\n%s\n* PyDev test runner error: %s does not exist.\n%s\n' % (block_line, dir_name, block_line))
+                    return
                 msg = ("unknown type. \n%s\nshould be file or a directory.\n" % (dir_name))
                 raise RuntimeError(msg)
         if path_to_append is not None:
@@ -391,6 +394,25 @@ class PydevTestRunner(object):
                 if os.path.isdir(base_dir):
                     if hasattr(os, 'walk'):
                         for root, dirs, files in os.walk(base_dir):
+
+                            #Note: handling directories that should be excluded from the search because
+                            #they don't have __init__.py
+                            exclude = {}
+                            for d in dirs:
+                                for init in ['__init__.py', '__init__.pyo', '__init__.pyc', '__init__.pyw']:
+                                    if os.path.exists(os.path.join(root, d, init).replace('\\', '/')):
+                                        break
+                                else:
+                                    exclude[d] = 1
+
+                            if exclude:
+                                new = []
+                                for d in dirs:
+                                    if d not in exclude:
+                                        new.append(d)
+
+                                dirs[:] = new
+
                             self.__add_files(pyfiles, root, files)
                     else:
                         # jython2.1 is too old for os.walk!
@@ -534,6 +556,7 @@ class PydevTestRunner(object):
 
 
     def _decorate_test_suite(self, suite, pyfile, module_name):
+        import unittest
         if isinstance(suite, unittest.TestSuite):
             add = False
             suite.__pydev_pyfile__ = pyfile
@@ -558,6 +581,8 @@ class PydevTestRunner(object):
     def find_tests_from_modules(self, file_and_modules_and_module_name):
         """ returns the unittests given a list of modules """
         #Use our own suite!
+        import pydev_runfiles_unittest
+        import unittest
         unittest.TestLoader.suiteClass = pydev_runfiles_unittest.PydevTestSuite
         loader = unittest.TestLoader()
 
@@ -604,6 +629,7 @@ class PydevTestRunner(object):
     def filter_tests(self, test_objs, internal_call=False):
         """ based on a filter name, only return those tests that have
             the test case names that match """
+        import unittest
         if not internal_call:
             if not self.configuration.include_tests and not self.tests and not self.configuration.exclude_tests:
                 #No need to filter if we have nothing to filter!
@@ -668,6 +694,7 @@ class PydevTestRunner(object):
 
     def iter_tests(self, test_objs):
         #Note: not using yield because of Jython 2.1.
+        import unittest
         tests = []
         for test_obj in test_objs:
             if isinstance(test_obj, unittest.TestSuite):
@@ -738,6 +765,7 @@ class PydevTestRunner(object):
         all_tests = self.find_tests_from_modules(file_and_modules_and_module_name)
         all_tests = self.filter_tests(all_tests)
 
+        import pydev_runfiles_unittest
         test_suite = pydev_runfiles_unittest.PydevTestSuite(all_tests)
         import pydev_runfiles_xml_rpc
         pydev_runfiles_xml_rpc.notifyTestsCollected(test_suite.countTestCases())

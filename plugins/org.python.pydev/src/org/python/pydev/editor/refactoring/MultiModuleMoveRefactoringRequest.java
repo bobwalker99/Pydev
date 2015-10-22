@@ -11,9 +11,9 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.python.pydev.core.FullRepIterable;
 import org.python.pydev.core.MisconfigurationException;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.plugin.nature.PythonNature;
+import org.python.pydev.shared_core.string.StringUtils;
 
 public class MultiModuleMoveRefactoringRequest extends PyRefactoringRequest {
 
@@ -21,7 +21,7 @@ public class MultiModuleMoveRefactoringRequest extends PyRefactoringRequest {
     private IContainer target;
 
     public MultiModuleMoveRefactoringRequest(List<ModuleRenameRefactoringRequest> requests, IContainer target)
-            throws MisconfigurationException {
+            throws MisconfigurationException, TargetNotInPythonpathException {
         super(requests.toArray(new RefactoringRequest[requests.size()]));
         PythonNature nature = PythonNature.getPythonNature(target);
         File file = target.getLocation().toFile();
@@ -42,7 +42,9 @@ public class MultiModuleMoveRefactoringRequest extends PyRefactoringRequest {
                 Log.log(e);
             }
         }
-        Assert.isNotNull(this.initialName, "Unable to resolve file as a python module: " + fullPath);
+        if (this.initialName == null) {
+            throw new TargetNotInPythonpathException("Unable to resolve file as a python module: " + fullPath);
+        }
     }
 
     @Override

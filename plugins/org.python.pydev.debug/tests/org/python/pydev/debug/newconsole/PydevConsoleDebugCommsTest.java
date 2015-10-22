@@ -42,7 +42,6 @@ import org.python.pydev.runners.SimpleRunner;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.net.SocketUtil;
-import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.shared_interactive_console.console.InterpreterResponse;
 
 /**
@@ -82,6 +81,7 @@ public class PydevConsoleDebugCommsTest extends TestCase {
         Map<String, String> env = new TreeMap<String, String>();
         env.put("HOME", homeDir.toString());
         env.put("PYTHONPATH", pydevdDir);
+        env.put("PYTHONIOENCODING", "utf-8");
         String sysRoot = System.getenv("SystemRoot");
         if (sysRoot != null) {
             env.put("SystemRoot", sysRoot); //Needed on windows boxes (random/socket. module needs it to work).
@@ -97,10 +97,10 @@ public class PydevConsoleDebugCommsTest extends TestCase {
         }
 
         process = SimpleRunner.createProcess(cmdarray, envp, null);
-        pydevConsoleCommunication = new PydevConsoleCommunication(port, process, clientPort, cmdarray, envp);
+        pydevConsoleCommunication = new PydevConsoleCommunication(port, process, clientPort, cmdarray, envp, "utf-8");
         pydevConsoleCommunication.hello(new NullProgressMonitor());
 
-        ServerSocket socket = new ServerSocket(0);
+        ServerSocket socket = SocketUtil.createLocalServerSocket();
         pydevConsoleCommunication.connectToDebugger(socket.getLocalPort());
         socket.setSoTimeout(5000);
         Socket accept = socket.accept();
@@ -192,7 +192,7 @@ public class PydevConsoleDebugCommsTest extends TestCase {
         debugTarget.postCommand(new VersionCommand(debugTarget) {
             @Override
             public void processOKResponse(int cmdCode, String payload) {
-                if (cmdCode == AbstractDebuggerCommand.CMD_VERSION && "1.1".equals(payload)) {
+                if (cmdCode == AbstractDebuggerCommand.CMD_VERSION && "@@BUILD_NUMBER@@".equals(payload)) {
                     passed[0] = true;
                 } else {
                     passed[0] = false;
@@ -210,31 +210,38 @@ public class PydevConsoleDebugCommsTest extends TestCase {
 
     }
 
-    private void execInterpreter(String command) {
-        final Boolean done[] = new Boolean[1];
+    private InterpreterResponse execInterpreter(String command) {
+        final InterpreterResponse response[] = new InterpreterResponse[1];
         ICallback<Object, InterpreterResponse> onResponseReceived = new ICallback<Object, InterpreterResponse>() {
 
             public Object call(InterpreterResponse arg) {
-                done[0] = true;
+                response[0] = arg;
                 return null;
             }
         };
-        ICallback<Object, Tuple<String, String>> onContentsReceived = new ICallback<Object, Tuple<String, String>>() {
+        pydevConsoleCommunication.execInterpreter(command, onResponseReceived);
+        waitUntilNonNull(response);
+        return response[0];
+    }
 
-            public Object call(Tuple<String, String> arg) {
-                return null;
-            }
+    /**
+     * #PyDev-502: PyDev 3.9 F2 doesn't support backslash continuations
+     */
+    public void testContinuation() throws Exception {
 
-        };
-        pydevConsoleCommunication.execInterpreter(command, onResponseReceived, onContentsReceived);
-        waitUntilNonNull(done);
+        InterpreterResponse response = execInterpreter("from os import \\\n");
+        assertTrue(response.more);
+        response = execInterpreter("  path,\\\n");
+        assertTrue(response.more);
+        response = execInterpreter("  remove\n");
+        assertTrue(response.more);
+        response = execInterpreter("\n");
     }
 
     /**
      * Test that variables can be seen
      */
     public void testVariable() throws Exception {
-
         execInterpreter("my_var=1");
 
         IVariableLocator frameLocator = new IVariableLocator() {

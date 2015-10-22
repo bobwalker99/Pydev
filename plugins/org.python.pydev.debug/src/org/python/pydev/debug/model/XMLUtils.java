@@ -31,13 +31,15 @@ import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.core.PydevDebugPlugin;
 import org.python.pydev.debug.newconsole.EvaluateDebugConsoleExpression;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_core.string.FastStringBuffer;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * Translate XML protocol responses into Py structures.
- * 
+ *
  * Things get more complex than I'd like when complex Py structures get built.
  */
 public class XMLUtils {
@@ -128,6 +130,13 @@ public class XMLUtils {
         } catch (Exception e) {
             Log.log(e);
         }
+        try {
+            if (name != null) {
+                name = URLDecoder.decode(name, "UTF-8");
+            }
+        } catch (Exception e) {
+            Log.log(e);
+        }
         String isContainer = attributes.getValue("isContainer");
         if ("True".equals(isContainer)) {
             var = new PyVariableCollection(target, name, type, value, locator);
@@ -142,7 +151,7 @@ public class XMLUtils {
      */
     static class XMLToStackInfo extends DefaultHandler {
         public PyThread thread;
-        public String stop_reason;
+        public String stopReason;
         public List<IStackFrame> stack = new ArrayList<IStackFrame>();
         public List<PyVariable> locals;
         public AbstractDebugTarget target;
@@ -159,7 +168,7 @@ public class XMLUtils {
                 throw new SAXException("Thread not found (" + target_id + ")"); // can happen when debugger has been destroyed
             }
 
-            stop_reason = attributes.getValue("stop_reason");
+            stopReason = attributes.getValue("stop_reason");
         }
 
         private void startFrame(Attributes attributes) {
@@ -199,15 +208,15 @@ public class XMLUtils {
          */
         @Override
         public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
-            /*       
+            /*
              <xml>
                <thread id="id"/>
                     <frame id="id" name="functionName " file="file" line="line">
-                    
+
                         @deprecated: variables are no longer returned in this request (they are
                         gotten later in asynchronously to speed up the debugger).
                         <var scope="local" name="self" type="ObjectType" value="<DeepThread>"/>
-                        
+
                     </frame>*
              */
             if (qName.equals("thread")) {
@@ -225,23 +234,44 @@ public class XMLUtils {
 
     }
 
+    public static class StoppedStack {
+
+        public final PyThread thread;
+        public final String stopReason;
+        public final IStackFrame[] stack;
+
+        public StoppedStack(PyThread thread, String stopReason, IStackFrame[] stack) {
+            this.thread = thread;
+            this.stopReason = stopReason;
+            this.stack = stack;
+        }
+
+    }
+
     /**
      * @param payload
-     * @return an array of [thread_id, stop_reason, IStackFrame[]]
+     * @return an array of [thread_id, stopReason, IStackFrame[]]
      */
-    public static Object[] XMLToStack(AbstractDebugTarget target, String payload) throws CoreException {
+    public static StoppedStack XMLToStack(AbstractDebugTarget target, String payload) throws CoreException {
         IStackFrame[] stack;
-        Object[] retVal = new Object[3];
+        StoppedStack retVal;
         try {
             SAXParser parser = getSAXParser();
-            XMLToStackInfo info = new XMLToStackInfo(target);
-            parser.parse(new ByteArrayInputStream(payload.getBytes()), info);
+            XMLToStackInfo info = null;
+            try {
+                info = new XMLToStackInfo(target);
+                parser.parse(new ByteArrayInputStream(payload.getBytes()), info);
+            } catch (SAXParseException e) {
+                info = new XMLToStackInfo(target);
+                FastStringBuffer buf2 = fixXml(payload);
+                parser.parse(new ByteArrayInputStream(buf2.getBytes()), info);
+                Log.log("Received wrong xml which was fixed but indicates problem in the debugger in the server-side (please report error):\n"
+                        + payload, e);
+            }
 
             stack = info.stack.toArray(new IStackFrame[0]);
 
-            retVal[0] = info.thread;
-            retVal[1] = info.stop_reason;
-            retVal[2] = stack;
+            retVal = new StoppedStack(info.thread, info.stopReason, stack);
         } catch (CoreException e) {
             throw e;
         } catch (SAXException e) {
@@ -252,6 +282,49 @@ public class XMLUtils {
                     + payload, e));
         }
         return retVal;
+    }
+
+    /**
+     * Try to fix a xml (which actually shouldn't happen): replace <,  > and " on wrong places with &lt; &gt; and &quot;
+     */
+    public static FastStringBuffer fixXml(String payload) {
+        int length = payload.length();
+        FastStringBuffer buf2 = new FastStringBuffer(length + 10);
+
+        boolean inQuotes = false;
+        boolean inTag = false;
+
+        for (int i = 0; i < length; i++) {
+            char c = payload.charAt(i);
+            if (c == '"') {
+                if (inTag) {
+                    inQuotes = !inQuotes;
+                    buf2.append(c);
+                } else {
+                    buf2.append("&quot;");
+                }
+
+            } else if (c == '<') {
+                if (inQuotes) {
+                    buf2.append("&lt;");
+                } else {
+                    inTag = true;
+                    buf2.append(c);
+                }
+
+            } else if (c == '>') {
+                if (inQuotes) {
+                    buf2.append("&gt;");
+                } else {
+                    inTag = false;
+                    buf2.append(c);
+                }
+
+            } else {
+                buf2.append(c);
+            }
+        }
+        return buf2;
     }
 
     /**
@@ -330,7 +403,7 @@ public class XMLUtils {
             } else if (qName.equals("var")) {
                 PyVariable var = createVariable(target, locator, attributes);
 
-                //When we find a var for the referrers, usually we have the id and sometimes we can know how that 
+                //When we find a var for the referrers, usually we have the id and sometimes we can know how that
                 //variable is referenced in the container.
                 String id = attributes.getValue("id");
 
@@ -441,13 +514,13 @@ public class XMLUtils {
     /**
      * Creates an object of
      * EvaluateDebugConsoleExpression.PydevDebugConsoleMessage. Parse the XML in
-     * the below mentioned format 
-     * 		<xml> 
+     * the below mentioned format
+     * 		<xml>
      * 			<output message = console_output_message></output>
-     * 			<error message = console_error_message></error> 
-     * 			<more>true/false</more> 
+     * 			<error message = console_error_message></error>
+     * 			<more>true/false</more>
      * 		</xml>
-     * 
+     *
      * @author hussain.bohra
      */
     static class DebugConsoleMessageInfo extends DefaultHandler {
@@ -494,9 +567,9 @@ public class XMLUtils {
 
     /**
      * Get an instance of a SAXParser and create a new DebugConsoleMessageInfo object.
-     * 
+     *
      * Call the parser passing it a DebugConsoleMessageInfo Object
-     * 
+     *
      * @param payload
      * @return
      * @throws CoreException
@@ -512,7 +585,8 @@ public class XMLUtils {
             debugConsoleMessage = info.debugConsoleMessage;
 
         } catch (SAXException e) {
-            throw new CoreException(PydevDebugPlugin.makeStatus(IStatus.ERROR, "Unexpected XML error", e));
+            throw new CoreException(PydevDebugPlugin.makeStatus(IStatus.ERROR, "Unexpected XML error. Payload: "
+                    + payload, e));
         } catch (IOException e) {
             throw new CoreException(PydevDebugPlugin.makeStatus(IStatus.ERROR, "Unexpected XML error", e));
         }

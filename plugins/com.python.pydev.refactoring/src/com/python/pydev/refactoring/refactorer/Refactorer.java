@@ -16,7 +16,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubProgressMonitor;
-import org.eclipse.ltk.core.refactoring.RefactoringStatus;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.ltk.core.refactoring.participants.RenameRefactoring;
 import org.eclipse.ltk.ui.refactoring.RefactoringWizardOpenOperation;
 import org.python.pydev.core.log.Log;
@@ -37,6 +37,7 @@ import org.python.pydev.shared_ui.EditorUtils;
 
 import com.python.pydev.refactoring.IPyRefactoring2;
 import com.python.pydev.refactoring.wizards.RefactorProcessFactory;
+import com.python.pydev.refactoring.wizards.rename.PyReferenceSearcher;
 import com.python.pydev.refactoring.wizards.rename.PyRenameEntryPoint;
 import com.python.pydev.refactoring.wizards.rename.PyRenameRefactoringWizard;
 import com.python.pydev.ui.hierarchy.HierarchyNodeModel;
@@ -110,7 +111,8 @@ public class Refactorer extends AbstractPyRefactoring implements IPyRefactoring2
         return null;
     }
 
-    public ItemPointer[] findDefinition(RefactoringRequest request) throws TooManyMatchesException {
+    public ItemPointer[] findDefinition(RefactoringRequest request)
+            throws TooManyMatchesException, BadLocationException {
         return new RefactorerFindDefinition().findDefinition(request);
     }
 
@@ -125,7 +127,7 @@ public class Refactorer extends AbstractPyRefactoring implements IPyRefactoring2
 
     public Map<Tuple<String, File>, HashSet<ASTEntry>> findAllOccurrences(RefactoringRequest req)
             throws OperationCanceledException, CoreException {
-        PyRenameEntryPoint processor = new PyRenameEntryPoint(new PyRefactoringRequest(req));
+        PyReferenceSearcher pyReferenceSearcher = new PyReferenceSearcher(req);
         //to see if a new request was not created in the meantime (in which case this one will be cancelled)
         req.checkCancelled();
 
@@ -136,29 +138,26 @@ public class Refactorer extends AbstractPyRefactoring implements IPyRefactoring2
         try {
             monitor.beginTask("Find all occurrences", 100);
             monitor.setTaskName("Find all occurrences");
-            RefactoringStatus status;
             try {
                 req.pushMonitor(new SubProgressMonitor(monitor, 10));
-                status = processor.checkInitialConditions(req.getMonitor());
-                if (status.getSeverity() == RefactoringStatus.FATAL) {
-                    return null;
-                }
+                pyReferenceSearcher.prepareSearch(req);
+            } catch (PyReferenceSearcher.SearchException | BadLocationException e) {
+                return null;
             } finally {
                 req.popMonitor().done();
             }
             req.checkCancelled();
             try {
                 req.pushMonitor(new SubProgressMonitor(monitor, 85));
-                status = processor.checkFinalConditions(req.getMonitor(), null, false);
-                if (status.getSeverity() == RefactoringStatus.FATAL) {
-                    return null;
-                }
+                pyReferenceSearcher.search(req);
+            } catch (PyReferenceSearcher.SearchException e) {
+                return null;
             } finally {
                 req.popMonitor().done();
             }
             req.checkCancelled();
-            occurrencesInOtherFiles = processor.getOccurrencesInOtherFiles();
-            HashSet<ASTEntry> occurrences = processor.getOccurrences();
+            occurrencesInOtherFiles = pyReferenceSearcher.getWorkspaceReferences(req);
+            HashSet<ASTEntry> occurrences = pyReferenceSearcher.getLocalReferences(req);
             occurrencesInOtherFiles.put(new Tuple<String, File>(req.moduleName, req.pyEdit.getEditorFile()),
                     occurrences);
 

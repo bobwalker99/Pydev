@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IPath;
@@ -33,14 +34,15 @@ import org.eclipse.text.edits.TextEditGroup;
 import org.python.pydev.core.FileUtilsFileBuffer;
 import org.python.pydev.core.FullRepIterable;
 import org.python.pydev.core.IPythonNature;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.editor.codecompletion.revisited.modules.ASTEntryWithSourceModule;
 import org.python.pydev.editor.refactoring.RefactoringRequest;
 import org.python.pydev.editorinput.PySourceLocatorBase;
 import org.python.pydev.parser.visitors.scope.ASTEntry;
+import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 
 import com.python.pydev.analysis.scopeanalysis.AstEntryScopeAnalysisConstants;
@@ -173,22 +175,22 @@ public abstract class TextEditCreation {
             IFile workspaceFile = null;
             IPath path = null;
             IDocument doc = null;
-            try {
-                workspaceFile = new PySourceLocatorBase().getWorkspaceFile(tup.o2);
+            if (!SharedCorePlugin.inTestMode()) {
+                IProject project = null;
+                IPythonNature nature = request.nature;
+                if (nature != null) {
+                    project = nature.getProject();
+                }
+
+                workspaceFile = new PySourceLocatorBase().getWorkspaceFile(tup.o2, project);
                 if (workspaceFile == null) {
-                    status.addWarning(org.python.pydev.shared_core.string.StringUtils.format(
+                    status.addWarning(StringUtils.format(
                             "Error. Unable to resolve the file:\n" + "%s\n"
                                     + "to a file in the Eclipse workspace.", tup.o2));
                     continue;
                 }
                 path = workspaceFile.getFullPath();
-            } catch (IllegalStateException e) {
-                //this can happen on tests (but if not on tests, we want to re-throw it
-                String message = e.getMessage();
-                if (message == null || !message.equals("Workspace is closed.")) {
-                    throw e;
-                }
-
+            } else {
                 //otherwise, we're in tests: just keep going...
                 path = Path.fromOSString(tup.o2.getAbsolutePath());
                 doc = new Document(FileUtils.getFileContents(tup.o2));

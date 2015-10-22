@@ -49,12 +49,14 @@ import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.NotConfiguredInterpreterException;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
+import org.python.pydev.editor.codecompletion.revisited.SyncSystemModulesManagerScheduler;
 import org.python.pydev.editor.codecompletion.shell.AbstractShell;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.plugin.nature.PythonNatureListenersManager;
 import org.python.pydev.shared_core.callbacks.ListenerList;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.shared_ui.EditorUtils;
 import org.python.pydev.ui.dialogs.PyDialogHelpers;
@@ -430,8 +432,15 @@ public abstract class AbstractInterpreterManager implements IInterpreterManager 
                             + "\ntrying to create the interpreter info for: " + executableName
                             + "\nThe error output contains:>>" + outTup.o2 + "<<");
         }
+        String executableToUse = executableIsUserSpecified ? executableName : null;
+        if (executableToUse != null) {
+            if (!new File(executableToUse).exists()) {
+                //Only use the user-specified version if the executable does exist (otherwise use the internal info).
+                executableToUse = null;
+            }
+        }
         InterpreterInfo info = InterpreterInfo.fromString(outTup.o1, askUser,
-                executableIsUserSpecified ? executableName : null);
+                executableToUse);
         return info;
     }
 
@@ -454,7 +463,7 @@ public abstract class AbstractInterpreterManager implements IInterpreterManager 
             }
         }
 
-        throw new MisconfigurationException(org.python.pydev.shared_core.string.StringUtils.format(
+        throw new MisconfigurationException(StringUtils.format(
                 "Interpreter: %s not found", nameOrExecutableOrJar));
     }
 
@@ -663,14 +672,31 @@ public abstract class AbstractInterpreterManager implements IInterpreterManager 
             //We also need to restart our code-completion shell after doing that, as we may have new environment variables!
             //And in jython, changing the classpath also needs to restore it.
             for (IInterpreterInfo interpreter : interpreterInfos) {
-                AbstractShell.stopServerShell(interpreter, AbstractShell.COMPLETION_SHELL);
+                for (int id : AbstractShell.getAllShellIds()) {
+                    AbstractShell.stopServerShell(interpreter, id);
+                }
             }
             IInterpreterManagerListener[] managerListeners = listeners.getListeners();
             for (IInterpreterManagerListener iInterpreterManagerListener : managerListeners) {
                 iInterpreterManagerListener.afterSetInfos(this, interpreterInfos);
             }
+
         } finally {
             AbstractShell.restartAllShells();
+        }
+
+        //In the regular process we do not create the global indexing for forced builtins, thus, we schedule a process
+        //now which will be able to do that when checking if things are correct in the configuration.
+        PydevPlugin plugin = PydevPlugin.getDefault();
+        if (plugin != null && interpreterNamesToRestore != null && interpreterNamesToRestore.size() > 0) {
+            SyncSystemModulesManagerScheduler syncScheduler = plugin.syncScheduler;
+            ArrayList<IInterpreterInfo> lst = new ArrayList<>(interpreterNamesToRestore.size());
+            for (IInterpreterInfo info : interpreterInfos) {
+                if (interpreterNamesToRestore.contains(info.getExecutableOrJar())) {
+                    lst.add(info);
+                }
+            }
+            syncScheduler.addToCheck(this, lst.toArray(new IInterpreterInfo[lst.size()]));
         }
     }
 

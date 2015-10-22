@@ -1,8 +1,12 @@
 --------- For nightly ---------
-Update the versions on org.python.pydev.build/build_local.properties
-Execute the build command at com.python.pydev.docs/build_cmd.txt
-Upload contents
-d:\bin\Python265Pydev\python.exe W:\git_deploy_dir\pydev_uploader.py -s W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\repository -d pydev/nightly
+Update the version:
+
+x:
+cd x:\pydev
+python update_version.py 4.3.1
+
+X:\pydev\builders\org.python.pydev.build\build_cmd.bat
+C:\bin\Python27\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository -d https://api.bintray.com/content/fabioz/pydev/nightly/
 
 
 --------- For full build ---------
@@ -17,96 +21,103 @@ d:\bin\Python265Pydev\python.exe W:\git_deploy_dir\pydev_uploader.py -s W:\git_b
 		    - Update version at W:\pydev\plugins\com.python.pydev.docs\build_both.py
 		    - W:\pydev\plugins\com.python.pydev.docs\build_both.py
 
-		Update the versions on org.python.pydev.build/build_local.properties
 		Commit everything
         Merge with master
 
-		Execute the build_cmd.txt in cmd.exe
-		- Note, the Aptana Red Core plugins must be available in the 'vanilla eclipse' so that pydev compiles properly (org.python.pydev.red_core)
+		Execute in cmd.exe: X:\pydev\builders\org.python.pydev.build\build_cmd.bat
 
+		Copy features and plugins folders from X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository to X:\pydev_build\update_site_dir\updates
 
-        Run the build command at com.python.pydev.docs/build_cmd.txt
+copy X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\features\*.jar X:\pydev_build\update_site_dir\updates\features /Y
+copy X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\plugins\*.jar X:\pydev_build\update_site_dir\updates\plugins /Y
 
+		Update the site.xml at X:\pydev_build\update_site_dir\updates
 
-		Copy features and plugins folders from W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\repository to W:\git_update_site_dir\updates
+		Remove the artifacts.jar and content.jar from X:\pydev_build\update_site_dir\updates
 
-copy W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\features\*.jar W:\git_update_site_dir\updates\features /Y
-copy W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\plugins\*.jar W:\git_update_site_dir\updates\plugins /Y
-
-		Update the site.xml at W:\git_update_site_dir\updates
-
-		Remove the artifacts.jar and content.jar from W:\git_update_site_dir\updates
-
-del W:\git_update_site_dir\updates\artifacts.jar
-del W:\git_update_site_dir\updates\content.jar
+del X:\pydev_build\update_site_dir\updates\artifacts.jar
+del X:\pydev_build\update_site_dir\updates\content.jar
 
 		Update artifacts.jar and content.jar
 
 
-D:\bin\eclipse_431_final_clean\eclipse.exe -application org.eclipse.equinox.p2.publisher.EclipseGenerator -updateSite W:\git_update_site_dir\updates\ -site file:W:\git_update_site_dir\updates\site.xml -metadataRepository file:W:\git_update_site_dir\updates -metadataRepositoryName "PyDev Update Site" -artifactRepository file:W:\git_update_site_dir\updates -artifactRepositoryName "PyDev Artifacts" -publishArtifacts -publishArtifactRepository -compress -reusePack200Files -noDefaultIUs -vmargs -Xmx256m
+C:\bin\eclipse45final\eclipse.exe -application org.eclipse.equinox.p2.publisher.EclipseGenerator -updateSite X:\pydev_build\update_site_dir\updates\ -site file:X:\pydev_build\update_site_dir\updates\site.xml -metadataRepository file:X:\pydev_build\update_site_dir\updates -metadataRepositoryName "PyDev Update Site" -artifactRepository file:X:\pydev_build\update_site_dir\updates -artifactRepositoryName "PyDev Artifacts" -publishArtifacts -publishArtifactRepository -compress -reusePack200Files -noDefaultIUs -vmargs -Xmx256m
 
 
-		** Copy site.xml, artifacts.jar and content.jar to W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\repository
+		** Copy site.xml, artifacts.jar and content.jar to X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository
 
-copy W:\git_update_site_dir\updates\site.xml W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\site.xml /Y
-copy W:\git_update_site_dir\updates\artifacts.jar W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\artifacts.jar /Y
-copy W:\git_update_site_dir\updates\content.jar W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\content.jar /Y
+copy X:\pydev_build\update_site_dir\updates\site.xml X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\site.xml /Y
+copy X:\pydev_build\update_site_dir\updates\artifacts.jar X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\artifacts.jar /Y
+copy X:\pydev_build\update_site_dir\updates\content.jar X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\content.jar /Y
 
 
 		** Create zips to distribute
-		
-		Zip: W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable (features and plugins)
-		cd W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable
-		git clone x:\pydev
-		rm -rf pydev\.git
-		Zip W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable\pydev
-
-		** Copy zips from W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable to sourceforge:
 
 
-Submit feature and sources .zip in folder W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable to:
-sftp: frs.sourceforge.net /home/pfs/project/p/py/pydev/pydev/PyDev 3.0 and add zip
+x:\
+cd X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable
+"C:\Program Files\7-Zip\7z" a -tzip -r "PyDev 4.4.0.zip" features plugins
+cd X:\pydev_build\build_dir\pydev
+git archive -o "X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable\PyDev 4.4.0-sources.zip" origin/development
 
-Check if the main download button points to the proper place (not to the sources) -- choose file > file info > set default and give better name.
+		** Copy zips from X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable to sourceforge:
+
+
+        ** Submit feature and sources .zip in folder X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable to:
+
+c:\bin\FileZilla\filezilla.exe sftp://fabioz,pydev@frs.sourceforge.net/home/pfs/project/p/py/pydev/pydev/ --local="X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable"
+
+Note: check pageant if it does not connect.
+
+Check if the main download button points to the proper place (not to the sources) --
+https://sourceforge.net/projects/pydev/files/pydev/PyDev 4.4.0/ -- choose file > file info > set default and give better name.
 
 
 		** Add contents to the update site
 
 
-d:\bin\Python27\python.exe W:\git_deploy_dir\pydev_uploader.py -s W:\git_build_dir\pydev\features\org.python.pydev.p2-repo\target\repository -d pydev/updates
+c:\bin\Python27\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository -d https://api.bintray.com/content/fabioz/pydev/all/
+
+cd X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\
+
+mkdir org.python.pydev.p2-repo-4.4.0-SNAPSHOT
+
+cd org.python.pydev.p2-repo-4.4.0-SNAPSHOT
+
+"C:\Program Files\7-Zip\7z" x ..\org.python.pydev.p2-repo-4.4.0-SNAPSHOT.zip
+
+c:\bin\Python27\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\org.python.pydev.p2-repo-4.4.0-SNAPSHOT -d https://api.bintray.com/content/fabioz/pydev/latest/
 
 
 		** Update homepage:
 
+robocopy X:\pydev\plugins\com.python.pydev.docs\merged_homepage\final X:\openshift\pydev.page2\ /xd .git /xd .openshift  /s
+X:\openshift\pydev.page2\
+mu st
+mu acp "Updated to 4.4.0"
 
-x:\pydev\plugins\com.python.pydev.docs\merged_homepage\final to 173.45.225.54 (/var/www)
+c:\bin\FileZilla\filezilla.exe sftp://fabioz,pydev@frs.sourceforge.net/home/project-web/pydev/htdocs --local="x:\pydev\plugins\com.python.pydev.docs\merged_homepage\final"
+c:\bin\FileZilla\filezilla.exe sftp://deploy@173.45.225.54/var/www --local="x:\pydev\plugins\com.python.pydev.docs\merged_homepage\final"
 
 
 		** Tag repository:
-		  git tag pydev_3_0_0 -a
+		  git tag pydev_4_4_0 -a -m "PyDev 4.4.0"
 		  git push --tags
+
 
 		** Add news in forum (same as e-mail)
 
 		** update version in eclipse marketplace: http://marketplace.eclipse.org/
 
-		** Send e-mail
+		** Add blog post
 
-		** Add blog post / twitter
-		
 		** Add to reddit: http://www.reddit.com/r/Python/submit
 
-        ** Update the versions:
-            On cmd shell (not 4nt):
-set JAVA_HOME=D:\bin\jdk1.7.0_10
-set MAVEN_BIN=D:\bin\apache-maven-3.0.5\bin
-SET MAVEN_OPTS=-Xmx1024m
-set PATH=
-set PATH=C:\Windows\system32;%PATH%
-set PATH=%MAVEN_BIN%;%PATH%
-set PATH=%JAVA_HOME%\bin;%PATH%
+		** Send e-mail
 
-x:
-cd x:\pydev
-D:\bin\apache-maven-3.0.5\bin\mvn -o tycho-versions:set-version -Dtycho.localArtifacts=ignore -DnewVersion=3.1.0-SNAPSHOT
-Then, manually change version on com.python.pydev.runalltests on pom.xml and MANIFEST.MF
+		** Twitter
+
+        ** Update the versions:
+            x:
+            cd x:\pydev
+            python update_version.py 4.3.1

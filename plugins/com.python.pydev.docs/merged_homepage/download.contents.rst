@@ -5,7 +5,7 @@
     <p><strong>LiClipse</strong> </p>
 
 		<p>
-	    Get LiClipse from <a href="http://brainwy.github.io/liclipse/">http://brainwy.github.io/liclipse</a> and use a
+	    Get LiClipse from <a href="http://www.liclipse.com/">http://www.liclipse.com</a> (and help supporting PyDev) and use a
 	    native installer with PyDev builtin.
 	    </p>
         <br>
@@ -50,22 +50,31 @@ Standalone install
 
 PyDev is available in **LiClipse**, which provides a hassle free (and OS-native) experience to install it.
 
-See the  `LiClipse homepage <http://brainwy.github.io/liclipse/>`_ for details on getting it.
+**Note that by supporting LiClipse you also directly support the development PyDev itself.**
 
-Also, if using Django-templates, Mako or RST, `LiClipse <http://brainwy.github.io/liclipse/>`_ is the recommended install as
+See the  `LiClipse homepage <http://www.liclipse.com/>`_ for details on getting it.
+
+Also, if using Django-templates, Mako or RST, `LiClipse <http://www.liclipse.com/>`_ is the recommended install as
 it provides support for those languages (among others such as C++, CoffeScript, HTML, JavaScript, CSS, etc.), along
 with theming support -- which is especially nice for dark themes -- if you're into it :)
+
+
+Profiling
+============
+
+To profile your programs, `PyVmMonitor <http://www.pyvmmonitor.com/>`_ is required and integrated through the
+profile view inside PyDev (window > show view > other > PyDev > profile).
 
 
 Requirements
 ============
 
--  `Java <http://www.javasoft.com/>`_ 7 (If you don't have java 7, the update process may appear to succeed, but PyDev will simply not show in the target installation. Please double-check if you're using a java 7 vm in about > installation details > configuration before trying to install PyDev).
+-  `Java <http://www.javasoft.com/>`_ 7: **Important**: If you don't have java 7, the update process may appear to succeed, but PyDev will simply not show in the target installation. See `PyDev does not appear after install!`_ below for details on how to fix that.
 
 At least one of:
 
--  `Python <http://www.python.org/>`_ **(2.1 or newer)**
--  `Jython <http://www.jython.org/>`_ **(2.1 or newer)**
+-  `Python <http://www.python.org/>`_ **(2.2 or newer)**
+-  `Jython <http://www.jython.org/>`_ **(2.2 or newer)**
 -  `IronPython <http://www.codeplex.com/Wiki/View.aspx?ProjectName=IronPython>`_
    **(2.6 or newer)**
 
@@ -80,6 +89,26 @@ require only the `Platform Runtime
 Binary <http://download.eclipse.org/eclipse/downloads/>`_ (download
 around 45-50 MB), and `Jython <http://www.jython.org/>`_ also requires
 `JDT <http://www.eclipse.org/jdt/>`_.
+
+
+PyDev does not appear after install!
+======================================
+
+Well, the main issue at this time is that PyDev requires Java 7 in order to run. So, if you don't want to support PyDev by
+going the LiClipse route (which is mostly a PyDev standalone plus some goodies), you may have to go through some loops to
+make sure that you're actually using Java 7 to run Eclipse/PyDev (as explained below).
+
+All OSes
+---------
+Make sure you download/install the latest Java 7 JRE or JDK, try restarting to see if it got it automatically.
+
+I.e.: in **help > about > installation details > configuration** check if it's actually using the java 7 version you pointed at.
+
+If it didn't get it automatically, follow the instructions from:
+
+http://wiki.eclipse.org/Eclipse.ini to add the -vm argument to eclipse.ini on "Specifying the JVM" to specify the java 7 vm.
+
+**Note on Mac OS**: You can use the command "/usr/libexec/java_home -v 1.7" to get the base path for the JVM (though you also need to append "/bin/java" to the output of said command to the -vm arg in eclipse.ini).
 
 
 URLs for PyDev as Eclipse plugin

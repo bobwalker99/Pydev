@@ -1,74 +1,39 @@
-PyDev 3.0 Released
-
-
-Hi All,
-
-PyDev 3.0 has been released
-
-Details on PyDev: http://pydev.org
-
-Details on its development: http://pydev.blogspot.com
-
-LiClipse (PyDev standalone with goodies such as support for Django Templates, Mako Templates, Html, Javascript, etc): http://brainwy.github.io/liclipse/
-
+PyDev 4.4.0 Released
 
 Release Highlights:
 -------------------------------
 
-* From now on, PyDev requires Eclipse 3.7 or 4.3 onwards and Java 7! For older versions, keep using PyDev 2.x.
- 
-* Interpreter is now kept up to date with changes to the interpreter, so, pip-installing packages will automatically update internal caches without requiring a manual step.
- 
-* Fixed issue connecting to shell for code-completion (which could halt the IDE).
- 
-* Interactive Console (patches by Jonah Graham)
- 
-    * IPython 1.0 is now supported.
-    
-    * Computational Crystallography Toolbox (CCTBX: http://cctbx.sourceforge.net/) can now be used with PyDev.
-    
-    * Debug support in interactive console (must be enabled in preferences).
-    
-    * User Module Deleter (UMD): forcefully reloads user-loaded modules when using runfile on interactive console (must be enabled in preferences).
-    
-    * GUI event loop integration: more backends are now supported and can be configured in the preferences.
-    
-    * %gui provides customization for the gui event loop integration (i.e.: %gui wx enables wxPython integration).
-    
-    * %edit on IPython will open the file in the PyDev editor.
-    
-    * History of commands is now saved to a persistent file.
-    
-    * Loading of history is faster.
-    
-* Interpreter configuration (patches by Andrew Ferrazzutti)
- 
-    * Interpreter configuration quick auto-config: automatically finds a Python installed and configures it.
+* Improved PyDev Package Explorer to give more information when all elements are filtered.
 
-    * Interpreter configuration advanced auto-config: searches for multiple Python installations in the computer and allows selecting one to configure.
-    
-    * Source folders (PYTHONPATH) are kept updated on renames and moves in the PyDev package explorer.
-    
-* Grammar 3.x accepts u'str'.
- 
-* Fixed project configuration ${PROJECT_DIR_NAME} variable to point to dir name inside Eclipse and not the folder name in filesystem (this could make PyDev miss folders in the project PYTHONPATH).
- 
-* Debugger:
- 
-    * Breakpoints working on files with unicode chars.
-     
-    * patches by Jonah Graham:
-     
-        * Variables can be pretty-printed with right-click > pretty print.
-        
-        * Improved handling for numpy.ndarrays.
-    
-* And as usual, many other bugfixes!
+* Code completion improvements: when parameter is typed in the docstring, assigning it to an instance gives proper code-completion results whe accessing the instance.
+
+* Fixed issues dealing with ansi colors in the interactive console.
+
+* When autopep8 is applied as the code formatting engine, the region selected is used to specify the lines for formatting.
+
+* Minor improvements in the debugger.
+
 
 What is PyDev?
 ---------------------------
 
-PyDev is a plugin that enables users to use Eclipse for Python, Jython and IronPython development -- making Eclipse a first class Python IDE -- It comes with many goodies such as code completion, syntax highlighting, syntax analysis, refactor, debug and many others.
+PyDev is an open-source Python IDE on top of Eclipse for Python, Jython and IronPython development.
+
+It comes with goodies such as code completion, syntax highlighting, syntax analysis, code analysis, refactor, debug, interactive console, etc.
+
+Details on PyDev: http://pydev.org
+Details on its development: http://pydev.blogspot.com
+
+
+What is LiClipse?
+---------------------------
+
+LiClipse is a PyDev standalone with goodies such as support for Multiple cursors, theming, TextMate bundles and a number of other languages such as Django Templates, Jinja2, Kivy Language, Mako Templates, Html, Javascript, etc.
+
+It's also a commercial counterpart which helps supporting the development of PyDev.
+
+Details on LiClipse: http://www.liclipse.com/
+
 
 
 Cheers,
@@ -79,8 +44,11 @@ Fabio Zadrozny
 Software Developer
 
 LiClipse
-http://brainwy.github.io/liclipse
+http://www.liclipse.com
 
 PyDev - Python Development Environment for Eclipse
 http://pydev.org
 http://pydev.blogspot.com
+
+PyVmMonitor - Python Profiler
+http://www.pyvmmonitor.com/
