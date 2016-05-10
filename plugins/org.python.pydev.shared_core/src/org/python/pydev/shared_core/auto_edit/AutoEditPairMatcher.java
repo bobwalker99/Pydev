@@ -19,6 +19,7 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.source.DefaultCharacterPairMatcher;
 import org.python.pydev.shared_core.partitioner.PartitionCodeReader;
 import org.python.pydev.shared_core.string.ICharacterPairMatcher2;
+import org.python.pydev.shared_core.string.StringUtils;
 
 public class AutoEditPairMatcher extends DefaultCharacterPairMatcher implements ICharacterPairMatcher2 {
 
@@ -31,6 +32,7 @@ public class AutoEditPairMatcher extends DefaultCharacterPairMatcher implements 
         this.contentType = contentType;
     }
 
+    @Override
     public int searchForClosingPeer(int offset, char openingPeer, char closingPeer, IDocument document) {
         try {
             PartitionCodeReader reader = new PartitionCodeReader(contentType);
@@ -58,6 +60,7 @@ public class AutoEditPairMatcher extends DefaultCharacterPairMatcher implements 
         }
     }
 
+    @Override
     public int searchForOpeningPeer(int offset, char openingPeer, char closingPeer, IDocument document) {
         try {
             PartitionCodeReader fReader = new PartitionCodeReader(contentType);
@@ -85,6 +88,7 @@ public class AutoEditPairMatcher extends DefaultCharacterPairMatcher implements 
         }
     }
 
+    @Override
     public int searchForAnyOpeningPeer(int offset, IDocument document) {
         try {
             PartitionCodeReader fReader = new PartitionCodeReader(contentType);
@@ -107,7 +111,7 @@ public class AutoEditPairMatcher extends DefaultCharacterPairMatcher implements 
             int c = fReader.read();
             while (c != PartitionCodeReader.EOF) {
                 if (closing.contains((char) c)) { // c == ')' || c == ']' || c == '}' 
-                    char peer = org.python.pydev.shared_core.string.StringUtils.getPeer((char) c);
+                    char peer = StringUtils.getPeer((char) c);
                     Integer iStack = stack.get(peer);
                     iStack++;
                     stack.put(peer, iStack);

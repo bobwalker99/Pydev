@@ -678,4 +678,166 @@ public class PyParser30Test extends PyParserTestBase {
 
         parseLegalDocStr(s);
     }
+
+    public void testIllegal() throws Exception {
+        String s = ""
+                + "a = dict(\n"
+                + " foo.bar = 1\n"
+                + ")\n"
+                + "";
+        Throwable parseILegalDocStrError = parseILegalDocStr(s);
+        assertTrue(!parseILegalDocStrError.toString().contains("ClassCastException"));
+    }
+
+    public void testListRemainder() throws Exception {
+        String s = ""
+                + "(first, middle, *last) = lst"
+                + "";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testAsync() throws Exception {
+        String s = ""
+                + "async def m1():\n"
+                + "    pass";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testAsync1() throws Exception {
+        String s = ""
+                + "@param\n"
+                + "async def m1():\n"
+                + "    pass";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testAsync2() throws Exception {
+        String s = ""
+                + "async with a:\n"
+                + "    pass";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testAsync3() throws Exception {
+        String s = ""
+                + "async with a:\n"
+                + "    pass";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testAwait() throws Exception {
+        String s = ""
+                + "async with a:\n"
+                + "    b = await foo()";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testDotOperator() throws Exception {
+        String s = ""
+                + "a = a @ a"
+                + "";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testDotOperator2() throws Exception {
+        String s = ""
+                + "a @= a"
+                + "";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testAcceptKwargsOnClass() throws Exception {
+        String s = ""
+                + "class F(**args):\n"
+                + "    pass"
+                + "";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testAcceptKwargsAsParam() throws Exception {
+        String s = ""
+                + "dict(**{'1':1})\n"
+                + "";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testAsyncNotKeyword() throws Exception {
+        String s = ""
+                + "class async(object):\n"
+                + "    pass";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testAwaitNotKeyword() throws Exception {
+        String s = ""
+                + "class await(object):\n"
+                + "    pass";
+        parseLegalDocStr(s);
+        parseLegalDocStrWithoutTree(s);
+    }
+
+    public void testUnpacking3() throws Exception {
+        String s = ""
+                + "def test():\n" +
+                "    return (1, *range(3))\n"
+                + "";
+        parseLegalDocStrWithoutTree(s);
+        parseLegalDocStr(s);
+    }
+
+    public void testUnpacking4() throws Exception {
+        String s = ""
+                + "def test():\n" +
+                "    return (1, *[x for x in (1,2)])\n"
+                + "";
+        parseLegalDocStrWithoutTree(s);
+        parseLegalDocStr(s);
+    }
+
+    public void testUnpacking5() throws Exception {
+        String s = ""
+                + "def test():\n" +
+                "    return (1, *(x for x in (1,2)))\n"
+                + "";
+        parseLegalDocStrWithoutTree(s);
+        parseLegalDocStr(s);
+    }
+
+    public void testUnpacking6() throws Exception {
+        String s = ""
+                + "def test():\n" +
+                "    return (1, *{x:x for x in (1,2)})\n"
+                + "";
+        parseLegalDocStrWithoutTree(s);
+        parseLegalDocStr(s);
+    }
+
+    public void testAsyncBackwardCompatibility() throws Exception {
+        String s = "async = 10\n" +
+                "print(async)\n" +
+                "";
+        parseLegalDocStrWithoutTree(s);
+        parseLegalDocStr(s);
+
+    }
+
+    public void testAwaitBackwardCompatibility() throws Exception {
+        String s = "await = 10\n" +
+                "\n" +
+                "";
+        parseLegalDocStrWithoutTree(s);
+        parseLegalDocStr(s);
+
+    }
 }

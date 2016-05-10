@@ -29,6 +29,7 @@ import org.python.pydev.editor.codecompletion.revisited.modules.SourceModule;
 import org.python.pydev.shared_core.callbacks.CallbackWithListeners;
 import org.python.pydev.shared_core.callbacks.ICallbackListener;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_core.string.StringUtils;
 
 import com.python.pydev.analysis.messages.IMessage;
 
@@ -696,6 +697,7 @@ public class OccurrencesAnalyzer2Test extends AnalysisTestsBase {
     List<String> findDefinitionDone = new ArrayList<String>();
     private ICallbackListener<ICompletionState> listener = new ICallbackListener<ICompletionState>() {
 
+        @Override
         public Object call(ICompletionState obj) {
             findDefinitionDone.add(obj.getActivationToken());
             return null;
@@ -710,7 +712,7 @@ public class OccurrencesAnalyzer2Test extends AnalysisTestsBase {
     private void unregisterFindDefinitionListener(String... expected) {
         SourceModule.onFindDefinition = null;
         if (expected.length != findDefinitionDone.size()) {
-            fail(org.python.pydev.shared_core.string.StringUtils.format(
+            fail(StringUtils.format(
                     "Expected: %s (%s) find definition call(s). Found: %s (%s)", expected.length,
                     Arrays.asList(expected), findDefinitionDone.size(), findDefinitionDone));
         }

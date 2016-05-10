@@ -22,6 +22,7 @@ import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.Region;
 import org.eclipse.jface.text.source.ICharacterPairMatcher;
 import org.python.pydev.shared_core.string.ICharacterPairMatcher2;
+import org.python.pydev.shared_core.string.StringUtils;
 
 /**
  * A character pair matcher finds to a character at a certain document offset the matching peer character. It
@@ -62,7 +63,7 @@ public class PythonPairMatcher implements ICharacterPairMatcher, ICharacterPairM
     protected PythonCodeReader fReader = new PythonCodeReader();
 
     public PythonPairMatcher() {
-        this(StringUtils.BRACKETS);
+        this(PyStringUtils.BRACKETS);
     }
 
     /**
@@ -86,6 +87,7 @@ public class PythonPairMatcher implements ICharacterPairMatcher, ICharacterPairM
      * @return the region describing the
      * @see org.eclipse.jface.text.source.ICharacterPairMatcher#match(org.eclipse.jface.text.IDocument, int)
      */
+    @Override
     public IRegion match(IDocument document, int offset) {
 
         fOffset = offset;
@@ -108,6 +110,7 @@ public class PythonPairMatcher implements ICharacterPairMatcher, ICharacterPairM
      * 
      * @see org.eclipse.jface.text.source.ICharacterPairMatcher#getAnchor()
      */
+    @Override
     public int getAnchor() {
         return fAnchor;
     }
@@ -117,6 +120,7 @@ public class PythonPairMatcher implements ICharacterPairMatcher, ICharacterPairM
      * 
      * @see org.eclipse.jface.text.source.ICharacterPairMatcher#dispose()
      */
+    @Override
     public void dispose() {
         clear();
         fDocument = null;
@@ -126,6 +130,7 @@ public class PythonPairMatcher implements ICharacterPairMatcher, ICharacterPairM
     /*
      * @see org.eclipse.jface.text.source.ICharacterPairMatcher#clear()
      */
+    @Override
     public void clear() {
         if (fReader != null) {
             try {
@@ -210,6 +215,7 @@ public class PythonPairMatcher implements ICharacterPairMatcher, ICharacterPairM
      * @return the offset of the closing peer
      * @throws IOException
      */
+    @Override
     public int searchForClosingPeer(int offset, char openingPeer, char closingPeer, IDocument document) {
         try {
             fReader.configureForwardReader(document, offset + 1, document.getLength(), true, true, true);
@@ -246,6 +252,7 @@ public class PythonPairMatcher implements ICharacterPairMatcher, ICharacterPairM
      * @return the offset of the opening peer
      * @throws IOException
      */
+    @Override
     public int searchForOpeningPeer(int offset, char openingPeer, char closingPeer, IDocument document) {
 
         try {
@@ -273,6 +280,7 @@ public class PythonPairMatcher implements ICharacterPairMatcher, ICharacterPairM
         }
     }
 
+    @Override
     public int searchForAnyOpeningPeer(int offset, IDocument document) {
         try {
             fReader.configureBackwardReader(document, offset, true, true, true);
@@ -294,7 +302,7 @@ public class PythonPairMatcher implements ICharacterPairMatcher, ICharacterPairM
             int c = fReader.read();
             while (c != PythonCodeReader.EOF) {
                 if (closing.contains((char) c)) { // c == ')' || c == ']' || c == '}' 
-                    char peer = org.python.pydev.shared_core.string.StringUtils.getPeer((char) c);
+                    char peer = StringUtils.getPeer((char) c);
                     Integer iStack = stack.get(peer);
                     iStack++;
                     stack.put(peer, iStack);

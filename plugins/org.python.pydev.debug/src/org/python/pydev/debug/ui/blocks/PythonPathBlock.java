@@ -22,7 +22,7 @@ import org.python.pydev.debug.ui.launching.PythonRunnerConfig;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.runners.SimpleRunner;
-
+import org.python.pydev.shared_core.string.StringUtils;
 
 /**
  * A control for displaying a list of python paths.
@@ -35,6 +35,7 @@ public class PythonPathBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#createControl(org.eclipse.swt.widgets.Composite)
      */
+    @Override
     public void createControl(Composite parent) {
         Label label = new Label(parent, SWT.NONE);
         label.setText("PYTHONPATH that will be used in the run:");
@@ -48,6 +49,7 @@ public class PythonPathBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#getName()
      */
+    @Override
     public String getName() {
         return "Python path";
     }
@@ -56,6 +58,7 @@ public class PythonPathBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#initializeFrom(org.eclipse.debug.core.ILaunchConfiguration)
      */
+    @Override
     public void initializeFrom(ILaunchConfiguration configuration) {
 
         try {
@@ -110,7 +113,7 @@ public class PythonPathBlock extends AbstractLaunchConfigurationTab {
             if (message == null) {
                 message = "null (see error log for the traceback).";
             }
-            String errorMsg = org.python.pydev.shared_core.string.StringUtils.replaceNewLines(message, " ");
+            String errorMsg = StringUtils.replaceNewLines(message, " ");
 
             fPythonPathList.removeAll();
             fPythonPathList.add(errorMsg);
@@ -122,6 +125,7 @@ public class PythonPathBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#performApply(org.eclipse.debug.core.ILaunchConfigurationWorkingCopy)
      */
+    @Override
     public void performApply(ILaunchConfigurationWorkingCopy configuration) {
         // Nothing to apply, this is a read-only control
         initializeFrom(configuration);
@@ -131,6 +135,7 @@ public class PythonPathBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#setDefaults(org.eclipse.debug.core.ILaunchConfigurationWorkingCopy)
      */
+    @Override
     public void setDefaults(ILaunchConfigurationWorkingCopy configuration) {
         // No defaults to set
     }

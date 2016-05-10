@@ -24,7 +24,7 @@ import org.eclipse.swt.graphics.Drawable;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Display;
-import org.python.pydev.core.docutils.StringUtils;
+import org.python.pydev.core.docutils.PyStringUtils;
 import org.python.pydev.editor.actions.PyOpenAction;
 import org.python.pydev.editor.model.ItemPointer;
 import org.python.pydev.shared_core.string.FastStringBuffer;
@@ -68,7 +68,7 @@ public class PyInformationPresenter extends AbstractInformationPresenter {
      * Creates the reader and properly puts the presentation into place.
      */
     protected Reader createReader(String hoverInfo, TextPresentation presentation) {
-        String str = StringUtils.removeWhitespaceColumnsToLeft(hoverInfo);
+        String str = PyStringUtils.removeWhitespaceColumnsToLeft(hoverInfo);
 
         str = correctLineDelimiters(str);
         str = handlePydevTags(presentation, str);
@@ -218,12 +218,14 @@ public class PyInformationPresenter extends AbstractInformationPresenter {
      * @see IHoverInformationPresenterExtension#updatePresentation(Drawable drawable, String, TextPresentation, int, int)
      * @since 3.2
      */
+    @Override
     public String updatePresentation(Drawable drawable, String hoverInfo, TextPresentation presentation, int maxWidth,
             int maxHeight) {
         if (drawable instanceof StyledText) {
             final StyledText styledText = (StyledText) drawable;
             styledText.addMouseListener(new MouseAdapter() {
 
+                @Override
                 public void mouseDown(MouseEvent e) {
                     int offset;
                     try {

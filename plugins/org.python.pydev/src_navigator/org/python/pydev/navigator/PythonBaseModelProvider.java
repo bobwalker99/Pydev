@@ -48,6 +48,7 @@ import org.eclipse.jface.viewers.AbstractTreeViewer;
 import org.eclipse.jface.viewers.StructuredViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerFilter;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.IWorkingSet;
 import org.eclipse.ui.PlatformUI;
@@ -86,6 +87,8 @@ import org.python.pydev.plugin.preferences.PyTitlePreferencesPage;
 import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.structure.TreeNode;
+import org.python.pydev.shared_ui.SharedUiPlugin;
+import org.python.pydev.shared_ui.UIConstants;
 import org.python.pydev.shared_ui.outline.IParsedItem;
 import org.python.pydev.ui.filetypes.FileTypesPreferencesPage;
 
@@ -114,13 +117,6 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
     public static final String PYDEV_PACKAGE_EXPORER_PROBLEM_MARKER = "org.python.pydev.PydevProjectErrorMarkers";
 
     /**
-     * These are the source folders that can be found in this file provider. The way we
-     * see things in this provider, the python model starts only after some source folder
-     * is found.
-     */
-    private Map<IProject, ProjectInfoForPackageExplorer> projectToSourceFolders = new HashMap<IProject, ProjectInfoForPackageExplorer>();
-
-    /**
      * This is the viewer that we're using to see the contents of this file provider.
      */
     protected CommonViewer viewer;
@@ -142,6 +138,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
      * It's done this way (and not final) because we want to mock it on tests.
      */
     protected static ICallback<List<IWorkingSet>, IWorkspaceRoot> getWorkingSetsCallback = new ICallback<List<IWorkingSet>, IWorkspaceRoot>() {
+        @Override
         public List<IWorkingSet> call(IWorkspaceRoot arg) {
             return Arrays.asList(PlatformUI.getWorkbench().getWorkingSetManager().getWorkingSets());
         }
@@ -258,6 +255,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
     /**
      * Notification received when the pythonpath has been changed or rebuilt.
      */
+    @Override
     public void notifyPythonPathRebuilt(IProject project, IPythonNature nature) {
         if (project == null) {
             return;
@@ -281,6 +279,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
         createAndStartUpdater(project, projectPythonpath);
     }
 
+    @Override
     public void propertyChange(PropertyChangeEvent event) {
         //When a property that'd change an icon changes, the tree must be updated.
         String property = event.getProperty();
@@ -328,7 +327,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
             projectPythonpathSet.add(newPath);
         }
 
-        ProjectInfoForPackageExplorer projectInfo = getProjectInfo(project);
+        ProjectInfoForPackageExplorer projectInfo = ProjectInfoForPackageExplorer.getProjectInfo(project);
         if (projectInfo != null) {
             projectInfo.recreateInfo(project);
 
@@ -414,42 +413,11 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
     }
 
     /**
-     * @return the information on a project. Can create it if it's not available.
-     */
-    protected synchronized ProjectInfoForPackageExplorer getProjectInfo(final IProject project) {
-        if (project == null) {
-            return null;
-        }
-        Map<IProject, ProjectInfoForPackageExplorer> p = projectToSourceFolders;
-        if (p != null) {
-            ProjectInfoForPackageExplorer projectInfo = p.get(project);
-            if (projectInfo == null) {
-                if (!project.isOpen()) {
-                    return null;
-                }
-                //No project info: create it
-                projectInfo = p.get(project);
-                if (projectInfo == null) {
-                    projectInfo = new ProjectInfoForPackageExplorer(project);
-                    p.put(project, projectInfo);
-                }
-            } else {
-                if (!project.isOpen()) {
-                    p.remove(project);
-                    projectInfo = null;
-                }
-            }
-            return projectInfo;
-        }
-        return null;
-    }
-
-    /**
      * @param object: the resource we're interested in
      * @return a set with the PythonSourceFolder that exist in the project that contains it
      */
     protected Set<PythonSourceFolder> getProjectSourceFolders(IProject project) {
-        ProjectInfoForPackageExplorer projectInfo = getProjectInfo(project);
+        ProjectInfoForPackageExplorer projectInfo = ProjectInfoForPackageExplorer.getProjectInfo(project);
         if (projectInfo != null) {
             return projectInfo.sourceFolders;
         }
@@ -569,7 +537,12 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
         } else if (parentElement instanceof IWorkspaceRoot) {
             switch (topLevelChoice.getRootMode()) {
                 case TopLevelProjectsOrWorkingSetChoice.WORKING_SETS:
-                    return PlatformUI.getWorkbench().getWorkingSetManager().getWorkingSets();
+                    IWorkingSet[] workingSets = PlatformUI.getWorkbench().getWorkingSetManager().getWorkingSets();
+                    if (workingSets == null || workingSets.length == 0) {
+                        TreeNode noWorkingSets = createErrorNoWorkingSetsDefined(parentElement);
+                        return new Object[] { noWorkingSets };
+                    }
+                    return workingSets;
                 case TopLevelProjectsOrWorkingSetChoice.PROJECTS:
                     //Just go on...
             }
@@ -578,6 +551,9 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
             if (parentElement instanceof IWorkingSet) {
                 IWorkingSet workingSet = (IWorkingSet) parentElement;
                 childrenToReturn = workingSet.getElements();
+                if (childrenToReturn == null || childrenToReturn.length == 0) {
+                    childrenToReturn = new Object[] { createErrorWorkingSetWithoutChildren(workingSet) };
+                }
             }
 
         } else if (parentElement instanceof TreeNode<?>) {
@@ -592,6 +568,28 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
             System.out.println("getChildren RETURN: " + childrenToReturn);
         }
         return childrenToReturn;
+    }
+
+    private TreeNode<LabelAndImage> createErrorWorkingSetWithoutChildren(IWorkingSet parentElement) {
+        Image img = SharedUiPlugin.getImageCache().get(UIConstants.WARNING);
+        TreeNode<LabelAndImage> root = new TreeNode<LabelAndImage>(parentElement,
+                new LabelAndImage("Warning: working set: " + parentElement.getName() + " does not have any contents.",
+                        img));
+        new TreeNode<>(root, new LabelAndImage(
+                "Access the menu (Ctrl+F10) to edit the working set.", null));
+        new TreeNode<>(root, new LabelAndImage(
+                "Or select the working set in the tree and use Alt+Enter.", null));
+        return root;
+    }
+
+    public TreeNode<LabelAndImage> createErrorNoWorkingSetsDefined(Object parentElement) {
+        Image img = SharedUiPlugin.getImageCache().get(UIConstants.WARNING);
+        TreeNode<LabelAndImage> root = new TreeNode<LabelAndImage>(parentElement,
+                new LabelAndImage("Warning: Top level elements set to working sets but no working sets are defined.",
+                        img));
+        new TreeNode<>(root, new LabelAndImage(
+                "Access the menu (Ctrl+F10) to change to show projects or create a working set.", null));
+        return root;
     }
 
     /**
@@ -841,7 +839,6 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
     @Override
     public void dispose() {
         try {
-            this.projectToSourceFolders = null;
             if (viewer != null) {
                 IWorkspace[] workspace = null;
                 Object obj = viewer.getInput();
@@ -955,7 +952,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
         HashSet<IWorkspace> set = new HashSet<IWorkspace>();
 
         for (IAdaptable adaptable : elements) {
-            IResource adapter = (IResource) adaptable.getAdapter(IResource.class);
+            IResource adapter = adaptable.getAdapter(IResource.class);
             if (adapter != null) {
                 IWorkspace workspace = adapter.getWorkspace();
                 set.add(workspace);
@@ -969,6 +966,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
     /*
      * (non-Javadoc) Method declared on IResourceChangeListener.
      */
+    @Override
     public final void resourceChanged(final IResourceChangeEvent event) {
         processDelta(event.getDelta());
     }
@@ -1015,6 +1013,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
                  *
                  * @see java.lang.Runnable#run()
                  */
+                @Override
                 public void run() {
                     runUpdates(runnables);
                 }
@@ -1191,6 +1190,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
         final boolean hasRename = numMovedFrom > 0 && numMovedTo > 0;
 
         Runnable addAndRemove = new Runnable() {
+            @Override
             public void run() {
                 if (viewer instanceof AbstractTreeViewer) {
                     AbstractTreeViewer treeViewer = viewer;
@@ -1278,6 +1278,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
      */
     private Runnable getRefreshRunnable(final IResource resource) {
         return new Runnable() {
+            @Override
             public void run() {
                 ((StructuredViewer) viewer).refresh(getResourceInPythonModel(resource));
             }
@@ -1289,6 +1290,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
      */
     private Runnable getUpdateRunnable(final IResource resource) {
         return new Runnable() {
+            @Override
             public void run() {
                 ((StructuredViewer) viewer).update(getResourceInPythonModel(resource), null);
             }

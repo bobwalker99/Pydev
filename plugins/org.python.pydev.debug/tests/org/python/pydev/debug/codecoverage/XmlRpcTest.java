@@ -27,6 +27,7 @@ import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.io.ThreadStreamReader;
 import org.python.pydev.shared_core.net.SocketUtil;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_interactive_console.console.IXmlRpcClient;
 import org.python.pydev.shared_interactive_console.console.ScriptXmlRpcClient;
 
@@ -88,9 +89,11 @@ public class XmlRpcTest extends TestCase {
         XmlRpcServer serverToHandleRawInput = this.webServer.getXmlRpcServer();
         serverToHandleRawInput.setHandlerMapping(new XmlRpcHandlerMapping() {
 
+            @Override
             public XmlRpcHandler getHandler(String handlerName) throws XmlRpcNoSuchHandlerException, XmlRpcException {
                 return new XmlRpcHandler() {
 
+                    @Override
                     public Object execute(XmlRpcRequest request) throws XmlRpcException {
                         return "input_request";
                     }
@@ -156,22 +159,23 @@ public class XmlRpcTest extends TestCase {
         }
 
         try {
-            IXmlRpcClient client = new ScriptXmlRpcClient(process, err, out);
+            IXmlRpcClient client = new ScriptXmlRpcClient(process);
             client.setPort(port);
 
-            printArr(client.execute("addExec", new Object[] { "abc = 10" }));
-            printArr(client.execute("addExec", new Object[] { "abc" }));
-            printArr(client.execute("addExec", new Object[] { "import sys" }));
-            printArr(client.execute("addExec", new Object[] { "class Foo:" }));
-            printArr(client.execute("addExec", new Object[] { "    print 20" }));
-            printArr(client.execute("addExec", new Object[] { "    print >> sys.stderr, 30" }));
-            printArr(client.execute("addExec", new Object[] { "" }));
-            printArr(client.execute("addExec", new Object[] { "foo=Foo()" }));
-            printArr(client.execute("addExec", new Object[] { "foo.__doc__=None" }));
+            printArr(client.execute("execLine", new Object[] { "abc = 10" }));
+            printArr(client.execute("execLine", new Object[] { "abc" }));
+            printArr(client.execute("execLine", new Object[] { "import sys" }));
+            printArr(client.execute("execLine", new Object[] { "class Foo:" }));
+            printArr(client.execute("execLine", new Object[] { "    print 20" }));
+            printArr(client.execute("execLine", new Object[] { "    print >> sys.stderr, 30" }));
+            printArr(client.execute("execLine", new Object[] { "" }));
+            printArr(client.execute("execLine", new Object[] { "foo=Foo()" }));
+            printArr(client.execute("execLine", new Object[] { "foo.__doc__=None" }));
             printArr("start get completions");
             Object[] completions = (Object[]) client.execute("getCompletions", new Object[] { "fo" });
             //the completions may come in any order, we must sort it for the test and remove things we don't expect.
             Arrays.sort(completions, new Comparator<Object>() {
+                @Override
                 public int compare(Object o1, Object o2) {
                     String s1 = (String) ((Object[]) o1)[0];
                     String s2 = (String) ((Object[]) o2)[0];
@@ -190,11 +194,11 @@ public class XmlRpcTest extends TestCase {
             printArr("end get completions");
 
             printArr("start raw_input");
-            printArr(client.execute("addExec", new Object[] { "raw_input()" }));
+            printArr(client.execute("execLine", new Object[] { "raw_input()" }));
             printArr("finish raw_input");
-            printArr(client.execute("addExec", new Object[] { "'foo'" }));
+            printArr(client.execute("execLine", new Object[] { "'foo'" }));
             //            System.out.println("Ask exit");
-            printArr(client.execute("addExec", new Object[] { "sys.exit(0)" }));
+            printArr(client.execute("execLine", new Object[] { "sys.exit(0)" }));
             //            System.out.println("End Ask exit");
         } finally {
             if (process != null) {
@@ -246,7 +250,7 @@ public class XmlRpcTest extends TestCase {
                             return;
                         }
                     }
-                    String errorMessage = org.python.pydev.shared_core.string.StringUtils.format(
+                    String errorMessage = StringUtils.format(
                             "Expected: >>%s<< and not: >>%s<< (position:%s)",
                             expected, found, next);
                     assertEquals(errorMessage, expected, found);

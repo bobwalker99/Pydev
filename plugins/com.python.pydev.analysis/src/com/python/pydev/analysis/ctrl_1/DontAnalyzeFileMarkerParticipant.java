@@ -16,6 +16,7 @@ import org.eclipse.swt.graphics.Image;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.editor.PyEdit;
+import org.python.pydev.editor.correctionassist.IgnoreCompletionProposal;
 import org.python.pydev.editor.correctionassist.heuristics.IAssistProps;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.shared_ui.ImageCache;
@@ -33,6 +34,7 @@ public class DontAnalyzeFileMarkerParticipant implements IAssistProps {
         annotationImage = analysisImageCache.get(UIConstants.ASSIST_ANNOTATION);
     }
 
+    @Override
     public List<ICompletionProposal> getProps(PySelection ps, ImageCache imageCache, File f, IPythonNature nature,
             PyEdit edit, int offset) throws BadLocationException {
         List<ICompletionProposal> props = new ArrayList<ICompletionProposal>();
@@ -56,6 +58,7 @@ public class DontAnalyzeFileMarkerParticipant implements IAssistProps {
         return props;
     }
 
+    @Override
     public boolean isValid(PySelection ps, String sel, PyEdit edit, int offset) {
         return ps.getCursorLine() == 0
                 && ps.getCursorLineContents().indexOf(AnalysisRunner.PYDEV_CODE_ANALYSIS_IGNORE) == -1;

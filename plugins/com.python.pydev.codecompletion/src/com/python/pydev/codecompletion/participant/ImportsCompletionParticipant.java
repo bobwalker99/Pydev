@@ -51,6 +51,7 @@ public class ImportsCompletionParticipant implements IPyDevCompletionParticipant
 
     // Console completions ---------------------------------------------------------------------------------------------
 
+    @Override
     public Collection<ICompletionProposal> computeConsoleCompletions(ActivationTokenAndQual tokenAndQual,
             List<IPythonNature> naturesUsed, IScriptConsoleViewer viewer, int requestOffset) {
         ArrayList<ICompletionProposal> completions = new ArrayList<ICompletionProposal>();
@@ -151,10 +152,11 @@ public class ImportsCompletionParticipant implements IPyDevCompletionParticipant
                 }
                 alreadyFound.add(found);
 
+                String displayAsStr = realImportRep.toString();
                 PyConsoleCompletion proposal = new PyConsoleCompletion(importRep, requestOffset - qlen, qlen,
                         realImportRep.length(), img, found, (IContextInformation) null, "",
-                        lowerImportRep.equals(lowerQual) ? IPyCompletionProposal.PRIORITY_LOCALS_2
-                                : IPyCompletionProposal.PRIORITY_PACKAGES, realImportRep.toString(), viewer);
+                        displayAsStr.toLowerCase().equals(lowerQual) ? IPyCompletionProposal.PRIORITY_PACKAGES_EXACT
+                                : IPyCompletionProposal.PRIORITY_PACKAGES, displayAsStr, viewer);
 
                 completions.add(proposal);
             }
@@ -226,10 +228,17 @@ public class ImportsCompletionParticipant implements IPyDevCompletionParticipant
                         realImportRep.append(strings[1]);
                     }
 
-                    CtxInsensitiveImportComplProposal proposal = new CtxInsensitiveImportComplProposal(importRep,
-                            request.documentOffset - request.qlen, request.qlen, realImportRep.length(), img,
-                            displayString.toString(), (IContextInformation) null, "",
-                            lowerImportRep.equals(lowerQual) ? IPyCompletionProposal.PRIORITY_LOCALS_2
+                    String displayAsStr = displayString.toString();
+                    CtxInsensitiveImportComplProposal proposal = new CtxInsensitiveImportComplProposal(
+                            importRep,
+                            request.documentOffset - request.qlen,
+                            request.qlen,
+                            realImportRep.length(),
+                            img,
+                            displayAsStr,
+                            (IContextInformation) null,
+                            "",
+                            displayAsStr.toLowerCase().equals(lowerQual) ? IPyCompletionProposal.PRIORITY_PACKAGES_EXACT
                                     : IPyCompletionProposal.PRIORITY_PACKAGES, realImportRep.toString());
 
                     list.add(proposal);
@@ -250,34 +259,40 @@ public class ImportsCompletionParticipant implements IPyDevCompletionParticipant
         return importedNames;
     }
 
+    @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public Collection getGlobalCompletions(CompletionRequest request, ICompletionState state)
             throws MisconfigurationException {
         return getThem(request, state, AutoImportsPreferencesPage.doAutoImport());
     }
 
+    @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public Collection getCompletionsForMethodParameter(ICompletionState state, ILocalScope localScope,
             Collection<IToken> interfaceForLocal) {
         return Collections.emptyList();
     }
 
+    @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public Collection getStringGlobalCompletions(CompletionRequest request, ICompletionState state)
             throws MisconfigurationException {
         return getThem(request, state, false);
     }
 
+    @Override
     public Collection<Object> getArgsCompletion(ICompletionState state, ILocalScope localScope,
             Collection<IToken> interfaceForLocal) {
         throw new RuntimeException("Deprecated");
     }
 
+    @Override
     public Collection<IToken> getCompletionsForTokenWithUndefinedType(ICompletionState state, ILocalScope localScope,
             Collection<IToken> interfaceForLocal) {
         return Collections.emptyList();
     }
 
+    @Override
     public Collection<IToken> getCompletionsForType(ICompletionState state) {
         return null;
     }

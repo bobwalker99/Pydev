@@ -4,6 +4,12 @@
 		<h1>Development Info</h1>
 		<p><a class="reference external" href="http://pydev.blogspot.com/">PyDev Blog</a></p>
 		</div>
+
+    	<div class="section" id="about">
+		<h1>Contact, Issues</h1>
+		<p><a class="reference external" href="about.html">See About</a></p>
+		</div>
+
 		<div class="section" id="releases-history">
 		<h1>Releases History:</h1>
 		<p><a class="reference external" href="history_pydev.html">History for PyDev</a></p>
@@ -40,6 +46,7 @@ PyDev is a **Python IDE** for **Eclipse**, which may be used in **Python**, **Jy
 .. _Features Matrix: manual_adv_features.html
 .. _History for PyDev Extensions: history_pydev_extensions.html
 .. _History for PyDev: history_pydev.html
+.. _View release notes for previous releases: history_pydev.html
 .. _PyDev Blog: http://pydev.blogspot.com/
 
 .. _Type hinting: manual_adv_type_hints.html
@@ -58,6 +65,7 @@ PyDev is a **Python IDE** for **Eclipse**, which may be used in **Python**, **Jy
 .. _Unittest integration: manual_adv_pyunit.html
 .. _Code coverage: manual_adv_coverage.html
 .. _video: video_pydev_20.html
+.. _Find Referrers in Debugger: manual_adv_debugger_find_referrers.html
 
 It comes with many goodies such as:
 
@@ -71,10 +79,12 @@ It comes with many goodies such as:
 | * `Refactoring`_                                                                                                                                                                                                                                         |    <a href="video_pydev_20.html" border=0><img class="link" src="images/video/snap.png" alt="PyDev 2.0 video" title="Click to see video" /></a>  |
 | * `Debugger`_                                                                                                                                                                                                                                            |                                                                                                                                                  |
 | * `Remote debugger`_                                                                                                                                                                                                                                     |                                                                                                                                                  |
+| * `Find Referrers in Debugger`_                                                                                                                                                                                                                          |                                                                                                                                                  |
 | * `Tokens browser`_                                                                                                                                                                                                                                      |                                                                                                                                                  |
 | * `Interactive console`_                                                                                                                                                                                                                                 |                                                                                                                                                  |
 | * `Unittest integration`_                                                                                                                                                                                                                                |                                                                                                                                                  |
 | * `Code coverage`_                                                                                                                                                                                                                                       |                                                                                                                                                  |
+| * Find References (Ctrl+Shift+G)                                                                                                                                                                                                                         |                                                                                                                                                  |
 | * **and many others**:                                                                                                                                                                                                                                   |                                                                                                                                                  |
 +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------+
 
@@ -83,14 +93,20 @@ For more details on the provided features, check the `Features Matrix`_.
 
 Important
 ==========
-First time users are strongly advised to read the `Getting started guide`_  which explains how to properly configure PyDev
+First time users are strongly advised to read the `Getting started guide`_  which explains how to properly configure PyDev.
 
 
 LiClipse
 ==========
 
-The recommended way of using PyDev is bundled in `LiClipse <http://brainwy.github.io/liclipse/>`_, which provides PyDev builtin as well as
-support for other languages such as Django Templates, Mako, RST, C++, CoffeScript, Dart, HTML, JavaScript, CSS, among others.
+The recommended way of using PyDev is bundled in `LiClipse <http://www.liclipse.com/>`_, which provides PyDev builtin as well as
+support for other languages such as Django Templates, Mako, RST, C++, CoffeScript, Dart, HTML, JavaScript, CSS, among others (also, by licensing
+LiClipse you directly support the development of PyDev).
+
+PyVmMonitor
+============
+
+If you'd like to analyze the performance of your programs, check `PyVmMonitor <http://www.pyvmmonitor.com/>`_.
 
 
 Gold Sponsors
@@ -98,11 +114,26 @@ Gold Sponsors
 
 .. raw:: html
 
-   <!--Added 2013-07-25-->
-   <a href="http://www.kichwacoders.com/" border=0><img class="sponsors" src="images/sponsors/kichwacoders.png" alt="Kichwacoders" title="http://www.kichwacoders.com/" /></a>
+   <!--Added 2014-07-16-->
+   <a href="http://www.liclipse.com/" border=0><img class="sponsors" src="images/sponsors/liclipse.png" alt="LiClipse" title="http://www.liclipse.com/" /></a>
    <a href="http://www.tracetronic.com" border=0><img class="sponsors" src="images/sponsors/tracetronic.png" alt="Tracetronic" title="http://www.tracetronic.com/" /></a>
-   <a href="http://brainwy.github.io/liclipse/" border=0><img class="sponsors" src="images/sponsors/liclipse.png" alt="LiClipse" title="http://brainwy.github.io/liclipse/" /></a>
+   <a href="http://www.kichwacoders.com/" border=0><img class="sponsors" src="images/sponsors/kichwacoders.png" alt="Kichwacoders" title="http://www.kichwacoders.com/" /></a>
+   <br/>
+   <a href="http://www.dawnsci.org/" border=0><img class="sponsors" src="images/sponsors/dawnsci.png" alt="Dawn science" title="http://www.dawnsci.org/" /></a>
+   <a href="http://www.pyvmmonitor.com/" border=0><img class="sponsors" src="images/sponsors/pyvmmonitor.png" alt="PyVmMonitor" title="http://www.pyvmmonitor.com/" /></a>
    <a href="http://www.squishlist.com/" border=0><img class="sponsors" src="images/sponsors/squishlist.png" alt="Squishlist" title="http://www.squishlist.com/" /></a>
+
+Silver Sponsors
+----------------
+
+.. raw:: html
+
+   <!--Added 2016-04-02-->
+   <a href="http://www.chameleonjohn.com" border=0><img class="sponsors" src="images/sponsors/logo_chameleon_john.png" alt="ChameleonJohn Coupons" title="http://www.chameleonjohn.com" /></a>
+   <!--Added 2014-09-02-->
+   <a href="http://www.orsoft.net" border=0><img class="sponsors" src="images/sponsors/logo_orsoft.png" alt="ORSOFT GmbH" title="http://www.orsoft.net" /></a>
+   <!--Added 2014-07-16-->
+   <a href="http://vegardit.com" border=0><img class="sponsors" src="images/sponsors/vegardit.png" alt="Vegard IT" title="http://vegardit.com" /></a>
 
 Supporting PyDev
 =================
@@ -110,69 +141,76 @@ Supporting PyDev
 Thank you to all PyDev supporters: https://sw-brainwy.rhcloud.com/supporters/PyDev.
 
 
-
 To show your appreciation for PyDev and to help to keep it going too, support it at https://sw-brainwy.rhcloud.com/. Supporter benefits
 include having votes to decide the next tackled tickets and space in the homepage.
 
+Companies have the option of sponsoring PyDev through corporate sponsorship. See `About/Sponsorship <about.html>`_ for details.
+
 
 .. _`Getting started guide`: manual_101_root.html
+.. _`update sites page`: update_sites/index.html
+.. _`the download page`: download.html#pydev-does-not-appear-after-install
 
-Release 3.0
+
+Release 5.0.0
 ==========================
 
-* From now on, PyDev requires Eclipse 3.7 or 4.3 onwards and Java 7! For older versions, keep using PyDev 2.x.
+* **Important** PyDev now requires Java 8.
 
-* Interpreter is now kept up to date with changes to the interpreter, so, pip-installing packages will automatically update internal caches without requiring a manual step.
+	* PyDev 4.5.5 is the last release supporting Java 7.
+	* See: `update sites page`_ for the update site of older versions of PyDev.
+	* See: the **PyDev does not appear after install** section on `the download page`_ for help on using a Java 8 vm in Eclipse.
 
-* Fixed issue connecting to shell for code-completion (which could halt the IDE).
+* PyUnit view now persists its state across restarts.
 
-* Interactive Console (patches by Jonah Graham)
+* Fixed issue in super() code completion.
 
-    * IPython 1.0 is now supported.
-    
-    * Computational Crystallography Toolbox (CCTBX: http://cctbx.sourceforge.net/) can now be used with PyDev.
-    
-    * Debug support in interactive console (must be enabled in preferences).
-    
-    * User Module Deleter (UMD): forcefully reloads user-loaded modules when using runfile on interactive console (must be enabled in preferences).
-    
-    * GUI event loop integration: more backends are now supported and can be configured in the preferences.
-    
-    * %gui provides customization for the gui event loop integration (i.e.: %gui wx enables wxPython integration). 
-    
-    * %edit on IPython will open the file in the PyDev editor.
-    
-    * History of commands is now saved to a persistent file.
-    
-    * Loading of history is faster.
-     
-* Interpreter configuration (patches by Andrew Ferrazzutti)
+* PyDev.Debugger updated to the latest version.
 
-    * Interpreter configuration quick auto-config: automatically finds a Python installed and configures it.
-    
-    * Interpreter configuration advanced auto-config: searches for multiple Python installations in the computer and allows selecting one to configure.
-    
-    * Source folders (PYTHONPATH) are kept updated on renames and moves in the PyDev package explorer.
- 
-* Grammar 3.x accepts u'str'.
- 
-* Fixed project configuration ${PROJECT_DIR_NAME} variable to point to dir name inside Eclipse and not the folder name in filesystem (this could make PyDev miss folders in the project PYTHONPATH).
- 
+* No longer showing un-needed shell on Linux on startup when showing donation dialog.
+
+* Fixed pyedit_wrap_expression to avoid halt of the IDE on Ctrl+1 -> Wrap expression.
+
+
+Release 4.5.5
+==========================
+
+* Code Completion
+
+	* namedtuple now recognized in code-completion.
+	* Code completion now available for super() (#PyDev-592).
+
+* PyTest integration
+
+	* Files in tracebacks now clickable in latest pytest.
+	* Skips not marked as errors in the latest pytest.
+
+* Parser:
+
+	* async and await should also be valid as names in Python 3 grammar (#PyDev-593).
+	* Additional Unpacking Generalizations from PEP 448 recognized (#PyDev-667).
+	* Made clearer in the UI that Python 3 grammar should support Python 3.0 to Python 3.5.
+
 * Debugger:
- 
-    * Breakpoints working on files with unicode chars.
 
-    * patches by Jonah Graham: 
-    
-        * Variables can be pretty-printed with right-click > pretty print.
-        
-        * Improved handling for numpy.ndarrays. 
- 
-* And as usual, many other bugfixes! 
-    
-    
-    
-    
-    
+	* tests package should no longer pollute name space (Removed tests directories from build: #PyDev-663).
+	* Multiprocessing working properly under debugger (Celery Cannot Run in Debug Mode: #PyDev-662).
 
-    
+* Others:
+
+	* Introduce source features/plugins (patch by Andreas Pakulat).
+	* Default test runner now works with Django >= 1.8 (#PyDev 614, patch by Ville Skyttä).
+
+
+Release 4.5.4
+==========================
+
+* Debugger
+
+	* Fixed critical issue, in which the main process was killed during the debugging when a subprocess exited when	"Attach to subprocess automatically while debugging" was enabled (#PyDev 656).
+
+	* Fixed issue which broke the action to get the referrers of some object in the debugger (right-click variable in debugger > get referrers).
+
+
+`View release notes for previous releases`_
+

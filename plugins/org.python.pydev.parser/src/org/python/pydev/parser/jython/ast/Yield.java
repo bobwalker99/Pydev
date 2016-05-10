@@ -13,6 +13,7 @@ public final class Yield extends exprType {
         this.yield_from = yield_from;
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -21,6 +22,7 @@ public final class Yield extends exprType {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (this == obj)
             return true;
@@ -39,12 +41,15 @@ public final class Yield extends exprType {
         return true;
     }
 
+    @Override
     public Yield createCopy() {
         return createCopy(true);
     }
 
+    @Override
     public Yield createCopy(boolean copyComments) {
-        Yield temp = new Yield(value != null ? (exprType) value.createCopy(copyComments) : null, yield_from);
+        Yield temp = new Yield(value != null ? (exprType) value.createCopy(copyComments) : null,
+                yield_from);
         temp.beginLine = this.beginLine;
         temp.beginColumn = this.beginColumn;
         if (this.specialsBefore != null && copyComments) {
@@ -66,6 +71,7 @@ public final class Yield extends exprType {
         return temp;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("Yield[");
         sb.append("value=");
@@ -77,10 +83,12 @@ public final class Yield extends exprType {
         return sb.toString();
     }
 
+    @Override
     public Object accept(VisitorIF visitor) throws Exception {
         return visitor.visitYield(this);
     }
 
+    @Override
     public void traverse(VisitorIF visitor) throws Exception {
         if (value != null) {
             value.accept(visitor);

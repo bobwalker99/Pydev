@@ -51,6 +51,7 @@ public class AssistDocString implements IAssistProps {
      * @see org.python.pydev.editor.correctionassist.heuristics.IAssistProps#getProps(org.python.pydev.core.docutils.PySelection,
      *      org.python.pydev.shared_ui.ImageCache)
      */
+    @Override
     public List<ICompletionProposal> getProps(PySelection ps, ImageCache imageCache, File f, IPythonNature nature,
             PyEdit edit, int offset) throws BadLocationException {
         ArrayList<ICompletionProposal> l = new ArrayList<ICompletionProposal>();
@@ -68,8 +69,8 @@ public class AssistDocString implements IAssistProps {
 
         String initial = PySelection.getIndentationFromLine(ps.getCursorLineContents());
         String delimiter = PyAction.getDelimiter(ps.getDoc());
-        String indentation = edit != null ? edit.getIndentPrefs().getIndentationString() : DefaultIndentPrefs.get()
-                .getIndentationString();
+        String indentation = edit != null ? edit.getIndentPrefs().getIndentationString() : DefaultIndentPrefs.get(
+                nature).getIndentationString();
         String inAndIndent = delimiter + initial + indentation;
 
         FastStringBuffer buf = new FastStringBuffer();
@@ -107,6 +108,7 @@ public class AssistDocString implements IAssistProps {
         }
         l.add(new PyCompletionProposal(comp, offsetPosToAdd, 0, newOffset, image, "Make docstring", null, null,
                 IPyCompletionProposal.PRIORITY_DEFAULT) {
+            @Override
             public void apply(IDocument document) {
                 //remove the next line if it is a pass...
                 PySelection ps = new PySelection(document, fReplacementOffset);
@@ -125,6 +127,7 @@ public class AssistDocString implements IAssistProps {
      * @see org.python.pydev.editor.correctionassist.heuristics.IAssistProps#isValid(org.python.pydev.core.docutils.PySelection,
      *      java.lang.String)
      */
+    @Override
     public boolean isValid(PySelection ps, String sel, PyEdit edit, int offset) {
         return ps.isInFunctionLine(true) || ps.isInClassLine();
     }

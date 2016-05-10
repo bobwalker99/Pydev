@@ -16,6 +16,7 @@ import java.io.File;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.osgi.framework.Bundle;
+import org.python.pydev.shared_core.bundle.BundleUtils;
 import org.python.pydev.shared_ui.ImageCache;
 
 /**
@@ -33,6 +34,7 @@ public class BundleInfo implements IBundleInfo {
      * @throws CoreException
      * @see org.python.pydev.shared_ui.bundle.IBundleInfo#getRelativePath(org.eclipse.core.runtime.IPath)
      */
+    @Override
     public File getRelativePath(IPath relative) throws CoreException {
         return BundleUtils.getRelative(relative, bundle);
     }
@@ -40,6 +42,7 @@ public class BundleInfo implements IBundleInfo {
     /**
      * @see org.python.pydev.shared_ui.bundle.IBundleInfo#getPluginID()
      */
+    @Override
     public String getPluginID() {
         return bundle.getSymbolicName();
     }
@@ -49,6 +52,7 @@ public class BundleInfo implements IBundleInfo {
     /**
      * @see org.python.pydev.shared_ui.bundle.IBundleInfo#getImageCache()
      */
+    @Override
     public ImageCache getImageCache() {
         if (imageCache == null) {
             imageCache = new ImageCache(bundle.getEntry("/"));

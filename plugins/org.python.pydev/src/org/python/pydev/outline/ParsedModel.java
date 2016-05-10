@@ -34,8 +34,8 @@ public class ParsedModel extends BaseModel {
     /**
      * @param outline - If not null, view to notify when parser changes
      */
-    public ParsedModel(PyOutlinePage outline, IBaseEditor editor) {
-        super(outline, editor);
+    public ParsedModel(IBaseEditor editor) {
+        super(editor);
     }
 
     @Override
@@ -65,6 +65,7 @@ public class ParsedModel extends BaseModel {
         return newRoot;
     }
 
+    @Override
     public SimpleNode[] getSelectionPosition(StructuredSelection sel) {
         if (sel.size() == 1) { // only sync the editing view if it is a single-selection
             Object firstElement = sel.getFirstElement();

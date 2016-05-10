@@ -3,7 +3,6 @@ package org.python.pydev.parser.grammar25;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.python.pydev.parser.IGrammar;
 import org.python.pydev.parser.grammarcommon.AbstractJJTPythonGrammarState;
 import org.python.pydev.parser.grammarcommon.AbstractPythonGrammar;
@@ -40,6 +39,7 @@ public final class PythonGrammar25 extends AbstractPythonGrammar implements /*@b
     /**
      * @return the current token found.
      */
+    @Override
     protected final Token getCurrentToken() {
         return this.token;
     }
@@ -47,6 +47,7 @@ public final class PythonGrammar25 extends AbstractPythonGrammar implements /*@b
     /**
      * Sets the current token.
      */
+    @Override
     protected final void setCurrentToken(Token t) {
         this.token = t;
     }
@@ -54,6 +55,7 @@ public final class PythonGrammar25 extends AbstractPythonGrammar implements /*@b
     /**
      * @return the jjtree from this grammar
      */
+    @Override
     protected final AbstractJJTPythonGrammarState getJJTree() {
         return jjtree;
     }
@@ -61,6 +63,7 @@ public final class PythonGrammar25 extends AbstractPythonGrammar implements /*@b
     /**
      * @return the special tokens in the token source
      */
+    @Override
     public final List<Object> getTokenSourceSpecialTokensList() {
         return token_source.specialTokens;
     }
@@ -68,6 +71,7 @@ public final class PythonGrammar25 extends AbstractPythonGrammar implements /*@b
     /**
      * @return the jj_lastpos
      */
+    @Override
     protected final Token getJJLastPos() {
         return jj_lastpos;
     }
@@ -81,6 +85,7 @@ public final class PythonGrammar25 extends AbstractPythonGrammar implements /*@b
     }
 
     //file_input: (NEWLINE | stmt)* ENDMARKER
+    @Override
     final public modType file_input() throws ParseException {
         /*@bgen(jjtree) file_input */
         SimpleNode jjtn000 = builder.openNode(JJTFILE_INPUT);
@@ -7634,6 +7639,12 @@ public final class PythonGrammar25 extends AbstractPythonGrammar implements /*@b
         }
     }
 
+    private boolean jj_3R_70() {
+        if (jj_3R_91())
+            return true;
+        return false;
+    }
+
     private boolean jj_3R_98() {
         if (jj_3R_52())
             return true;
@@ -8705,12 +8716,6 @@ public final class PythonGrammar25 extends AbstractPythonGrammar implements /*@b
         return false;
     }
 
-    private boolean jj_3R_70() {
-        if (jj_3R_91())
-            return true;
-        return false;
-    }
-
     /** Generated Token Manager. */
     public PythonGrammar25TokenManager token_source;
     /** Current token. */
@@ -8911,6 +8916,7 @@ public final class PythonGrammar25 extends AbstractPythonGrammar implements /*@b
     }
 
     /** Get the specific Token. */
+    @Override
     final public Token getToken(int index) {
         Token t = token;
         for (int i = 0; i < index; i++) {
@@ -9009,6 +9015,7 @@ public final class PythonGrammar25 extends AbstractPythonGrammar implements /*@b
     }
 
     /** Enable tracing. */
+    @Override
     final public void enable_tracing() {
     }
 

@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.eclipse.core.resources.IMarker;
+import org.eclipse.core.runtime.IAdaptable;
 
 public final class AnalysisPreferencesStub extends AbstractAnalysisPreferences {
     public int severityForUnusedImport;
@@ -49,6 +50,7 @@ public final class AnalysisPreferencesStub extends AbstractAnalysisPreferences {
         severityForArgumentsMismatch = IMarker.SEVERITY_INFO;
     }
 
+    @Override
     public int getSeverityForType(int type) {
         switch (type) {
             case TYPE_UNUSED_IMPORT:
@@ -99,6 +101,7 @@ public final class AnalysisPreferencesStub extends AbstractAnalysisPreferences {
         throw new RuntimeException("unable to get severity for type " + type);
     }
 
+    @Override
     public boolean makeCodeAnalysis() {
         return true;
     }
@@ -106,30 +109,34 @@ public final class AnalysisPreferencesStub extends AbstractAnalysisPreferences {
     /**
      * @see com.python.pydev.analysis.IAnalysisPreferences#getNamesIgnoredByUnusedVariable()
      */
+    @Override
     public Set<String> getNamesIgnoredByUnusedVariable() {
         Set<String> names = new HashSet<String>();
         names.add("dummy");
         return names;
     }
 
+    @Override
     public Set<String> getModuleNamePatternsToBeIgnored() {
         Set<String> names = new HashSet<String>();
         names.add("__init__");
         return names;
     }
 
+    @Override
     public Set<String> getTokensAlwaysInGlobals() {
         Set<String> names = new HashSet<String>();
         names.add("considerGlobal");
         return names;
     }
 
-    public void clearCaches() {
-        //no caches here
-    }
-
+    @Override
     public int getWhenAnalyze() {
         return IAnalysisPreferences.ANALYZE_ON_SUCCESFUL_PARSE;
     }
 
+    @Override
+    public IAdaptable getProjectAdaptable() {
+        return null;
+    }
 }

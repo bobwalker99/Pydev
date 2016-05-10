@@ -31,11 +31,11 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.customizations.CustomizationsPlugin;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 
 /**
@@ -92,6 +92,7 @@ public class AppEngineTemplatePage extends WizardPage {
         setErrorMessage("Please select the template to use to create the project");
     }
 
+    @Override
     public void createControl(Composite parent) {
         Font font = parent.getFont();
 
@@ -109,6 +110,7 @@ public class AppEngineTemplatePage extends WizardPage {
         setFillHorizontalLayoutDataAndFont(appIdText, font);
         appIdText.addModifyListener(new ModifyListener() {
 
+            @Override
             public void modifyText(ModifyEvent e) {
                 handleChange();
             }
@@ -139,10 +141,12 @@ public class AppEngineTemplatePage extends WizardPage {
 
         comboTemplateNames.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 handleChange();
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
         });
@@ -230,6 +234,7 @@ public class AppEngineTemplatePage extends WizardPage {
                     FileUtils.copyDirectory(tuple.o2, sourceFolder.getLocation().toFile(),
                             new ICallback<Boolean, File>() {
 
+                                @Override
                                 public Boolean call(File arg) {
                                     //we don't want to copy description.txt
                                     String filename = arg.getName().toLowerCase();
@@ -241,9 +246,11 @@ public class AppEngineTemplatePage extends WizardPage {
                                 }
                             }, new ICallback<String, String>() {
 
+                                @Override
                                 public String call(String contents) {
                                     //We want to change any references to ${app_id} for the app id entered by the user
-                                    return org.python.pydev.shared_core.string.StringUtils.replaceAll(contents, "${app_id}", lastAppIdText);
+                                    return StringUtils.replaceAll(contents,
+                                            "${app_id}", lastAppIdText);
                                 }
                             });
                 } catch (IOException e) {

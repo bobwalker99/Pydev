@@ -13,6 +13,7 @@ import java.util.List;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.Assert;
 import org.python.pydev.core.ICompletionCache;
 import org.python.pydev.core.IDefinition;
 import org.python.pydev.core.IModule;
@@ -20,7 +21,6 @@ import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.actions.PyOpenAction;
 import org.python.pydev.editor.codecompletion.revisited.CompletionCache;
 import org.python.pydev.editor.codecompletion.revisited.CompletionStateFactory;
-import org.python.pydev.editor.codecompletion.revisited.visitors.Definition;
 import org.python.pydev.editor.model.ItemPointer;
 import org.python.pydev.editor.refactoring.PyRefactoringFindDefinition;
 import org.python.pydev.editorinput.PySourceLocatorBase;
@@ -42,12 +42,20 @@ public class PyUnitTestResult {
     private WeakReference<PyUnitTestRun> testRun;
 
     public final String STATUS_OK = "ok";
+    public final String STATUS_SKIP = "skip";
     public final String STATUS_FAIL = "fail";
     public final String STATUS_ERROR = "error";
     public final String index;
 
     public PyUnitTestResult(PyUnitTestRun testRun, String status, String location, String test, String capturedOutput,
             String errorContents, String time) {
+        Assert.isNotNull(capturedOutput);
+        Assert.isNotNull(errorContents);
+        Assert.isNotNull(time);
+        Assert.isNotNull(test);
+        Assert.isNotNull(location);
+        Assert.isNotNull(status);
+        Assert.isNotNull(testRun);
         //note that the parent has a strong reference to the children.
         this.testRun = new WeakReference<PyUnitTestRun>(testRun);
         this.status = status;
@@ -65,6 +73,10 @@ public class PyUnitTestResult {
 
     public boolean isOk() {
         return STATUS_OK.equals(this.status);
+    }
+
+    public boolean isSkip() {
+        return STATUS_SKIP.equals(this.status);
     }
 
     /**
@@ -88,7 +100,12 @@ public class PyUnitTestResult {
         if (file.exists()) {
             PyOpenAction openAction = new PyOpenAction();
             String fileContents = FileUtils.getFileContents(file);
-            ItemPointer itemPointer = getItemPointer(file, fileContents, this.test);
+            String thisTest = this.test;
+            int i = thisTest.indexOf('['); // This happens when parameterizing pytest tests.
+            if (i != -1) {
+                thisTest = thisTest.substring(0, i);
+            }
+            ItemPointer itemPointer = getItemPointer(file, fileContents, thisTest);
             openAction.run(itemPointer);
         }
     }
@@ -110,7 +127,7 @@ public class PyUnitTestResult {
             //do an actual (more costly) find definition.
             try {
                 PySourceLocatorBase locator = new PySourceLocatorBase();
-                IFile workspaceFile = locator.getWorkspaceFile(file);
+                IFile workspaceFile = locator.getWorkspaceFile(file, null);
                 if (workspaceFile != null && workspaceFile.exists()) {
                     IProject project = workspaceFile.getProject();
                     if (project != null && project.exists()) {
@@ -125,7 +142,7 @@ public class PyUnitTestResult {
 
                                 if (definitions != null && definitions.length > 0) {
                                     List<ItemPointer> pointers = new ArrayList<ItemPointer>();
-                                    PyRefactoringFindDefinition.getAsPointers(pointers, (Definition[]) definitions);
+                                    PyRefactoringFindDefinition.getAsPointers(pointers, definitions);
                                     if (pointers.size() > 0) {
                                         return pointers.get(0);
                                     }
@@ -143,4 +160,5 @@ public class PyUnitTestResult {
         }
         return itemPointer;
     }
+
 }

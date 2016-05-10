@@ -19,15 +19,13 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.jdt.ui.actions.OpenAction;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.dialogs.ErrorDialog;
-import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentExtension4;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
-import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -45,9 +43,6 @@ import org.python.pydev.editor.PyEdit;
 import org.python.pydev.editor.actions.PyOpenAction;
 import org.python.pydev.editor.actions.refactoring.PyRefactorAction;
 import org.python.pydev.editor.codecompletion.PyCodeCompletionImages;
-import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
-import org.python.pydev.editor.codecompletion.revisited.javaintegration.AbstractJavaClassModule;
-import org.python.pydev.editor.codecompletion.revisited.javaintegration.JavaDefinition;
 import org.python.pydev.editor.model.ItemPointer;
 import org.python.pydev.editor.refactoring.AbstractPyRefactoring;
 import org.python.pydev.editor.refactoring.IPyRefactoring;
@@ -115,7 +110,8 @@ public class PyGoToDefinition extends PyRefactorAction {
         /**
          * As soon as the reparse is done, this method is called.
          */
-        public void parserChanged(ISimpleNode root, IAdaptable file, IDocument doc) {
+        @Override
+        public void parserChanged(ISimpleNode root, IAdaptable file, IDocument doc, long docModificationStamp) {
             editToReparse.getParser().removeParseListener(this); //we'll only listen for this single parse
             doFindIfLast();
         }
@@ -123,6 +119,7 @@ public class PyGoToDefinition extends PyRefactorAction {
         /**
          * We want to work in the event of parse errors too.
          */
+        @Override
         public void parserError(Throwable error, IAdaptable file, IDocument doc) {
             editToReparse.getParser().removeParseListener(this); //we'll only listen for this single parse
             doFindIfLast();
@@ -268,13 +265,16 @@ public class PyGoToDefinition extends PyRefactorAction {
                 final Display disp = shell.getDisplay();
                 disp.syncExec(new Runnable() {
 
+                    @Override
                     public void run() {
                         ElementListSelectionDialog dialog = new ElementListSelectionDialog(shell, new ILabelProvider() {
 
+                            @Override
                             public Image getImage(Object element) {
                                 return PyCodeCompletionImages.getImageForType(IToken.TYPE_PACKAGE);
                             }
 
+                            @Override
                             public String getText(Object element) {
                                 ItemPointer pointer = (ItemPointer) element;
                                 File f = (File) (pointer).file;
@@ -282,16 +282,20 @@ public class PyGoToDefinition extends PyRefactorAction {
                                 return f.getName() + "  (" + f.getParent() + ") - line:" + line;
                             }
 
+                            @Override
                             public void addListener(ILabelProviderListener listener) {
                             }
 
+                            @Override
                             public void dispose() {
                             }
 
+                            @Override
                             public boolean isLabelProperty(Object element, String property) {
                                 return false;
                             }
 
+                            @Override
                             public void removeListener(ILabelProviderListener listener) {
                             }
                         }) {
@@ -340,44 +344,17 @@ public class PyGoToDefinition extends PyRefactorAction {
      * @param shell 
      */
     private static void doOpen(ItemPointer itemPointer, PyEdit pyEdit, Shell shell) {
-        File f = (File) itemPointer.file;
-        String filename = f.getName();
-        if (PythonPathHelper.isValidSourceFile(filename) || filename.indexOf('.') == -1 || //treating files without any extension! 
-                (itemPointer.zipFilePath != null && PythonPathHelper.isValidSourceFile(itemPointer.zipFilePath))) {
-
-            final PyOpenAction openAction = (PyOpenAction) pyEdit.getAction(PyEdit.ACTION_OPEN);
-
-            openAction.run(itemPointer, pyEdit.getProject());
-        } else if (itemPointer.definition instanceof JavaDefinition) {
-            //note that it will only be able to find a java definition if JDT is actually available
-            //so, we don't have to care about JDTNotAvailableExceptions here. 
-            JavaDefinition javaDefinition = (JavaDefinition) itemPointer.definition;
-            OpenAction openAction = new OpenAction(pyEdit.getSite());
-            StructuredSelection selection = new StructuredSelection(new Object[] { javaDefinition.javaElement });
-            openAction.run(selection);
-        } else {
-            String message;
-            if (itemPointer.definition != null && itemPointer.definition.module instanceof AbstractJavaClassModule) {
-                AbstractJavaClassModule module = (AbstractJavaClassModule) itemPointer.definition.module;
-                message = "The definition was found at: " + f.toString() + "\n" + "as the java module: "
-                        + module.getName();
-
-            } else {
-                message = "The definition was found at: " + f.toString() + "\n"
-                        + "(which cannot be opened because it is a compiled extension)";
-
-            }
-
-            MessageDialog.openInformation(shell, "Compiled Extension file", message);
-        }
+        new PyOpenAction().run(itemPointer, pyEdit.getProject(), pyEdit.getSite());
     }
 
     /**
      * @return an array of ItemPointer with the definitions found
      * @throws MisconfigurationException 
      * @throws TooManyMatchesException 
+     * @throws BadLocationException 
      */
-    public ItemPointer[] findDefinition(PyEdit pyEdit) throws TooManyMatchesException, MisconfigurationException {
+    public ItemPointer[] findDefinition(PyEdit pyEdit)
+            throws TooManyMatchesException, MisconfigurationException, BadLocationException {
         IPyRefactoring pyRefactoring = AbstractPyRefactoring.getPyRefactoring();
         return pyRefactoring.findDefinition(getRefactoringRequest());
     }

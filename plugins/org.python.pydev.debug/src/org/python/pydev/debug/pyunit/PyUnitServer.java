@@ -26,7 +26,7 @@ import org.eclipse.debug.core.ILaunchesListener2;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.ui.launching.PythonRunnerConfig;
 import org.python.pydev.shared_core.net.SocketUtil;
-
+import org.python.pydev.shared_core.string.StringUtils;
 
 public class PyUnitServer implements IPyUnitServer {
 
@@ -92,22 +92,33 @@ public class PyUnitServer implements IPyUnitServer {
 
     }
 
+    private String getAsStr(Object obj) {
+        if (obj instanceof byte[]) {
+            return StringUtils.safeDecodeByteArray((byte[]) obj, "ISO-8859-1"); //same from server
+        }
+        return obj.toString();
+    }
+
     /**
      * This is where the handling of xml-rpc methods from the servers is handled and properly translated for listeners.
      */
     private XmlRpcHandler handler = new XmlRpcHandler() {
 
+        @Override
         public Object execute(final XmlRpcRequest request) throws XmlRpcException {
             return execute(new IRequest() {
 
+                @Override
                 public int getParameterCount() {
                     return request.getParameterCount();
                 }
 
+                @Override
                 public Object getParameter(int i) {
                     return request.getParameter(i);
                 }
 
+                @Override
                 public String getMethodName() {
                     return request.getMethodName();
                 }
@@ -139,24 +150,28 @@ public class PyUnitServer implements IPyUnitServer {
     private void initializeDispatches() {
         dispatch.put("notifyTest", new Dispatch(6) {
 
+            @Override
             public void dispatch(IRequest request) {
-                String status = request.getParameter(0).toString();
-                String capturedOutput = request.getParameter(1).toString();
-                String errorContents = request.getParameter(2).toString();
-                String location = request.getParameter(3).toString();
-                String test = request.getParameter(4).toString();
-                String time = request.getParameter(5).toString();
+                String status = getAsStr(request.getParameter(0));
+
+                String capturedOutput = getAsStr(request.getParameter(1));
+                String errorContents = getAsStr(request.getParameter(2));
+                String location = getAsStr(request.getParameter(3));
+                String test = getAsStr(request.getParameter(4));
+                String time = getAsStr(request.getParameter(5));
 
                 for (IPyUnitServerListener listener : listeners) {
                     listener.notifyTest(status, location, test, capturedOutput, errorContents, time);
                 }
             }
+
         });
         dispatch.put("notifyStartTest", new Dispatch(2) {
 
+            @Override
             public void dispatch(IRequest request) {
-                String location = request.getParameter(0).toString();
-                String test = request.getParameter(1).toString();
+                String location = getAsStr(request.getParameter(0));
+                String test = getAsStr(request.getParameter(1));
                 for (IPyUnitServerListener listener : listeners) {
                     listener.notifyStartTest(location, test);
                 }
@@ -165,8 +180,9 @@ public class PyUnitServer implements IPyUnitServer {
         });
         dispatch.put("notifyTestsCollected", new Dispatch(1) {
 
+            @Override
             public void dispatch(IRequest request) {
-                String totalTestsCount = request.getParameter(0).toString();
+                String totalTestsCount = getAsStr(request.getParameter(0));
                 for (IPyUnitServerListener listener : listeners) {
                     listener.notifyTestsCollected(totalTestsCount);
                 }
@@ -174,79 +190,85 @@ public class PyUnitServer implements IPyUnitServer {
         });
         dispatch.put("notifyConnected", new Dispatch(0) {
 
+            @Override
             public void dispatch(IRequest request) {
                 // Ignore this one
             }
         });
         dispatch.put("notifyTestRunFinished", new Dispatch(1) {
 
+            @Override
             public void dispatch(IRequest request) {
                 for (IPyUnitServerListener listener : listeners) {
                     Object seconds = request.getParameter(0);
-                    listener.notifyFinished(seconds.toString());
+                    listener.notifyFinished(getAsStr(seconds));
                 }
             }
         });
         dispatch.put("notifyCommands", new Dispatch(1) { //the list of commands as a parameter
 
-                    public void dispatch(IRequest request) {
-                        Object requestParam = request.getParameter(0);
-                        if (!(requestParam instanceof Object[])) {
-                            if (requestParam == null) {
-                                Log.log("Expected Object[]. Found: null");
-                            } else {
-                                Log.log("Expected Object[]. Found: " + requestParam.getClass());
-                            }
-                            return;
-                        }
-
-                        Object[] parameters = (Object[]) requestParam;
-
-                        for (int i = 0; i < parameters.length; i++) {
-                            Object param = parameters[i];
-                            if (!(param instanceof Object[])) {
-                                if (param == null) {
-                                    Log.log("Expected Object[]. Found: null");
-                                } else {
-                                    Log.log("Expected Object[]. Found: " + param.getClass());
-                                }
-                                return;
-                            }
-
-                            final Object[] methodAndParams = (Object[]) param;
-                            if (methodAndParams.length != 2) {
-                                Log.log("Expected Object[] of len == 2. Found len: " + methodAndParams.length);
-                                continue;
-                            }
-                            if (!(methodAndParams[1] instanceof Object[])) {
-                                Log.log("Expected methodAndParams[1] to be Object[]. Found: "
-                                        + methodAndParams[1].getClass());
-                                continue;
-                            }
-
-                            final String methodName = methodAndParams[0].toString();
-                            final Object[] params = (Object[]) methodAndParams[1];
-
-                            Dispatch d = dispatch.get(methodName);
-                            if (d != null) {
-                                d.handle(new IRequest() {
-
-                                    public int getParameterCount() {
-                                        return params.length;
-                                    }
-
-                                    public Object getParameter(int i) {
-                                        return params[i];
-                                    }
-
-                                    public String getMethodName() {
-                                        return methodName;
-                                    }
-                                });
-                            }
-                        }
+            @Override
+            public void dispatch(IRequest request) {
+                Object requestParam = request.getParameter(0);
+                if (!(requestParam instanceof Object[])) {
+                    if (requestParam == null) {
+                        Log.log("Expected Object[]. Found: null");
+                    } else {
+                        Log.log("Expected Object[]. Found: " + requestParam.getClass());
                     }
-                });
+                    return;
+                }
+
+                Object[] parameters = (Object[]) requestParam;
+
+                for (int i = 0; i < parameters.length; i++) {
+                    Object param = parameters[i];
+                    if (!(param instanceof Object[])) {
+                        if (param == null) {
+                            Log.log("Expected Object[]. Found: null");
+                        } else {
+                            Log.log("Expected Object[]. Found: " + param.getClass());
+                        }
+                        return;
+                    }
+
+                    final Object[] methodAndParams = (Object[]) param;
+                    if (methodAndParams.length != 2) {
+                        Log.log("Expected Object[] of len == 2. Found len: " + methodAndParams.length);
+                        continue;
+                    }
+                    if (!(methodAndParams[1] instanceof Object[])) {
+                        Log.log("Expected methodAndParams[1] to be Object[]. Found: "
+                                + methodAndParams[1].getClass());
+                        continue;
+                    }
+
+                    final String methodName = getAsStr(methodAndParams[0]);
+                    final Object[] params = (Object[]) methodAndParams[1];
+
+                    Dispatch d = dispatch.get(methodName);
+                    if (d != null) {
+                        d.handle(new IRequest() {
+
+                            @Override
+                            public int getParameterCount() {
+                                return params.length;
+                            }
+
+                            @Override
+                            public Object getParameter(int i) {
+                                return params[i];
+                            }
+
+                            @Override
+                            public String getMethodName() {
+                                return methodName;
+                            }
+                        });
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -254,6 +276,7 @@ public class PyUnitServer implements IPyUnitServer {
      */
     private ILaunchesListener2 launchListener = new ILaunchesListener2() {
 
+        @Override
         public void launchesRemoved(ILaunch[] launches) {
             if (!disposed) {
                 for (ILaunch iLaunch : launches) {
@@ -264,12 +287,15 @@ public class PyUnitServer implements IPyUnitServer {
             }
         }
 
+        @Override
         public void launchesAdded(ILaunch[] launches) {
         }
 
+        @Override
         public void launchesChanged(ILaunch[] launches) {
         }
 
+        @Override
         public void launchesTerminated(ILaunch[] launches) {
             if (!disposed) {
                 for (ILaunch iLaunch : launches) {
@@ -292,11 +318,11 @@ public class PyUnitServer implements IPyUnitServer {
     public PyUnitServer(PythonRunnerConfig config, ILaunch launch) throws IOException {
         initializeDispatches();
         port = SocketUtil.findUnusedLocalPorts(1)[0];
-        SocketUtil.checkValidPort(port);
         this.webServer = new WebServer(port);
         XmlRpcServer serverToHandleRawInput = this.webServer.getXmlRpcServer();
         serverToHandleRawInput.setHandlerMapping(new XmlRpcHandlerMapping() {
 
+            @Override
             public XmlRpcHandler getHandler(String handlerName) throws XmlRpcNoSuchHandlerException, XmlRpcException {
                 return handler;
             }
@@ -313,6 +339,7 @@ public class PyUnitServer implements IPyUnitServer {
     /**
      * Want to hear about what happens in the test running session?
      */
+    @Override
     public void registerOnNotifyTest(IPyUnitServerListener listener) {
         if (!this.disposed) {
             this.listeners.add(listener);
@@ -356,6 +383,7 @@ public class PyUnitServer implements IPyUnitServer {
         }
     }
 
+    @Override
     public IPyUnitLaunch getPyUnitLaunch() {
         return new PyUnitLaunch(launch, configuration);
     }

@@ -10,6 +10,7 @@ import java.util.Iterator;
 
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
+import org.python.pydev.shared_core.string.StringUtils;
 
 public class PyDocIterator implements Iterator<String> {
 
@@ -64,6 +65,7 @@ public class PyDocIterator implements Iterator<String> {
         this.offset = offset;
     }
 
+    @Override
     public boolean hasNext() {
         return offset < doc.getLength();
     }
@@ -116,6 +118,7 @@ public class PyDocIterator implements Iterator<String> {
     /**
      * @return the next line in the document
      */
+    @Override
     public String next() {
 
         try {
@@ -208,6 +211,7 @@ public class PyDocIterator implements Iterator<String> {
         }
     }
 
+    @Override
     public void remove() {
         throw new RuntimeException("Not Impl.");
     }

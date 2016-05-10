@@ -31,6 +31,7 @@ public final class argumentsType extends SimpleNode {
         this.kwonlyargannotation = kwonlyargannotation;
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -47,6 +48,7 @@ public final class argumentsType extends SimpleNode {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (this == obj)
             return true;
@@ -90,10 +92,12 @@ public final class argumentsType extends SimpleNode {
         return true;
     }
 
+    @Override
     public argumentsType createCopy() {
         return createCopy(true);
     }
 
+    @Override
     public argumentsType createCopy(boolean copyComments) {
         exprType[] new0;
         if (this.args != null) {
@@ -126,7 +130,8 @@ public final class argumentsType extends SimpleNode {
         if (this.kw_defaults != null) {
             new3 = new exprType[this.kw_defaults.length];
             for (int i = 0; i < this.kw_defaults.length; i++) {
-                new3[i] = (exprType) (this.kw_defaults[i] != null ? this.kw_defaults[i].createCopy(copyComments) : null);
+                new3[i] = (exprType) (this.kw_defaults[i] != null ? this.kw_defaults[i].createCopy(copyComments)
+                        : null);
             }
         } else {
             new3 = this.kw_defaults;
@@ -144,14 +149,15 @@ public final class argumentsType extends SimpleNode {
         if (this.kwonlyargannotation != null) {
             new5 = new exprType[this.kwonlyargannotation.length];
             for (int i = 0; i < this.kwonlyargannotation.length; i++) {
-                new5[i] = (exprType) (this.kwonlyargannotation[i] != null ? this.kwonlyargannotation[i]
-                        .createCopy(copyComments) : null);
+                new5[i] = (exprType) (this.kwonlyargannotation[i] != null
+                        ? this.kwonlyargannotation[i].createCopy(copyComments) : null);
             }
         } else {
             new5 = this.kwonlyargannotation;
         }
-        argumentsType temp = new argumentsType(new0, vararg != null ? (NameTokType) vararg.createCopy(copyComments)
-                : null, kwarg != null ? (NameTokType) kwarg.createCopy(copyComments) : null, new1, new2, new3, new4,
+        argumentsType temp = new argumentsType(new0,
+                vararg != null ? (NameTokType) vararg.createCopy(copyComments) : null,
+                kwarg != null ? (NameTokType) kwarg.createCopy(copyComments) : null, new1, new2, new3, new4,
                 varargannotation != null ? (exprType) varargannotation.createCopy(copyComments) : null,
                 kwargannotation != null ? (exprType) kwargannotation.createCopy(copyComments) : null, new5);
         temp.beginLine = this.beginLine;
@@ -175,6 +181,7 @@ public final class argumentsType extends SimpleNode {
         return temp;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("arguments[");
         sb.append("args=");
@@ -210,11 +217,13 @@ public final class argumentsType extends SimpleNode {
         return sb.toString();
     }
 
+    @Override
     public Object accept(VisitorIF visitor) throws Exception {
         traverse(visitor);
         return null;
     }
 
+    @Override
     public void traverse(VisitorIF visitor) throws Exception {
         if (args != null) {
             for (int i = 0; i < args.length; i++) {

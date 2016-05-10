@@ -18,6 +18,7 @@ public class EvaluationConsoleInputListener implements IConsoleInputListener {
     private static final boolean DEBUG = false;
     private StringBuffer buf = new StringBuffer();
 
+    @Override
     public void newLineReceived(String lineReceived, AbstractDebugTarget target) {
         boolean evaluateNow = !lineReceived.startsWith(" ") && !lineReceived.startsWith("\t")
                 && !lineReceived.endsWith(":") && !lineReceived.endsWith("\\");
@@ -38,8 +39,15 @@ public class EvaluationConsoleInputListener implements IConsoleInputListener {
                     System.out.println("Evaluating:\n" + toEval);
                 }
                 if (context instanceof PyStackFrame) {
-                    target.postCommand(new EvaluateExpressionCommand(target, toEval, ((PyStackFrame) context)
-                            .getLocalsLocator().getPyDBLocation(), true));
+                    final PyStackFrame frame = (PyStackFrame) context;
+                    target.postCommand(new EvaluateExpressionCommand(target, toEval, frame
+                            .getLocalsLocator().getPyDBLocation(), true) {
+                        @Override
+                        public void processOKResponse(int cmdCode, String payload) {
+                            frame.forceGetNewVariables();
+                            super.processOKResponse(cmdCode, payload);
+                        }
+                    });
                 }
             }
             buf = new StringBuffer();
@@ -47,6 +55,7 @@ public class EvaluationConsoleInputListener implements IConsoleInputListener {
 
     }
 
+    @Override
     public void pasteReceived(String text, AbstractDebugTarget target) {
         if (DEBUG) {
             System.out.println("paste: '" + text + "'");

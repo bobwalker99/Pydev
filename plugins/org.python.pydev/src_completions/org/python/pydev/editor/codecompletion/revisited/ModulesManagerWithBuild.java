@@ -38,11 +38,14 @@ public abstract class ModulesManagerWithBuild extends ModulesManager implements 
 
     /**
      * Used to process deltas (in case we have the process killed for some reason)
+     * 
+     * Note that it may become null during normal processing when not generating deltas.
      */
     protected volatile DeltaSaver<ModulesKey> deltaSaver;
 
     protected static ICallback<ModulesKey, String> readFromFileMethod = new ICallback<ModulesKey, String>() {
 
+        @Override
         public ModulesKey call(String arg) {
             List<String> split = StringUtils.split(arg, '|');
             if (split.size() == 1) {
@@ -58,6 +61,7 @@ public abstract class ModulesManagerWithBuild extends ModulesManager implements 
 
     protected static ICallback<String, ModulesKey> toFileMethod = new ICallback<String, ModulesKey>() {
 
+        @Override
         public String call(ModulesKey arg) {
             FastStringBuffer buf = new FastStringBuffer();
             buf.append(arg.name);
@@ -72,6 +76,7 @@ public abstract class ModulesManagerWithBuild extends ModulesManager implements 
     /** 
      * @see org.python.pydev.core.IProjectModulesManager#processUpdate(org.python.pydev.core.ModulesKey)
      */
+    @Override
     public void processUpdate(ModulesKey data) {
         //updates are ignored because we always start with 'empty modules' (so, we don't actually generate them -- updates are treated as inserts).
         throw new RuntimeException("Not impl");
@@ -80,6 +85,7 @@ public abstract class ModulesManagerWithBuild extends ModulesManager implements 
     /** 
      * @see org.python.pydev.core.IProjectModulesManager#processDelete(org.python.pydev.core.ModulesKey)
      */
+    @Override
     public void processDelete(ModulesKey key) {
         doRemoveSingleModule(key);
     }
@@ -87,16 +93,56 @@ public abstract class ModulesManagerWithBuild extends ModulesManager implements 
     /** 
      * @see org.python.pydev.core.IProjectModulesManager#processInsert(org.python.pydev.core.ModulesKey)
      */
+    @Override
     public void processInsert(ModulesKey key) {
         addModule(key);
+    }
+
+    private final Object lockNoDeltas = new Object();
+    private int noDeltas = 0;
+
+    /**
+     * This method can be used to signal that some processing may be done under which no deltas should be generated.
+     * 
+     * The returned AutoCloseable must be closed afterwards (use in try block).
+     */
+    @Override
+    public AutoCloseable withNoGenerateDeltas() {
+        synchronized (lockNoDeltas) {
+            noDeltas++;
+            final DeltaSaver<ModulesKey> tempDeltaSaver;
+            if (noDeltas == 1) {
+                tempDeltaSaver = deltaSaver;
+                if (tempDeltaSaver != null) {
+                    deltaSaver = null;
+                }
+            } else {
+                tempDeltaSaver = null;
+            }
+            return new AutoCloseable() {
+
+                @Override
+                public void close() throws Exception {
+                    synchronized (lockNoDeltas) {
+                        noDeltas--;
+                        if (noDeltas == 0 && tempDeltaSaver != null && deltaSaver == null) {
+                            DeltaSaver<ModulesKey> d = deltaSaver = tempDeltaSaver;
+                            endProcessing();
+                            d.clearAll();
+                        }
+                    }
+                }
+            };
+        }
     }
 
     @Override
     public void doRemoveSingleModule(ModulesKey key) {
         super.doRemoveSingleModule(key);
-        if (deltaSaver != null && !IN_TESTS) { //we don't want deltas in tests
+        DeltaSaver<ModulesKey> d = deltaSaver;
+        if (d != null && !IN_TESTS) { //we don't want deltas in tests
             //overridden to add delta
-            deltaSaver.addDeleteCommand(key);
+            d.addDeleteCommand(key);
             checkDeltaSize();
         }
     }
@@ -104,11 +150,12 @@ public abstract class ModulesManagerWithBuild extends ModulesManager implements 
     @Override
     public void doAddSingleModule(ModulesKey key, AbstractModule n) {
         super.doAddSingleModule(key, n);
-        if ((deltaSaver != null && !IN_TESTS) && !(key instanceof ModulesKeyForZip)
+        DeltaSaver<ModulesKey> d = deltaSaver;
+        if ((d != null && !IN_TESTS) && !(key instanceof ModulesKeyForZip)
                 && !(key instanceof ModulesKeyForJava)) {
             //we don't want deltas in tests nor in zips/java modules
             //overridden to add delta
-            deltaSaver.addInsertCommand(key);
+            d.addInsertCommand(key);
             checkDeltaSize();
         }
     }
@@ -117,9 +164,10 @@ public abstract class ModulesManagerWithBuild extends ModulesManager implements 
      * If the delta size is big enough, save the current state and discard the deltas.
      */
     private void checkDeltaSize() {
-        if (deltaSaver != null && deltaSaver.availableDeltas() > MAXIMUN_NUMBER_OF_DELTAS) {
+        DeltaSaver<ModulesKey> d = deltaSaver;
+        if (d != null && d.availableDeltas() > MAXIMUN_NUMBER_OF_DELTAS) {
             endProcessing();
-            deltaSaver.clearAll();
+            d.clearAll();
         }
     }
 
@@ -196,7 +244,7 @@ public abstract class ModulesManagerWithBuild extends ModulesManager implements 
 
     public void rebuildModule(File f, ICallback0<IDocument> doc, final IProject project, IProgressMonitor monitor,
             IPythonNature nature) {
-        final String m = pythonPathHelper.resolveModule(FileUtils.getFileAbsolutePath(f));
+        final String m = pythonPathHelper.resolveModule(FileUtils.getFileAbsolutePath(f), false, project);
         if (m != null) {
             addModule(new ModulesKey(m, f));
 

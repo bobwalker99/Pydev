@@ -49,7 +49,6 @@ import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.IModulesManager;
 import org.python.pydev.core.ModulesKey;
 import org.python.pydev.core.TestDependent;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.editor.PyEdit;
 import org.python.pydev.editor.codecompletion.revisited.ProjectModulesManager;
 import org.python.pydev.editor.simpleassist.SimpleAssistProcessor;
@@ -58,6 +57,7 @@ import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.ui.filetypes.FileTypesPreferencesPage;
 import org.python.pydev.ui.interpreters.JythonInterpreterManager;
@@ -94,6 +94,7 @@ public class AbstractWorkbenchTestCase extends TestCase {
         if (!interpretersConfigured) {
             interpretersConfigured = true;
             InterpreterInfo.configurePathsCallback = new ICallback<Boolean, Tuple<List<String>, List<String>>>() {
+                @Override
                 public Boolean call(Tuple<List<String>, List<String>> arg) {
                     return Boolean.TRUE;
                 }
@@ -214,6 +215,7 @@ public class AbstractWorkbenchTestCase extends TestCase {
         goToIdleLoopUntilCondition(
 
                 new ICallback<Boolean, Object>() {
+                    @Override
                     public Boolean call(Object arg) {
                         SortedMap<ModulesKey, ModulesKey> allDirectModulesStartingWith = modulesManager.getAllDirectModulesStartingWith("pack1");
                         Set<ModulesKey> keySet = allDirectModulesStartingWith.keySet();
@@ -226,6 +228,7 @@ public class AbstractWorkbenchTestCase extends TestCase {
                 },
 
                 new ICallback<String, Object>() {
+                    @Override
                     public String call(Object arg) {
                         SortedMap<ModulesKey, ModulesKey> allDirectModulesStartingWith = modulesManager
                                 .getAllDirectModulesStartingWith("pack1");

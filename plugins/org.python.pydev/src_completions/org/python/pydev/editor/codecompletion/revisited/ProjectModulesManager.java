@@ -15,6 +15,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedMap;
@@ -24,7 +25,6 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IStatus;
 import org.python.pydev.core.DeltaSaver;
 import org.python.pydev.core.ICodeCompletionASTManager;
 import org.python.pydev.core.IInterpreterInfo;
@@ -36,11 +36,11 @@ import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.IPythonPathNature;
 import org.python.pydev.core.ISystemModulesManager;
 import org.python.pydev.core.ModulesKey;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.codecompletion.revisited.javaintegration.JavaProjectModulesManagerCreator;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 
 /**
@@ -57,9 +57,10 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
     public ProjectModulesManager() {
     }
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#setProject(org.eclipse.core.resources.IProject, boolean)
      */
+    @Override
     public void setProject(IProject project, IPythonNature nature, boolean restoreDeltas) {
         this.project = project;
         this.nature = nature;
@@ -68,21 +69,23 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
             return; //project was deleted.
         }
 
-        this.deltaSaver = new DeltaSaver<ModulesKey>(completionsCacheDir, "v1_astdelta", readFromFileMethod,
+        DeltaSaver<ModulesKey> d = this.deltaSaver = new DeltaSaver<ModulesKey>(completionsCacheDir, "v1_astdelta",
+                readFromFileMethod,
                 toFileMethod);
 
         if (!restoreDeltas) {
-            deltaSaver.clearAll(); //remove any existing deltas
+            d.clearAll(); //remove any existing deltas
         } else {
-            deltaSaver.processDeltas(this); //process the current deltas (clears current deltas automatically and saves it when the processing is concluded)
+            d.processDeltas(this); //process the current deltas (clears current deltas automatically and saves it when the processing is concluded)
         }
     }
 
     // ------------------------ delta processing
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#endProcessing()
      */
+    @Override
     public void endProcessing() {
         //save it with the updated info
         nature.saveAstManager();
@@ -90,24 +93,27 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
 
     // ------------------------ end delta processing
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#setPythonNature(org.python.pydev.core.IPythonNature)
      */
+    @Override
     public void setPythonNature(IPythonNature nature) {
         this.nature = nature;
     }
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#getNature()
      */
+    @Override
     public IPythonNature getNature() {
         return nature;
     }
 
-    /** 
-     * @param defaultSelectedInterpreter 
+    /**
+     * @param defaultSelectedInterpreter
      * @see org.python.pydev.core.IProjectModulesManager#getSystemModulesManager()
      */
+    @Override
     public ISystemModulesManager getSystemModulesManager() {
         if (nature == null) {
             Log.log("Nature still not set");
@@ -120,9 +126,10 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
         }
     }
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#getAllModuleNames(boolean addDependencies, String partStartingWithLowerCase)
      */
+    @Override
     public Set<String> getAllModuleNames(boolean addDependencies, String partStartingWithLowerCase) {
         if (addDependencies) {
             Set<String> s = new HashSet<String>();
@@ -149,9 +156,10 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
         return ret;
     }
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#getModule(java.lang.String, org.python.pydev.plugin.nature.PythonNature, boolean)
      */
+    @Override
     public IModule getModule(String name, IPythonNature nature, boolean dontSearchInit) {
         return getModule(name, nature, true, dontSearchInit);
     }
@@ -159,13 +167,15 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
     /**
      * When looking for relative, we do not check dependencies
      */
+    @Override
     public IModule getRelativeModule(String name, IPythonNature nature) {
         return super.getModule(false, name, nature, true); //cannot be a compiled module
     }
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#getModule(java.lang.String, org.python.pydev.plugin.nature.PythonNature, boolean, boolean)
      */
+    @Override
     public IModule getModule(String name, IPythonNature nature, boolean checkSystemManager, boolean dontSearchInit) {
         Tuple<IModule, IModulesManager> ret = getModuleAndRelatedModulesManager(name, nature, checkSystemManager,
                 dontSearchInit);
@@ -175,9 +185,10 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
         return null;
     }
 
-    /** 
+    /**
      * @return a tuple with the IModule requested and the IModulesManager that contained that module.
      */
+    @Override
     public Tuple<IModule, IModulesManager> getModuleAndRelatedModulesManager(String name, IPythonNature nature,
             boolean checkSystemManager, boolean dontSearchInit) {
 
@@ -227,10 +238,12 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
     /**
      * Only searches the modules contained in the direct modules manager.
      */
+    @Override
     public IModule getModuleInDirectManager(String name, IPythonNature nature, boolean dontSearchInit) {
         return super.getModule(name, nature, dontSearchInit);
     }
 
+    @Override
     protected String getResolveModuleErr(IResource member) {
         return "Unable to find the path " + member + " in the project were it\n"
                 + "is added as a source folder for pydev (project: " + project.getName() + ")";
@@ -238,22 +251,27 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
 
     public String resolveModuleOnlyInProjectSources(String fileAbsolutePath, boolean addExternal) throws CoreException {
         String onlyProjectPythonPathStr = this.nature.getPythonPathNature().getOnlyProjectPythonPathStr(addExternal);
-        HashSet<String> projectSourcePath = new HashSet<String>(StringUtils.splitAndRemoveEmptyTrimmed(
-                onlyProjectPythonPathStr, '|'));
-
-        return this.pythonPathHelper.resolveModule(fileAbsolutePath, new ArrayList<String>(projectSourcePath));
+        List<String> pathItems = StringUtils.splitAndRemoveEmptyTrimmed(onlyProjectPythonPathStr, '|');
+        List<String> filteredPathItems = filterDuplicatesPreservingOrder(pathItems);
+        return this.pythonPathHelper.resolveModule(fileAbsolutePath, false, filteredPathItems, project);
     }
 
-    /** 
+    private List<String> filterDuplicatesPreservingOrder(List<String> pathItems) {
+        return new ArrayList<>(new LinkedHashSet<>(pathItems));
+    }
+
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#resolveModule(java.lang.String)
      */
+    @Override
     public String resolveModule(String full) {
         return resolveModule(full, true);
     }
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#resolveModule(java.lang.String, boolean)
      */
+    @Override
     public String resolveModule(String full, boolean checkSystemManager) {
         IModulesManager[] managersInvolved = this.getManagersInvolved(checkSystemManager);
         for (IModulesManager m : managersInvolved) {
@@ -274,18 +292,24 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
         return null;
     }
 
+    @Override
     public String resolveModuleInDirectManager(String full) {
+        if (nature != null) {
+            return pythonPathHelper.resolveModule(full, false, nature.getProject());
+        }
         return super.resolveModule(full);
     }
 
+    @Override
     public String resolveModuleInDirectManager(IFile member) {
         File inOs = member.getRawLocation().toFile();
         return resolveModuleInDirectManager(FileUtils.getFileAbsolutePath(inOs));
     }
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#getSize(boolean)
      */
+    @Override
     public int getSize(boolean addDependenciesSize) {
         if (addDependenciesSize) {
             int size = 0;
@@ -299,9 +323,10 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
         }
     }
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#getBuiltins()
      */
+    @Override
     public String[] getBuiltins() {
         String[] builtins = null;
         ISystemModulesManager systemModulesManager = getSystemModulesManager();
@@ -313,10 +338,10 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
 
     /**
      * @param checkSystemManager whether the system manager should be added
-     * @param referenced true if we should get the referenced projects 
+     * @param referenced true if we should get the referenced projects
      *                   false if we should get the referencing projects
-     * @return the Managers that this project references or the ones that reference this project (depends on 'referenced') 
-     * 
+     * @return the Managers that this project references or the ones that reference this project (depends on 'referenced')
+     *
      * Change in 1.3.3: adds itself to the list of returned managers
      */
     private synchronized IModulesManager[] getManagers(boolean checkSystemManager, boolean referenced) {
@@ -351,7 +376,7 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
             addModuleManagers(list, projs);
         }
 
-        //the system is the last one we add 
+        //the system is the last one we add
         //http://sourceforge.net/tracker/index.php?func=detail&aid=1687018&group_id=85796&atid=577329
         if (checkSystemManager && systemModulesManager != null) {
             //may be null in initialization or if the project does not have a related interpreter manager at the present time
@@ -360,7 +385,7 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
             list.add(systemModulesManager);
         }
 
-        IModulesManager[] ret = (IModulesManager[]) list.toArray(new IModulesManager[list.size()]);
+        IModulesManager[] ret = list.toArray(new IModulesManager[list.size()]);
         if (localCompletionCache != null) {
             localCompletionCache.setManagers(ret, referenced);
         }
@@ -385,7 +410,7 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
      * @param project the project for which we want references.
      * @param referenced whether we want to get the referenced projects or the ones referencing this one.
      * @param memo (out) this is the place where all the projects will e available.
-     * 
+     *
      * Note: the project itself will not be added.
      */
     private static void getProjectsRecursively(IProject project, boolean referenced, HashSet<IProject> memo) {
@@ -425,11 +450,12 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
                 if (otherProjectAstManager != null) {
                     IModulesManager projectModulesManager = otherProjectAstManager.getModulesManager();
                     if (projectModulesManager != null) {
-                        list.add((IModulesManager) projectModulesManager);
+                        list.add(projectModulesManager);
                     }
                 } else {
-                    String msg = "No ast manager configured for :" + project.getName();
-                    Log.log(IStatus.WARNING, msg, new RuntimeException(msg));
+                    //Removed the warning below: this may be common when starting up...
+                    //String msg = "No ast manager configured for :" + project.getName();
+                    //Log.log(IStatus.WARNING, msg, new RuntimeException(msg));
                 }
             }
             IModulesManager javaModulesManagerForProject = JavaProjectModulesManagerCreator
@@ -441,14 +467,14 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
     }
 
     /**
-     * @return Returns the managers that this project references(does not include itself).
+     * @return Returns the managers that this project references, including itself.
      */
     public IModulesManager[] getManagersInvolved(boolean checkSystemManager) {
         return getManagers(checkSystemManager, true);
     }
 
     /**
-     * @return Returns the managers that reference this project (does not include itself).
+     * @return Returns the managers that reference this project, including itself.
      */
     public IModulesManager[] getRefencingManagersInvolved(boolean checkSystemManager) {
         return getManagers(checkSystemManager, false);
@@ -459,9 +485,10 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
      */
     private volatile long checkedPythonpathConsistency = 0;
 
-    /** 
+    /**
      * @see org.python.pydev.core.IProjectModulesManager#getCompletePythonPath()
      */
+    @Override
     public List<String> getCompletePythonPath(IInterpreterInfo interpreter, IInterpreterManager manager) {
         List<String> l = new ArrayList<String>();
         IModulesManager[] managersInvolved = getManagersInvolved(true);
@@ -509,7 +536,7 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
                         //Check if it's actually correct and auto-fix if it's not.
                         List<String> parsed = PythonPathHelper.parsePythonPathFromStr(onlyProjectPythonPathStr, null);
                         if (m2.nature != null && !new HashSet<String>(parsed).equals(new HashSet<String>(pythonpath))) {
-                            // Make it right at this moment (so any other place that calls it before the restore 
+                            // Make it right at this moment (so any other place that calls it before the restore
                             //takes place has the proper version).
                             h.setPythonPath(parsed);
 
@@ -525,5 +552,4 @@ public final class ProjectModulesManager extends ModulesManagerWithBuild impleme
         }
         return l;
     }
-
 }

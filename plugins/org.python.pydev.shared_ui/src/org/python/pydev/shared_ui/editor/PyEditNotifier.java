@@ -43,6 +43,7 @@ public class PyEditNotifier {
             return;
         }
         INotifierRunnable runnable = new INotifierRunnable() {
+            @Override
             public void run(final IProgressMonitor monitor) {
                 for (IPyEditListener listener : edit.getAllListeners()) {
                     try {
@@ -68,6 +69,7 @@ public class PyEditNotifier {
             return;
         }
         INotifierRunnable runnable = new INotifierRunnable() {
+            @Override
             public void run(IProgressMonitor monitor) {
                 for (IPyEditListener listener : edit.getAllListeners()) {
                     try {
@@ -115,8 +117,9 @@ public class PyEditNotifier {
         }
 
         INotifierRunnable runnable = new INotifierRunnable() {
+            @Override
             public void run(IProgressMonitor monitor) {
-                for (IPyEditListener listener : edit.getAllListeners()) {
+                for (IPyEditListener listener : edit.getAllListeners(false)) {
                     try {
                         if (!monitor.isCanceled()) {
                             listener.onDispose(edit, monitor);
@@ -139,6 +142,7 @@ public class PyEditNotifier {
             return;
         }
         INotifierRunnable runnable = new INotifierRunnable() {
+            @Override
             public void run(IProgressMonitor monitor) {
                 for (IPyEditListener listener : edit.getAllListeners()) {
                     try {
@@ -167,6 +171,7 @@ public class PyEditNotifier {
             return;
         }
         INotifierRunnable runnable = new INotifierRunnable() {
+            @Override
             public void run(IProgressMonitor monitor) {
                 for (IPyEditListener listener : edit.getAllListeners()) {
                     if (listener instanceof IPyEditListener3) {

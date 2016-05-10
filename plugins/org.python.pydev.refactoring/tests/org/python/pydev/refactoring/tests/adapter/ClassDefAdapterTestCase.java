@@ -1,3 +1,17 @@
+/******************************************************************************
+* Copyright (C) 2006-2012  IFS Institute for Software and others
+*
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Eclipse Public License v1.0
+* which accompanies this distribution, and is available at
+* http://www.eclipse.org/legal/epl-v10.html
+*
+* Original authors:
+*     Dennis Hunziker
+*     Ueli Kistler
+* Contributors:
+*     Fabio Zadrozny <fabiofz@gmail.com> - initial implementation
+******************************************************************************/
 /* 
  * Copyright (C) 2006, 2007  Dennis Hunziker, Ueli Kistler 
  */
@@ -31,6 +45,7 @@ public class ClassDefAdapterTestCase extends AbstractIOTestCase {
             List<IClassDefAdapter> baseClasses = adapter.getBaseClasses();
             Collections.sort(baseClasses, new Comparator<IClassDefAdapter>() {
 
+                @Override
                 public int compare(IClassDefAdapter o1, IClassDefAdapter o2) {
                     return o1.getName().compareTo(o2.getName());
                 }

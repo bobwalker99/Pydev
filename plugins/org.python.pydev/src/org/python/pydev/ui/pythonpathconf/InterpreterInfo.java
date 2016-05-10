@@ -46,14 +46,16 @@ import org.python.pydev.core.IInterpreterInfo;
 import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.ISystemModulesManager;
 import org.python.pydev.core.PropertiesHelper;
-import org.python.pydev.core.docutils.StringUtils;
+import org.python.pydev.core.docutils.PyStringUtils;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.codecompletion.revisited.ProjectModulesManager;
 import org.python.pydev.editor.codecompletion.revisited.SystemModulesManager;
+import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.shared_core.utils.PlatformUtils;
 import org.python.pydev.shared_ui.EditorUtils;
@@ -77,6 +79,7 @@ public class InterpreterInfo implements IInterpreterInfo {
      */
     public volatile String executableOrJar;
 
+    @Override
     public String getExecutableOrJar() {
         return executableOrJar;
     }
@@ -136,6 +139,7 @@ public class InterpreterInfo implements IInterpreterInfo {
      */
     private String name;
 
+    @Override
     public ISystemModulesManager getModulesManager() {
         return modulesManager;
     }
@@ -159,6 +163,7 @@ public class InterpreterInfo implements IInterpreterInfo {
     /**
      * @return the pythonpath to be used (only the folders)
      */
+    @Override
     public List<String> getPythonPath() {
         return new ArrayList<String>(libs);
     }
@@ -172,18 +177,19 @@ public class InterpreterInfo implements IInterpreterInfo {
         libs.addAll(libs0);
     }
 
-    /*default*/InterpreterInfo(String version, String exe, Collection<String> libs0, Collection<String> dlls) {
+    /*default*/ InterpreterInfo(String version, String exe, Collection<String> libs0, Collection<String> dlls) {
         this(version, exe, libs0);
     }
 
-    /*default*/InterpreterInfo(String version, String exe, List<String> libs0, List<String> dlls, List<String> forced) {
+    /*default*/ InterpreterInfo(String version, String exe, List<String> libs0, List<String> dlls,
+            List<String> forced) {
         this(version, exe, libs0, dlls, forced, null, null);
     }
 
     /**
      * Note: dlls is no longer used!
      */
-    /*default*/InterpreterInfo(String version, String exe, List<String> libs0, List<String> dlls, List<String> forced,
+    /*default*/ InterpreterInfo(String version, String exe, List<String> libs0, List<String> dlls, List<String> forced,
             List<String> envVars, Properties stringSubstitution) {
         this(version, exe, libs0, dlls);
         for (String s : forced) {
@@ -283,16 +289,21 @@ public class InterpreterInfo implements IInterpreterInfo {
      * @param userSpecifiedExecutable the path the the executable as specified by the user, or null to use that in received
      * @return new interpreter info
      */
-    public static InterpreterInfo fromString(String received, boolean askUserInOutPath, String userSpecifiedExecutable) {
+    public static InterpreterInfo fromString(String received, boolean askUserInOutPath,
+            String userSpecifiedExecutable) {
         if (received.toLowerCase().indexOf("executable") == -1) {
             throw new RuntimeException(
                     "Unable to recreate the Interpreter info (Its format changed. Please, re-create your Interpreter information).Contents found:"
                             + received);
         }
         received = received.trim();
-        if (!received.startsWith("<xml>")) {
+        int startXml = received.indexOf("<xml>");
+        int endXML = received.indexOf("</xml>");
+
+        if (startXml == -1 || endXML == -1) {
             return fromStringOld(received, askUserInOutPath);
         } else {
+            received = received.substring(startXml, endXML + "</xml>".length());
 
             DocumentBuilder parser;
             try {
@@ -489,10 +500,12 @@ public class InterpreterInfo implements IInterpreterInfo {
             fParticipants = ExtensionHelper.getParticipants(ExtensionHelper.PYDEV_INTERPRETER_NEW_CUSTOM_ENTRIES);
         }
 
+        @Override
         public Collection<String> getAdditionalLibraries() {
             final Collection<String> additions = new ArrayList<String>();
             for (final IInterpreterNewCustomEntries newEntriesProvider : fParticipants) {
                 SafeRunner.run(new SafeRunnable() {
+                    @Override
                     public void run() {
                         additions.addAll(newEntriesProvider.getAdditionalLibraries());
                     }
@@ -501,10 +514,12 @@ public class InterpreterInfo implements IInterpreterInfo {
             return additions;
         }
 
+        @Override
         public Collection<String> getAdditionalEnvVariables() {
             final Collection<String> additions = new ArrayList<String>();
             for (final IInterpreterNewCustomEntries newEntriesProvider : fParticipants) {
                 SafeRunner.run(new SafeRunnable() {
+                    @Override
                     public void run() {
                         additions.addAll(newEntriesProvider.getAdditionalEnvVariables());
                     }
@@ -513,10 +528,12 @@ public class InterpreterInfo implements IInterpreterInfo {
             return additions;
         }
 
+        @Override
         public Collection<String> getAdditionalBuiltins() {
             final Collection<String> additions = new ArrayList<String>();
             for (final IInterpreterNewCustomEntries newEntriesProvider : fParticipants) {
                 SafeRunner.run(new SafeRunnable() {
+                    @Override
                     public void run() {
                         additions.addAll(newEntriesProvider.getAdditionalBuiltins());
                     }
@@ -525,10 +542,12 @@ public class InterpreterInfo implements IInterpreterInfo {
             return additions;
         }
 
+        @Override
         public Map<String, String> getAdditionalStringSubstitutionVariables() {
             final Map<String, String> additions = new HashMap<String, String>();
             for (final IInterpreterNewCustomEntries newEntriesProvider : fParticipants) {
                 SafeRunner.run(new SafeRunnable() {
+                    @Override
                     public void run() {
                         additions.putAll(newEntriesProvider.getAdditionalStringSubstitutionVariables());
                     }
@@ -877,6 +896,7 @@ public class InterpreterInfo implements IInterpreterInfo {
                 forcedLibs.add("OpenGL");
                 forcedLibs.add("wxPython");
                 forcedLibs.add("wx");
+                forcedLibs.add("gi"); // for gnome introspection
                 forcedLibs.add("numpy");
                 forcedLibs.add("scipy");
                 forcedLibs.add("Image"); //for PIL
@@ -932,6 +952,7 @@ public class InterpreterInfo implements IInterpreterInfo {
                 forcedLibs.add("math");
                 forcedLibs.add("mmap");
                 forcedLibs.add("msvcrt");
+                forcedLibs.add("multiprocessing");
                 forcedLibs.add("nt");
                 forcedLibs.add("operator");
                 forcedLibs.add("parser");
@@ -1417,6 +1438,7 @@ public class InterpreterInfo implements IInterpreterInfo {
         restorePythonpath(buffer.toString(), monitor);
     }
 
+    @Override
     public int getInterpreterType() {
         if (isJythonExecutable(executableOrJar)) {
             return IInterpreterManager.INTERPRETER_TYPE_JYTHON;
@@ -1449,17 +1471,20 @@ public class InterpreterInfo implements IInterpreterInfo {
     }
 
     public static String getExeAsFileSystemValidPath(String executableOrJar) {
-        return StringUtils.getExeAsFileSystemValidPath(executableOrJar);
+        return PyStringUtils.getExeAsFileSystemValidPath(executableOrJar);
     }
 
+    @Override
     public String getExeAsFileSystemValidPath() {
         return getExeAsFileSystemValidPath(executableOrJar);
     }
 
+    @Override
     public String getVersion() {
         return version;
     }
 
+    @Override
     public int getGrammarVersion() {
         return PythonNature.getGrammarVersionFromStr(version);
     }
@@ -1502,6 +1527,7 @@ public class InterpreterInfo implements IInterpreterInfo {
         this.clearBuiltinsCache();
     }
 
+    @Override
     public Iterator<String> forcedLibsIterator() {
         return forcedLibs.iterator();
     }
@@ -1539,14 +1565,17 @@ public class InterpreterInfo implements IInterpreterInfo {
         this.envVariables = env;
     }
 
+    @Override
     public String[] getEnvVariables() {
         return this.envVariables;
     }
 
+    @Override
     public String[] updateEnv(String[] env) {
         return updateEnv(env, null);
     }
 
+    @Override
     public String[] updateEnv(String[] env, Set<String> keysThatShouldNotBeUpdated) {
         if (this.envVariables == null || this.envVariables.length == 0) {
             return env; //nothing to change
@@ -1642,6 +1671,7 @@ public class InterpreterInfo implements IInterpreterInfo {
                     + "It's managed depending on the project and other configurations and cannot be directly specified in the interpreter.";
             try {
                 RunInUiThread.async(new Runnable() {
+                    @Override
                     public void run() {
                         MessageBox message = new MessageBox(EditorUtils.getShell(), SWT.OK | SWT.ICON_INFORMATION);
                         message.setText("Ignoring " + keyPlatformDependent);
@@ -1662,6 +1692,7 @@ public class InterpreterInfo implements IInterpreterInfo {
     /**
      * @return a new interpreter info that's a copy of the current interpreter info.
      */
+    @Override
     public InterpreterInfo makeCopy() {
         InterpreterInfo ret = fromString(toString(), false);
         ret.setModificationStamp(modificationStamp);
@@ -1680,10 +1711,12 @@ public class InterpreterInfo implements IInterpreterInfo {
         return this.modificationStamp;
     }
 
+    @Override
     public void setName(String name) {
         this.name = name;
     }
 
+    @Override
     public String getName() {
         if (this.name != null) {
             return this.name;
@@ -1691,6 +1724,7 @@ public class InterpreterInfo implements IInterpreterInfo {
         return this.executableOrJar;
     }
 
+    @Override
     public String getNameForUI() {
         if (this.name != null && !this.name.equals(this.executableOrJar)) {
             return this.name + "  (" + this.executableOrJar + ")";
@@ -1699,6 +1733,7 @@ public class InterpreterInfo implements IInterpreterInfo {
         }
     }
 
+    @Override
     public boolean matchNameBackwardCompatible(String interpreter) {
         if (this.name != null) {
             if (interpreter.equals(this.name)) {
@@ -1719,6 +1754,7 @@ public class InterpreterInfo implements IInterpreterInfo {
         }
     }
 
+    @Override
     public Properties getStringSubstitutionVariables() {
         return this.stringSubstitutionVariables;
     }
@@ -1728,6 +1764,7 @@ public class InterpreterInfo implements IInterpreterInfo {
         this.clearBuiltinsCache();
     }
 
+    @Override
     public List<String> getPredefinedCompletionsPath() {
         return new ArrayList<String>(predefinedCompletionsPath); //Return a copy.
     }
@@ -1745,6 +1782,7 @@ public class InterpreterInfo implements IInterpreterInfo {
                     File[] predefs = f.listFiles(new FilenameFilter() {
 
                         //Only accept names ending with .pypredef in the passed dirs
+                        @Override
                         public boolean accept(File dir, String name) {
                             return name.endsWith(".pypredef");
                         }
@@ -1777,5 +1815,10 @@ public class InterpreterInfo implements IInterpreterInfo {
 
     public boolean getLoadFinished() {
         return this.loadFinished;
+    }
+
+    public File getIoDirectory() {
+        final File workspaceMetadataFile = PydevPlugin.getWorkspaceMetadataFile(this.getExeAsFileSystemValidPath());
+        return workspaceMetadataFile;
     }
 }

@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,6 +40,7 @@ import org.python.pydev.core.IInterpreterInfo;
 import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.plugin.PydevPlugin;
+import org.python.pydev.shared_core.structure.LinkedListWarningOnSlowOperations;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.shared_core.structure.Tuple3;
 import org.python.pydev.shared_ui.EditorUtils;
@@ -110,14 +110,14 @@ public class AutoConfigMaker {
      * in the constructor, in cases when no interpreters of that type are yet configured.
      * @param onConfigComplete An optional JobChangeAdapter to be associated with the configure operation.
      */
-    public void autoConfigSingleApply(JobChangeAdapter onConfigComplete) {
+    public boolean autoConfigSingleApply(JobChangeAdapter onConfigComplete) {
         if (interpreterManager.getInterpreterInfos().length != 0) {
-            return;
+            return false;
         }
         ObtainInterpreterInfoOperation operation = autoConfigSearch();
         //autoConfigSearch displays an error dialog if an interpreter couldn't be found, so don't display errors for null cases here.
         if (operation == null) {
-            return;
+            return false;
         }
         try {
             final IInterpreterInfo interpreterInfo = operation.result.makeCopy();
@@ -158,7 +158,7 @@ public class AutoConfigMaker {
                 applyOperationJob.addJobChangeListener(onConfigComplete);
             }
             applyOperationJob.schedule();
-            return;
+            return true;
 
         } catch (Exception e) {
             Log.log(e);
@@ -171,7 +171,7 @@ public class AutoConfigMaker {
             //show the user a message (so that it does not fail silently)...
             ErrorDialog.openError(EditorUtils.getShell(), "Unable to get info on the interpreter.",
                     errorMsg, PydevPlugin.makeStatus(IStatus.ERROR, "See error log for details.", e));
-            return;
+            return false;
         } finally {
             if (charWriter != null) {
                 Log.logInfo(charWriter.toString());
@@ -280,6 +280,7 @@ public class AutoConfigMaker {
         public ObtainInterpreterInfoOperation getOperation() {
             if (needInstall()) {
                 SafeRunner.run(new SafeRunnable() {
+                    @Override
                     public void run() throws Exception {
                         provider.runInstall();
                     }
@@ -352,7 +353,7 @@ public class AutoConfigMaker {
             final List<PossibleInterpreter> possibleInterpreters) {
 
         boolean foundDuplicate = false;
-        List<Exception> exceptions = new LinkedList<Exception>();
+        List<Exception> exceptions = new LinkedListWarningOnSlowOperations<Exception>();
 
         // Iterate through the interpreters, removing the invalid ones
         for (Iterator<PossibleInterpreter> iterator = possibleInterpreters.iterator(); iterator.hasNext();) {
@@ -435,8 +436,7 @@ public class AutoConfigMaker {
             MultiStatus multiStatus = new MultiStatus(PydevPlugin.getPluginID(), IStatus.ERROR, children, message,
                     null);
             ErrorDialog.openError(EditorUtils.getShell(), dialogTitle, errorMsg + typeSpecificMessage, multiStatus);
-        }
-        else {
+        } else {
             Status status = PydevPlugin.makeStatus(IStatus.ERROR, message, null);
             ErrorDialog.openError(EditorUtils.getShell(), dialogTitle, errorMsg + typeSpecificMessage, status);
         }
@@ -459,6 +459,7 @@ public class AutoConfigMaker {
                 .getParticipants(ExtensionHelper.PYDEV_INTERPRETER_PROVIDER);
         for (final IInterpreterProviderFactory providerFactory : participants) {
             SafeRunner.run(new SafeRunnable() {
+                @Override
                 public void run() throws Exception {
                     IInterpreterProvider[] ips = providerFactory.getInterpreterProviders(interpreterType);
                     if (ips != null) {

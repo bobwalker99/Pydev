@@ -29,8 +29,6 @@ import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IOverviewRuler;
 import org.eclipse.jface.text.source.IVerticalRuler;
-import org.eclipse.jface.text.source.projection.ProjectionViewer;
-import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.texteditor.IDocumentProvider;
@@ -38,38 +36,42 @@ import org.eclipse.ui.texteditor.MarkerAnnotation;
 import org.python.pydev.editor.PyEdit;
 import org.python.pydev.editor.actions.PyShiftLeft;
 import org.python.pydev.editor.autoedit.PyAutoIndentStrategy;
-import org.python.pydev.overview_ruler.StyledTextWithoutVerticalBar;
+import org.python.pydev.shared_ui.editor.BaseSourceViewer;
+import org.python.pydev.shared_ui.editor.ITextViewerExtensionAutoEditions;
 import org.python.pydev.shared_ui.proposals.ICompletionStyleToggleEnabler;
 
-public class PySourceViewer extends ProjectionViewer implements IAdaptable, ICompletionStyleToggleEnabler {
+public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICompletionStyleToggleEnabler,
+        ITextViewerExtensionAutoEditions {
 
     private WeakReference<PyEdit> projection;
 
     public PySourceViewer(Composite parent, IVerticalRuler ruler, IOverviewRuler overviewRuler,
-            boolean showsAnnotationOverview, int styles, PyEditProjection projection) {
-        super(parent, ruler, overviewRuler, showsAnnotationOverview, styles);
+            boolean showsAnnotationOverview, int styles, final PyEditProjection projection) {
+        super(parent, ruler, overviewRuler, showsAnnotationOverview, styles,
+                new PyAbstractIndentGuidePreferencesProvider() {
+
+                    @Override
+                    public int getTabWidth() {
+                        return ((PyEdit) projection).getIndentPrefs().getTabWidth();
+                    }
+                });
         this.projection = new WeakReference<PyEdit>((PyEdit) projection);
     }
 
     private boolean isInToggleCompletionStyle;
 
+    @Override
     public void setInToggleCompletionStyle(boolean b) {
         this.isInToggleCompletionStyle = b;
     }
 
+    @Override
     public boolean getIsInToggleCompletionStyle() {
         return this.isInToggleCompletionStyle;
     }
 
     public PyEdit getEdit() {
         return projection.get();
-    }
-
-    @Override
-    protected StyledText createTextWidget(Composite parent, int styles) {
-        StyledTextWithoutVerticalBar styledText = new StyledTextWithoutVerticalBar(parent, styles);
-        styledText.setLeftMargin(Math.max(styledText.getLeftMargin(), 2));
-        return styledText;
     }
 
     /**
@@ -146,6 +148,7 @@ public class PySourceViewer extends ProjectionViewer implements IAdaptable, ICom
 
                 private MarkerAnnotationAndPosition marker;
 
+                @Override
                 public boolean hasNext() {
                     while (annotationIterator.hasNext()) {
                         if (marker != null) {
@@ -167,6 +170,7 @@ public class PySourceViewer extends ProjectionViewer implements IAdaptable, ICom
                     return false;
                 }
 
+                @Override
                 public MarkerAnnotationAndPosition next() {
                     hasNext();
 
@@ -175,6 +179,7 @@ public class PySourceViewer extends ProjectionViewer implements IAdaptable, ICom
                     return m;
                 }
 
+                @Override
                 public void remove() {
                     throw new RuntimeException("not implemented");
                 }
@@ -182,14 +187,17 @@ public class PySourceViewer extends ProjectionViewer implements IAdaptable, ICom
             };
         }
         return new Iterator<MarkerAnnotationAndPosition>() {
+            @Override
             public boolean hasNext() {
                 return false;
             }
 
+            @Override
             public MarkerAnnotationAndPosition next() {
                 return null;
             }
 
+            @Override
             public void remove() {
                 throw new RuntimeException("not implemented");
             }
@@ -265,10 +273,12 @@ public class PySourceViewer extends ProjectionViewer implements IAdaptable, ICom
         super.customizeDocumentCommand(command);
     }
 
-    public Object getAdapter(Class adapter) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getAdapter(Class<T> adapter) {
         PyEdit pyEdit = projection.get();
         if (pyEdit != null) {
-            return pyEdit.getAdapter(adapter);
+            return (T) pyEdit.getAdapter(adapter);
         }
         return null;
     }

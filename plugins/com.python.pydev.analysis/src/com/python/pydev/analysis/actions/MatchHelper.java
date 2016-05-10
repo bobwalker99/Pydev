@@ -9,8 +9,8 @@ package com.python.pydev.analysis.actions;
 import java.util.List;
 
 import org.eclipse.ui.dialogs.SearchPattern;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.shared_core.callbacks.ICallback2;
+import org.python.pydev.shared_core.string.StringUtils;
 
 import com.python.pydev.analysis.additionalinfo.IInfo;
 
@@ -67,6 +67,7 @@ public class MatchHelper {
     public static boolean equalsFilter(String thisPattern, String otherPattern) {
         return checkPatternSubparts(thisPattern, otherPattern, new ICallback2<Boolean, SearchPattern, SearchPattern>() {
 
+            @Override
             public Boolean call(SearchPattern thisP, SearchPattern otherP) {
                 if (!(thisP.equalsPattern(otherP))) {
                     return false;
@@ -82,6 +83,7 @@ public class MatchHelper {
     public static boolean isSubFilter(String thisPattern, String otherPattern) {
         return checkPatternSubparts(thisPattern, otherPattern, new ICallback2<Boolean, SearchPattern, SearchPattern>() {
 
+            @Override
             public Boolean call(SearchPattern thisP, SearchPattern otherP) {
                 if (!(thisP.isSubPattern(otherP))) {
                     return false;

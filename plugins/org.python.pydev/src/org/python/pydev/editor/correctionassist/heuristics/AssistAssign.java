@@ -23,7 +23,7 @@ import org.python.pydev.codingstd.ICodingStd;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.docutils.ParsingUtils;
 import org.python.pydev.core.docutils.PySelection;
-import org.python.pydev.core.docutils.StringUtils;
+import org.python.pydev.core.docutils.PyStringUtils;
 import org.python.pydev.core.docutils.SyntaxErrorException;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.PyEdit;
@@ -31,6 +31,7 @@ import org.python.pydev.editor.actions.PyAction;
 import org.python.pydev.editor.codefolding.PySourceViewer;
 import org.python.pydev.plugin.preferences.PyCodeStylePreferencesPage;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_ui.ImageCache;
 import org.python.pydev.shared_ui.UIConstants;
 import org.python.pydev.shared_ui.proposals.IPyCompletionProposal;
@@ -45,6 +46,7 @@ public class AssistAssign implements IAssistProps {
     public AssistAssign() {
         this(new ICodingStd() {
 
+            @Override
             public boolean localsAndAttrsCamelcase() {
                 return PyCodeStylePreferencesPage.useLocalsAndAttrsCamelCase();
             }
@@ -57,14 +59,16 @@ public class AssistAssign implements IAssistProps {
     }
 
     private Image getImage(ImageCache imageCache, String c) {
-        if (imageCache != null)
+        if (imageCache != null) {
             return imageCache.get(c);
+        }
         return null;
     }
 
     /**
      * @see org.python.pydev.editor.correctionassist.heuristics.IAssistProps#getProps
      */
+    @Override
     public List<ICompletionProposal> getProps(PySelection ps, ImageCache imageCache, File f, IPythonNature nature,
             PyEdit edit, int offset) throws BadLocationException {
         PySourceViewer viewer = null;
@@ -157,6 +161,7 @@ public class AssistAssign implements IAssistProps {
     /**
      * @see org.python.pydev.editor.correctionassist.heuristics.IAssistProps#isValid
      */
+    @Override
     public boolean isValid(PySelection ps, String sel, PyEdit edit, int offset) {
         return isValid(ps.getTextSelection().getLength(), sel, offset);
     }
@@ -268,7 +273,7 @@ public class AssistAssign implements IAssistProps {
                 }
             }
             if (callName.length() == 0) {
-                if (StringUtils.isPythonIdentifier(string)) {
+                if (PyStringUtils.isPythonIdentifier(string)) {
                     callName = string;
                 }
             }

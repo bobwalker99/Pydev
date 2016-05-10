@@ -43,7 +43,6 @@ import org.python.pydev.navigator.PythonpathTreeNode;
 import org.python.pydev.navigator.elements.IWrappedResource;
 import org.python.pydev.shared_core.structure.TreeNode;
 
-
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class PythonLinkHelper implements ILinkHelper {
 
@@ -58,6 +57,7 @@ public class PythonLinkHelper implements ILinkHelper {
      * 
      * @see org.eclipse.ui.navigator.ILinkHelper#findSelection(org.eclipse.ui.IEditorInput)
      */
+    @Override
     public IStructuredSelection findSelection(IEditorInput anInput) {
         if (anInput instanceof IFileEditorInput) {
             return new StructuredSelection(((IFileEditorInput) anInput).getFile());
@@ -79,6 +79,7 @@ public class PythonLinkHelper implements ILinkHelper {
      * 
      * @see org.eclipse.ui.navigator.ILinkHelper#activateEditor(org.eclipse.ui.IWorkbenchPage, org.eclipse.jface.viewers.IStructuredSelection)
      */
+    @Override
     public void activateEditor(IWorkbenchPage aPage, IStructuredSelection aSelection) {
         if (aSelection == null || aSelection.isEmpty()) {
             return;
@@ -210,7 +211,7 @@ public class PythonLinkHelper implements ILinkHelper {
     }
 
     private IStructuredSelection findExternalFileSelectionGivenTreeSelection(File f, CommonViewer commonViewer,
-            ITreeContentProvider treeContentProvider, Set<IInterpreterInfo> infosSearched, Object next) {
+            ITreeContentProvider treeContentProvider, Set<IInterpreterInfo> infosSearched, final Object next) {
 
         if (next instanceof IAdaptable) {
             IAdaptable adaptable = (IAdaptable) next;
@@ -233,7 +234,9 @@ public class PythonLinkHelper implements ILinkHelper {
             }
             //Keep on going to try to find a parent that'll adapt to IResource...
 
-        } else if (next instanceof TreeNode) {
+        }
+
+        if (next instanceof TreeNode) {
             TreeNode treeNode = (TreeNode) next;
             while (true) {
                 if (treeNode instanceof InterpreterInfoTreeNodeRoot) {
@@ -243,6 +246,12 @@ public class PythonLinkHelper implements ILinkHelper {
                         return sel;
                     }
                     return null;
+                }
+                if (treeNode instanceof PythonpathTreeNode) {
+                    PythonpathTreeNode pythonpathTreeNode = (PythonpathTreeNode) treeNode;
+                    if (f.equals(pythonpathTreeNode.file)) {
+                        return new StructuredSelection(treeNode);
+                    }
                 }
                 Object parent = treeNode.getParent();
                 if (parent instanceof TreeNode) {
@@ -259,8 +268,8 @@ public class PythonLinkHelper implements ILinkHelper {
 
         //Some unexpected type... let's get its parent until we find one expected (or just end up trying if we get to the root).
         Object parent = next;
-        int i = 10000;
-        //just playing safe to make sure we won't get into a recursion (the tree should never group up to 10000 levels,
+        int i = 200;
+        //just playing safe to make sure we won't get into a recursion (the tree should never group up to 200 levels,
         //so, this is likely a problem in the content provider).
         while (i > 0) {
             i--;
@@ -271,7 +280,7 @@ public class PythonLinkHelper implements ILinkHelper {
             if (parent == null || parent instanceof IWorkspaceRoot || parent instanceof IWorkingSet) {
                 break;
             }
-            if (parent instanceof TreeNode) {
+            if (parent instanceof TreeNode && parent != next) {
                 return findExternalFileSelectionGivenTreeSelection(f, commonViewer, treeContentProvider, infosSearched,
                         parent);
             } else if (parent instanceof IAdaptable) {
@@ -279,7 +288,7 @@ public class PythonLinkHelper implements ILinkHelper {
                 IResource resource = (IResource) adaptable.getAdapter(IResource.class);
                 if (resource != null) {
                     IProject project = resource.getProject();
-                    if (project != null) {
+                    if (project != null && project != next) {
                         return findExternalFileSelectionGivenTreeSelection(f, commonViewer, treeContentProvider,
                                 infosSearched, project);
                     }

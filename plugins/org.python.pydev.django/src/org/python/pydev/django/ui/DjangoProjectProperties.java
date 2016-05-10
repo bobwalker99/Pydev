@@ -34,7 +34,7 @@ import org.python.pydev.core.log.Log;
 import org.python.pydev.django.launching.DjangoConstants;
 import org.python.pydev.editor.codecompletion.revisited.ProjectModulesManager;
 import org.python.pydev.plugin.nature.PythonNature;
-
+import org.python.pydev.shared_core.string.StringUtils;
 
 public class DjangoProjectProperties extends PropertyPage {
 
@@ -85,6 +85,7 @@ public class DjangoProjectProperties extends PropertyPage {
 
                 ModifyListener manageValidator = new ModifyListener() {
 
+                    @Override
                     public void modifyText(ModifyEvent e) {
                         try {
                             String path = textDjangoManage.getText().trim();
@@ -96,7 +97,7 @@ public class DjangoProjectProperties extends PropertyPage {
 
                             IFile file = project.getFile(new Path(path));
                             if (!file.exists()) {
-                                labelErrorManage.setText(org.python.pydev.shared_core.string.StringUtils.format("File: %s could not be found.", path));
+                                labelErrorManage.setText(StringUtils.format("File: %s could not be found.", path));
                             } else {
                                 labelErrorManage.setText("");
                             }
@@ -128,6 +129,7 @@ public class DjangoProjectProperties extends PropertyPage {
                 labelErrorSettings.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
                 ModifyListener settingsValidator = new ModifyListener() {
 
+                    @Override
                     public void modifyText(ModifyEvent e) {
                         try {
                             String moduleName = textDjangoSettings.getText().trim();
@@ -143,7 +145,7 @@ public class DjangoProjectProperties extends PropertyPage {
                             IModule moduleInDirectManager = modulesManager.getModuleInDirectManager(moduleName, nature,
                                     true);
                             if (moduleInDirectManager == null) {
-                                labelErrorSettings.setText(org.python.pydev.shared_core.string.StringUtils.format("Module: %s could not be found.",
+                                labelErrorSettings.setText(StringUtils.format("Module: %s could not be found.",
                                         moduleName));
                             } else {
                                 labelErrorSettings.setText("");
@@ -190,6 +192,7 @@ public class DjangoProjectProperties extends PropertyPage {
     /**
      * Saves values.
      */
+    @Override
     public boolean performOk() {
 
         try {

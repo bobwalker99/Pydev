@@ -9,6 +9,7 @@ package com.python.pydev.codecompletion.simpleassist;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
@@ -27,9 +28,9 @@ import com.python.pydev.codecompletion.ui.CodeCompletionPreferencesPage;
 
 /**
  * by using this assist (with the extension), we are able to just validate it (without recomputing all completions each time).
- * 
+ *
  * They are only recomputed on backspace...
- * 
+ *
  * @author Fabio
  */
 public class SimpleAssistProposal extends PyCompletionProposal implements ICompletionProposalExtension2 {
@@ -80,19 +81,35 @@ public class SimpleAssistProposal extends PyCompletionProposal implements ICompl
 
     private int changeInCursorPos = 0;
 
+    @Override
     public Point getSelection(IDocument document) {
         return new Point(fReplacementOffset + fCursorPosition + changeInCursorPos, 0);
     }
 
+    @Override
     public void apply(ITextViewer viewer, char trigger, int stateMask, int offset) {
         try {
             IDocument doc = viewer.getDocument();
             int dif = offset - fReplacementOffset;
+
+            IAdaptable projectAdaptable;
+            if (viewer instanceof IAdaptable) {
+                projectAdaptable = (IAdaptable) viewer;
+            } else {
+                projectAdaptable = new IAdaptable() {
+
+                    @Override
+                    public <T> T getAdapter(Class<T> adapter) {
+                        return null;
+                    }
+                };
+            }
+
             if (fReplacementString.equals("elif")) {
                 doc.replace(offset, 0, fReplacementString.substring(dif));
 
                 //check if we should dedent
-                PyAutoIndentStrategy strategy = new PyAutoIndentStrategy();
+                PyAutoIndentStrategy strategy = new PyAutoIndentStrategy(projectAdaptable);
                 DocCmd cmd = new DocCmd(offset + fReplacementString.length() - dif, 0, " ");
                 Tuple<String, Integer> dedented = PyAutoIndentStrategy.autoDedentElif(doc, cmd,
                         strategy.getIndentPrefs());
@@ -109,7 +126,7 @@ public class SimpleAssistProposal extends PyCompletionProposal implements ICompl
                 doc.replace(offset, 0, replacementString.substring(dif));
 
                 //dedent if needed
-                PyAutoIndentStrategy strategy = new PyAutoIndentStrategy();
+                PyAutoIndentStrategy strategy = new PyAutoIndentStrategy(projectAdaptable);
                 DocCmd cmd = new DocCmd(offset + replacementString.length() - dif, 0, ":");
                 Tuple<String, Integer> dedented = PyAutoIndentStrategy.autoDedentAfterColon(doc, cmd,
                         strategy.getIndentPrefs());
@@ -151,12 +168,15 @@ public class SimpleAssistProposal extends PyCompletionProposal implements ICompl
         }
     }
 
+    @Override
     public void selected(ITextViewer viewer, boolean smartToggle) {
     }
 
+    @Override
     public void unselected(ITextViewer viewer) {
     }
 
+    @Override
     public boolean validate(IDocument document, int offset, DocumentEvent event) {
         String[] strs = PySelection.getActivationTokenAndQual(document, offset, false);
 

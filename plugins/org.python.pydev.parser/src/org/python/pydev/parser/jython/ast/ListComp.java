@@ -15,6 +15,7 @@ public final class ListComp extends exprType implements comp_contextType {
         this.ctx = ctx;
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -24,6 +25,7 @@ public final class ListComp extends exprType implements comp_contextType {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (this == obj)
             return true;
@@ -44,10 +46,12 @@ public final class ListComp extends exprType implements comp_contextType {
         return true;
     }
 
+    @Override
     public ListComp createCopy() {
         return createCopy(true);
     }
 
+    @Override
     public ListComp createCopy(boolean copyComments) {
         comprehensionType[] new0;
         if (this.generators != null) {
@@ -59,7 +63,8 @@ public final class ListComp extends exprType implements comp_contextType {
         } else {
             new0 = this.generators;
         }
-        ListComp temp = new ListComp(elt != null ? (exprType) elt.createCopy(copyComments) : null, new0, ctx);
+        ListComp temp = new ListComp(elt != null ? (exprType) elt.createCopy(copyComments) : null, new0,
+                ctx);
         temp.beginLine = this.beginLine;
         temp.beginColumn = this.beginColumn;
         if (this.specialsBefore != null && copyComments) {
@@ -81,6 +86,7 @@ public final class ListComp extends exprType implements comp_contextType {
         return temp;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("ListComp[");
         sb.append("elt=");
@@ -95,10 +101,12 @@ public final class ListComp extends exprType implements comp_contextType {
         return sb.toString();
     }
 
+    @Override
     public Object accept(VisitorIF visitor) throws Exception {
         return visitor.visitListComp(this);
     }
 
+    @Override
     public void traverse(VisitorIF visitor) throws Exception {
         if (elt != null) {
             elt.accept(visitor);

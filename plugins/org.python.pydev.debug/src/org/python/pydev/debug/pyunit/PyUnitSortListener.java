@@ -19,7 +19,6 @@ import org.eclipse.swt.widgets.TreeItem;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.shared_ui.tooltips.presenter.ToolTipPresenterHandler;
 
-
 /**
  * Listener to do the sorting in the tree.
  */
@@ -31,6 +30,7 @@ final class PyUnitSortListener implements Listener {
         this.view = view;
     }
 
+    @Override
     public void handleEvent(Event e) {
         Tree tree = view.getTree();
         TreeItem[] items = tree.getItems();
@@ -40,6 +40,7 @@ final class PyUnitSortListener implements Listener {
         if (column == view.colIndex) {
             col = -1;
             comparator = new Comparator<TreeItem>() {
+                @Override
                 public int compare(TreeItem o1, TreeItem o2) {
                     String txt0 = o1.getText(PyUnitView.COL_INDEX);
                     String txt1 = o2.getText(PyUnitView.COL_INDEX);
@@ -71,6 +72,7 @@ final class PyUnitSortListener implements Listener {
         } else if (column == view.colTime) {
             col = -1;
             comparator = new Comparator<TreeItem>() {
+                @Override
                 public int compare(TreeItem o1, TreeItem o2) {
                     String txt0 = o1.getText(PyUnitView.COL_TIME);
                     String txt1 = o2.getText(PyUnitView.COL_TIME);
@@ -96,6 +98,7 @@ final class PyUnitSortListener implements Listener {
 
         if (comparator == null) {
             comparator = new Comparator<TreeItem>() {
+                @Override
                 public int compare(TreeItem o1, TreeItem o2) {
                     return o1.getText(col).compareTo(o2.getText(col));
                 }
@@ -111,6 +114,7 @@ final class PyUnitSortListener implements Listener {
                 final Comparator<TreeItem> oldComparator = comparator;
                 comparator = new Comparator<TreeItem>() {
 
+                    @Override
                     public int compare(TreeItem o1, TreeItem o2) {
                         return -oldComparator.compare(o1, o2);
                     }
@@ -143,10 +147,14 @@ final class PyUnitSortListener implements Listener {
                 item.setData(ToolTipPresenterHandler.TIP_DATA, results[i][0]);
                 PyUnitTestResult result = (PyUnitTestResult) results[i][1];
                 item.setData(PyUnitView.PY_UNIT_TEST_RESULT, result);
-                if (!result.isOk()) {
-                    item.setForeground(errorColor);
-                } else {
+                if (result.isOk()) {
                     item.setForeground(null);
+
+                } else if (result.isSkip()) {
+                    item.setForeground(null);
+
+                } else {
+                    item.setForeground(errorColor);
                 }
             }
         } finally {

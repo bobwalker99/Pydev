@@ -17,7 +17,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.python.pydev.core.resource_stubs.AbstractIFileStub;
+import org.python.pydev.shared_core.resource_stubs.AbstractIFileStub;
 
 public class FileStub2 extends AbstractIFileStub implements IFile {
 
@@ -38,6 +38,7 @@ public class FileStub2 extends AbstractIFileStub implements IFile {
         return this.name;
     }
 
+    @Override
     public void create(InputStream source, boolean force, IProgressMonitor monitor) throws CoreException {
         created = true;
         try {

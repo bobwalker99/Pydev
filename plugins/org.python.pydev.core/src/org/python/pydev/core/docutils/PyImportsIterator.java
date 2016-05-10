@@ -9,6 +9,7 @@ package org.python.pydev.core.docutils;
 import java.util.Iterator;
 
 import org.eclipse.jface.text.IDocument;
+import org.python.pydev.shared_core.string.StringUtils;
 
 /**
  * Iterator through imports that yields tuples with the import itself, the initial line of the import
@@ -68,7 +69,7 @@ public class PyImportsIterator implements Iterator<ImportHandle> {
     }
 
     public PyImportsIterator(IDocument doc, boolean addOnlyGlobalImports) {
-        this(doc,  addOnlyGlobalImports, false);
+        this(doc, addOnlyGlobalImports, false);
     }
 
     /**
@@ -88,10 +89,10 @@ public class PyImportsIterator implements Iterator<ImportHandle> {
 
             boolean match;
             if (addOnlyGlobalImports) {
-                match = str.startsWith("import ") || str.startsWith("from ");
+                match = str.startsWith("import ") || str.startsWith("from ") || str.trim().equals("import");
             } else {
                 str = StringUtils.leftTrim(str);
-                match = str.startsWith("import ") || str.startsWith("from ");
+                match = str.startsWith("import ") || str.startsWith("from ") || str.trim().equals("import");
             }
 
             if (match) {
@@ -123,6 +124,7 @@ public class PyImportsIterator implements Iterator<ImportHandle> {
     /**
      * From the iterator interface
      */
+    @Override
     public boolean hasNext() {
         return this.hasNext;
     }
@@ -130,6 +132,7 @@ public class PyImportsIterator implements Iterator<ImportHandle> {
     /**
      * From the iterator interface
      */
+    @Override
     public ImportHandle next() {
         ImportHandle ret = this.nextImport;
         calcNext(); //pre-compute the next step
@@ -139,6 +142,7 @@ public class PyImportsIterator implements Iterator<ImportHandle> {
     /**
      * From the iterator interface (not implemented)
      */
+    @Override
     public void remove() {
         throw new RuntimeException("Not implemented");
     }

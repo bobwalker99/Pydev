@@ -53,13 +53,13 @@ import org.python.pydev.parser.jython.ast.sliceType;
 import org.python.pydev.parser.jython.ast.stmtType;
 import org.python.pydev.parser.jython.ast.suiteType;
 
-
 public final class TreeBuilder25 extends AbstractTreeBuilder implements ITreeBuilder, ITreeConstants {
 
     public TreeBuilder25(JJTPythonGrammarState stack) {
         super(stack);
     }
 
+    @Override
     public final SimpleNode onCloseNode(SimpleNode n, int arity) throws Exception {
         exprType value;
         exprType[] exprs;

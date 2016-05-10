@@ -13,7 +13,6 @@ package org.python.pydev.outline;
 import java.util.ArrayList;
 
 import org.eclipse.swt.graphics.Image;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.Attribute;
 import org.python.pydev.parser.jython.ast.ClassDef;
@@ -32,6 +31,7 @@ import org.python.pydev.parser.visitors.scope.ASTEntryWithChildren;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.shared_core.model.ErrorDescription;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_ui.ImageCache;
 import org.python.pydev.shared_ui.UIConstants;
 import org.python.pydev.shared_ui.outline.BaseParsedItem;
@@ -49,6 +49,15 @@ public class ParsedItem extends BaseParsedItem {
         this(astChildren, null);
         this.parent = parent;
         this.astThis = root;
+    }
+
+    @Override
+    public int getBeginCol() {
+        ASTEntryWithChildren astThis = getAstThis();
+        if (astThis != null && astThis.node != null) {
+            return astThis.node.beginColumn;
+        }
+        return -1;
     }
 
     /**
@@ -77,6 +86,7 @@ public class ParsedItem extends BaseParsedItem {
         super.updateTo(item);
     }
 
+    @Override
     public int getBeginLine() {
         ASTEntryWithChildren astThis = getAstThis();
         if (astThis != null && astThis.node != null) {
@@ -128,6 +138,7 @@ public class ParsedItem extends BaseParsedItem {
     }
 
     // returns images based upon element type
+    @Override
     public Image getImage() {
         ImageCache imageCache = PydevPlugin.getImageCache();
         if (astThis == null) {
@@ -234,6 +245,7 @@ public class ParsedItem extends BaseParsedItem {
         }
     }
 
+    @Override
     public IParsedItem[] getChildren() {
         if (children != null) {
             return children;
@@ -256,6 +268,7 @@ public class ParsedItem extends BaseParsedItem {
         return children;
     }
 
+    @Override
     protected String calcToString() {
         if (errorDesc != null && errorDesc.message != null) {
             return errorDesc.message;
@@ -344,6 +357,7 @@ public class ParsedItem extends BaseParsedItem {
         return rank;
     }
 
+    @Override
     public int compareTo(Object o) {
         if (!(o instanceof ParsedItem)) {
             return 0;
@@ -364,6 +378,7 @@ public class ParsedItem extends BaseParsedItem {
         }
     }
 
+    @Override
     public boolean sameNodeType(IParsedItem newItem) {
         ASTEntryWithChildren astThisOld = this.getAstThis();
         ASTEntryWithChildren astThisNew = ((ParsedItem) newItem).getAstThis();
@@ -376,6 +391,7 @@ public class ParsedItem extends BaseParsedItem {
         return true; //still the same
     }
 
+    @Override
     public void updateShallow(IParsedItem newItem) {
         setAstThis(((ParsedItem) newItem).getAstThis());
         setErrorDesc(newItem.getErrorDesc());

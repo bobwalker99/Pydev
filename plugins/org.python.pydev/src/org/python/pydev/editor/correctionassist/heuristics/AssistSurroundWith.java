@@ -45,19 +45,32 @@ public class AssistSurroundWith extends AbstractTemplateCodeCompletion implement
      * @throws BadLocationException
      * @see org.python.pydev.editor.correctionassist.heuristics.IAssistProps#getProps(org.python.pydev.core.docutils.PySelection, org.python.pydev.shared_ui.ImageCache)
      */
+    @Override
     public List<ICompletionProposal> getProps(PySelection ps, ImageCache imageCache, File f, IPythonNature nature,
             PyEdit edit, int offset) throws BadLocationException {
 
         ArrayList<ICompletionProposal> l = new ArrayList<ICompletionProposal>();
-        String indentation = edit != null ? edit.getIndentPrefs().getIndentationString() : DefaultIndentPrefs.get()
-                .getIndentationString();
+        String indentation = edit != null ? edit.getIndentPrefs().getIndentationString() : DefaultIndentPrefs.get(
+                nature).getIndentationString();
 
         ps.selectCompleteLine();
         String selectedText = ps.getSelectedText();
         List<String> splitInLines = StringUtils.splitInLines(selectedText);
         int firstCharPosition = -1;
+        int firstCommentCharPosition = -1;
+
         for (String string : splitInLines) {
-            if (string.trim().length() > 0) {
+            String trimmed = string.trim();
+            if (trimmed.startsWith("#")) {
+                int localFirst = PySelection.getFirstCharPosition(string);
+                if (firstCommentCharPosition == -1) {
+                    firstCommentCharPosition = localFirst;
+                } else if (localFirst < firstCommentCharPosition) {
+                    firstCommentCharPosition = localFirst;
+                }
+                continue;
+            }
+            if (trimmed.length() > 0) {
                 int localFirst = PySelection.getFirstCharPosition(string);
                 if (firstCharPosition == -1) {
                     firstCharPosition = localFirst;
@@ -67,7 +80,12 @@ public class AssistSurroundWith extends AbstractTemplateCodeCompletion implement
             }
         }
         if (firstCharPosition == -1) {
-            return l;
+            if (firstCommentCharPosition != -1) {
+                firstCharPosition = firstCommentCharPosition;
+            } else {
+                // Haven't found any non-empty line.
+                return l;
+            }
         }
 
         //delimiter to use
@@ -99,9 +117,9 @@ public class AssistSurroundWith extends AbstractTemplateCodeCompletion implement
         for (int iComp = 0, iRep = 0; iComp < SURROUND_WITH_COMPLETIONS.length; iComp += 2, iRep++) {
             String comp = SURROUND_WITH_COMPLETIONS[iComp];
             if (iRep < 4) {
-                comp = org.python.pydev.shared_core.string.StringUtils.format(comp, (Object[]) replace0to3);
+                comp = StringUtils.format(comp, (Object[]) replace0to3);
             } else {
-                comp = org.python.pydev.shared_core.string.StringUtils.format(comp, (Object[]) replace4toEnd);
+                comp = StringUtils.format(comp, (Object[]) replace4toEnd);
             }
 
             l.add(createProposal(ps, imageCache, edit, startIndent, region, iComp, comp, context));
@@ -130,10 +148,10 @@ public class AssistSurroundWith extends AbstractTemplateCodeCompletion implement
 
     /**
      * Template completions available for surround with... They %s will be replaced later for the actual code/indentation.
-     * 
+     *
      * Could be refactored so that we don't have to put the actual indent here (creating a subclass of PyDocumentTemplateContext)
      * Also, if that refactoring was done, we could give an interface for the user to configure those templates better.
-     * 
+     *
      * Another nice thing may be analyzing the current context for local variables so that
      * for item in collection could have 'good' choices for the collection variable based on the local variables.
      */
@@ -149,10 +167,12 @@ public class AssistSurroundWith extends AbstractTemplateCodeCompletion implement
     /**
      * @see org.python.pydev.editor.correctionassist.heuristics.IAssistProps#isValid(org.python.pydev.core.docutils.PySelection)
      */
+    @Override
     public boolean isValid(PySelection ps, String sel, PyEdit edit, int offset) {
         return ps.getTextSelection().getLength() > 0;
     }
 
+    @Override
     public List<Object> getCodeCompletionProposals(ITextViewer viewer, CompletionRequest request) throws CoreException,
             BadLocationException {
         throw new RuntimeException("Not implemented: completions should be gotten from the IAssistProps interface.");

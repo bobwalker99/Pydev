@@ -20,7 +20,6 @@ import org.eclipse.ltk.core.refactoring.TextChange;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.shared_ui.utils.RunInUiThread;
 
-
 public class PyDocumentChange extends DocumentChange {
 
     /** Construct with factory method **/
@@ -28,12 +27,14 @@ public class PyDocumentChange extends DocumentChange {
         super(name, document);
     }
 
+    @Override
     public Change perform(final org.eclipse.core.runtime.IProgressMonitor pm) throws CoreException {
 
         final Object[] superPerform = new Object[1];
         //We need to sync it to have UI access because otherwise we're unable to start a document rewrite session.
         RunInUiThread.sync(new Runnable() {
 
+            @Override
             public void run() {
                 try {
                     superPerform[0] = superPerform(pm);
@@ -74,5 +75,10 @@ public class PyDocumentChange extends DocumentChange {
         } else {
             return new PyDocumentChangeForTests(name, document);
         }
+    }
+
+    @Override
+    public String getTextType() {
+        return "py";
     }
 }

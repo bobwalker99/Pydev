@@ -18,11 +18,11 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.editor.preferences.PydevEditorPrefs;
 import org.python.pydev.editorinput.PySourceLocatorPrefs;
 import org.python.pydev.plugin.PydevPlugin;
-import org.python.pydev.utils.ComboFieldEditor;
+import org.python.pydev.shared_core.string.StringUtils;
+import org.python.pydev.shared_ui.field_editors.ComboFieldEditor;
 
 /**
  * Preferences for the locations that should be translated -- used when the debugger is not able
@@ -42,6 +42,7 @@ public class SourceLocatorPrefsPage extends FieldEditorPreferencePage implements
         setPreferenceStore(PydevPlugin.getDefault().getPreferenceStore());
     }
 
+    @Override
     public void init(IWorkbench workbench) {
     }
 
@@ -54,6 +55,7 @@ public class SourceLocatorPrefsPage extends FieldEditorPreferencePage implements
     /**
      * Creates the editors
      */
+    @Override
     protected void createFieldEditors() {
         Composite p = getFieldEditorParent();
         addField(new ComboFieldEditor(PySourceLocatorPrefs.ON_SOURCE_NOT_FOUND,
@@ -74,6 +76,7 @@ public class SourceLocatorPrefsPage extends FieldEditorPreferencePage implements
                 InputDialog d = new InputDialog(getShell(), "New entry",
                         "Add the entry in the format path_to_replace,new_path or path,DONTASK.", "",
                         new IInputValidator() {
+                            @Override
                             public String isValid(String newText) {
                                 String[] splitted = StringUtils.splitAndRemoveEmptyTrimmed(newText, ',').toArray(
                                         new String[0]);

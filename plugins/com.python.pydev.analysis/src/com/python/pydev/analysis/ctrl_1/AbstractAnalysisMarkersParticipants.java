@@ -36,6 +36,7 @@ public abstract class AbstractAnalysisMarkersParticipants implements IAssistProp
 
     protected abstract void fillParticipants();
 
+    @Override
     public List<ICompletionProposal> getProps(PySelection ps, ImageCache imageCache, File f, IPythonNature nature,
             PyEdit edit, int offset) throws BadLocationException {
         fillParticipants();
@@ -59,7 +60,7 @@ public abstract class AbstractAnalysisMarkersParticipants implements IAssistProp
         ArrayList<ICompletionProposal> props = new ArrayList<ICompletionProposal>();
 
         if (markersAtLine != null) {
-            IAnalysisPreferences analysisPreferences = AnalysisPreferences.getAnalysisPreferences();
+            IAnalysisPreferences analysisPreferences = new AnalysisPreferences(edit);
             String currLine = ps.getLine();
             for (MarkerAnnotationAndPosition marker : markersAtLine) {
                 for (IAnalysisMarkersParticipant participant : participants) {
@@ -79,6 +80,7 @@ public abstract class AbstractAnalysisMarkersParticipants implements IAssistProp
      *  
      * @see org.python.pydev.editor.correctionassist.heuristics.IAssistProps#isValid(org.python.pydev.core.docutils.PySelection, java.lang.String, org.python.pydev.editor.PyEdit, int)
      */
+    @Override
     public boolean isValid(PySelection ps, String sel, PyEdit edit, int offset) {
         return ps.getSelLength() == 0;
     }

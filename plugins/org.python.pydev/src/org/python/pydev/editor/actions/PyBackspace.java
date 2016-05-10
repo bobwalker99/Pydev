@@ -10,6 +10,7 @@
  */
 package org.python.pydev.editor.actions;
 
+import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -26,13 +27,15 @@ import org.python.pydev.core.docutils.PythonPairMatcher;
 import org.python.pydev.editor.PyEdit;
 import org.python.pydev.editor.autoedit.DefaultIndentPrefs;
 import org.python.pydev.editor.autoedit.PyAutoIndentStrategy;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
+import org.python.pydev.shared_ui.editor.ITextViewerExtensionAutoEditions;
 
 /**
  * @author Fabio Zadrozny
- * 
+ *
  * Makes a backspace happen...
- * 
+ *
  * We can:
  * - go to the indentation from some uncommented previous line (if we
  *   only have whitespaces in the current line).
@@ -82,9 +85,10 @@ public class PyBackspace extends PyAction {
                 //in this situation, we are in the first character of the
                 // line...
                 //so, we have to get the end of the other line and delete it.
-                if (cursorOffset != 0) //we only want to erase if we are not in
-                                       // the first line.
+                if (cursorOffset != 0) {
+                    // the first line.
                     eraseLineDelimiter(ps);
+                }
             } else if (cursorOffset <= lastCharPosition) {
                 //System.out.println("cursorOffset <= lastCharPosition");
                 //this situation is:
@@ -125,13 +129,14 @@ public class PyBackspace extends PyAction {
 
     /**
      * Makes a backspace happen...
-     * 
+     *
      * We can:
      * - go to the indentation from some uncommented previous line (if
      *   we only have whitespaces in the current line).
      *  - erase all whitespace characters until we find some character.
      *  - erase a single character.
      */
+    @Override
     public void run(IAction action) {
         OfflineActionTarget adapter = (OfflineActionTarget) getPyEdit().getAdapter(OfflineActionTarget.class);
         if (adapter != null) {
@@ -151,7 +156,7 @@ public class PyBackspace extends PyAction {
     /**
      * @param ps
      * @param hasOnlyWhitespaces
-     * @param lastCharRegion 
+     * @param lastCharRegion
      * @throws BadLocationException
      */
     private void eraseToPreviousIndentation(PySelection ps, boolean hasOnlyWhitespaces, IRegion lastCharRegion)
@@ -183,7 +188,7 @@ public class PyBackspace extends PyAction {
     }
 
     /**
-     * 
+     *
      * @param ps
      * @throws BadLocationException
      */
@@ -198,7 +203,7 @@ public class PyBackspace extends PyAction {
             char c = doc.getChar(replaceOffset);
             if (c == '(' || c == '[' || c == '{') {
                 //When removing a (, check if we have to delete the corresponding ) too.
-                char peer = org.python.pydev.shared_core.string.StringUtils.getPeer(c);
+                char peer = StringUtils.getPeer(c);
                 if (replaceOffset + replaceLength < doc.getLength()) {
                     char c2 = doc.getChar(replaceOffset + 1);
                     if (c2 == peer) {
@@ -240,7 +245,7 @@ public class PyBackspace extends PyAction {
     }
 
     /**
-     * 
+     *
      * @param ps
      * @throws BadLocationException
      */
@@ -257,7 +262,7 @@ public class PyBackspace extends PyAction {
     }
 
     /**
-     * 
+     *
      * @param ps
      * @throws BadLocationException
      */
@@ -286,7 +291,7 @@ public class PyBackspace extends PyAction {
     /**
      * TODO: Make use of the indentation gotten previously. This implementation
      * just uses the indentation string and erases the number of chars from it.
-     * 
+     *
      * @param ps
      * @param indentation this is in number of characters.
      * @throws BadLocationException
@@ -381,6 +386,7 @@ public class PyBackspace extends PyAction {
     public static VerifyKeyListener createVerifyKeyListener(final TextViewer viewer, final PyEdit edit) {
         return new VerifyKeyListener() {
 
+            @Override
             public void verifyKey(VerifyEvent event) {
                 if ((event.doit && event.character == SWT.BS && event.stateMask == 0 && viewer != null && viewer
                         .isEditable())) { //isBackspace
@@ -391,6 +397,13 @@ public class PyBackspace extends PyAction {
                         //that's OK (only available in eclipse 3.5)
                     }
                     if (!blockSelection) {
+                        if (viewer instanceof ITextViewerExtensionAutoEditions) {
+                            ITextViewerExtensionAutoEditions autoEditions = (ITextViewerExtensionAutoEditions) viewer;
+                            if (!autoEditions.getAutoEditionsEnabled()) {
+                                return;
+                            }
+                        }
+
                         ISelection selection = viewer.getSelection();
                         if (selection instanceof ITextSelection) {
                             //Only do our custom backspace if we're not in block selection mode.
@@ -398,7 +411,19 @@ public class PyBackspace extends PyAction {
                             if (edit != null) {
                                 pyBackspace.setEditor(edit);
                             } else {
-                                pyBackspace.setIndentPrefs(new DefaultIndentPrefs());
+                                IAdaptable adaptable;
+                                if (viewer instanceof IAdaptable) {
+                                    adaptable = (IAdaptable) viewer;
+                                } else {
+                                    adaptable = new IAdaptable() {
+
+                                        @Override
+                                        public <T> T getAdapter(Class<T> adapter) {
+                                            return null;
+                                        }
+                                    };
+                                }
+                                pyBackspace.setIndentPrefs(new DefaultIndentPrefs(adaptable));
                             }
                             PySelection ps = new PySelection(viewer.getDocument(), (ITextSelection) selection);
                             pyBackspace.perform(ps);

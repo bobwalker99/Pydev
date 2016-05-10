@@ -34,19 +34,27 @@ public class PyEditScripting implements IPyEditListener {
     private static Object systemGlobals = null;
 
     public PyEditScripting() {
-        interpreter = JythonPlugin.newPythonInterpreter();
-        if (systemGlobals == null) {
-            interpreter.exec("systemGlobals = {}");
-            systemGlobals = interpreter.get("systemGlobals");
+        createInterpreter();
+    }
+
+    private void createInterpreter() {
+        if (interpreter == null) {
+            interpreter = JythonPlugin.newPythonInterpreter();
+            if (systemGlobals == null) {
+                interpreter.exec("systemGlobals = {}");
+                systemGlobals = interpreter.get("systemGlobals");
+            }
         }
     }
 
     private void doExec(HashMap<String, Object> locals) {
+        createInterpreter();
         locals.put("systemGlobals", systemGlobals);
         JythonPlugin.execAll(locals, "pyedit", interpreter); //execute all the files that start with 'pyedit' that are located beneath
                                                              //the org.python.pydev.jython/jysrc directory and some user specified dir (if any).
     }
 
+    @Override
     public void onSave(BaseEditor edit, IProgressMonitor monitor) {
         HashMap<String, Object> locals = new HashMap<String, Object>();
         locals.put("cmd", "onSave");
@@ -54,6 +62,7 @@ public class PyEditScripting implements IPyEditListener {
         doExec(locals);
     }
 
+    @Override
     public void onCreateActions(ListResourceBundle resources, BaseEditor edit, IProgressMonitor monitor) {
         HashMap<String, Object> locals = new HashMap<String, Object>();
         locals.put("cmd", "onCreateActions");
@@ -61,6 +70,7 @@ public class PyEditScripting implements IPyEditListener {
         doExec(locals);
     }
 
+    @Override
     public void onDispose(BaseEditor edit, IProgressMonitor monitor) {
         HashMap<String, Object> locals = new HashMap<String, Object>();
         locals.put("cmd", "onDispose");
@@ -71,6 +81,7 @@ public class PyEditScripting implements IPyEditListener {
         interpreter = null;
     }
 
+    @Override
     public void onSetDocument(IDocument document, BaseEditor edit, IProgressMonitor monitor) {
         HashMap<String, Object> locals = new HashMap<String, Object>();
         locals.put("cmd", "onSetDocument");

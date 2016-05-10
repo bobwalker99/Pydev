@@ -15,7 +15,7 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.contentassist.IContextInformation;
 import org.eclipse.swt.graphics.Image;
 import org.python.pydev.core.docutils.PySelection;
-import org.python.pydev.core.docutils.StringUtils;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_ui.proposals.AbstractCompletionProposalExtension;
 
 public abstract class AbstractPyCompletionProposalExtension2 extends AbstractCompletionProposalExtension {
@@ -72,6 +72,7 @@ public abstract class AbstractPyCompletionProposalExtension2 extends AbstractCom
      * 
      * If not added, it won't request the new one (and will just stop the current)
      */
+    @Override
     public char[] getTriggerCharacters() {
         char[] chars = VAR_TRIGGER;
         if (PyCodeCompletionPreferencesPage.applyCompletionOnLParen()) {

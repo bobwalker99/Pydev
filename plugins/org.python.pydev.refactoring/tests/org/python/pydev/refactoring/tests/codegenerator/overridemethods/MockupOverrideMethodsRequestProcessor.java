@@ -1,3 +1,18 @@
+/******************************************************************************
+* Copyright (C) 2006-2013  IFS Institute for Software and others
+*
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Eclipse Public License v1.0
+* which accompanies this distribution, and is available at
+* http://www.eclipse.org/legal/epl-v10.html
+*
+* Original authors:
+*     Dennis Hunziker
+*     Ueli Kistler
+* Contributors:
+*     Fabio Zadrozny <fabiofz@gmail.com>       - initial implementation
+*     Alexander Kurtakov <akurtako@redhat.com> - ongoing maintenance
+******************************************************************************/
 /* 
  * Copyright (C) 2006, 2007  Dennis Hunziker, Ueli Kistler 
  */
@@ -44,6 +59,7 @@ public class MockupOverrideMethodsRequestProcessor implements IRequestProcessor<
                 .getEditClass());
     }
 
+    @Override
     public List<OverrideMethodsRequest> getRefactoringRequests() throws MisconfigurationException {
         ClassDefAdapter clazz = (ClassDefAdapter) module.getClasses().get(editClass);
 
@@ -111,6 +127,7 @@ public class MockupOverrideMethodsRequestProcessor implements IRequestProcessor<
             OverrideMethodsRequest req = new OverrideMethodsRequest(clazz, this.offsetStrategy, method, false,
                     baseClassName, new AdapterPrefs("\n", new IGrammarVersionProvider() {
 
+                        @Override
                         public int getGrammarVersion() throws MisconfigurationException {
                             return IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_2_7;
                         }

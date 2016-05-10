@@ -12,6 +12,7 @@ import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
 import org.python.pydev.editor.IOfflineActionWithParameters;
 import org.python.pydev.editor.PyEdit;
+import org.python.pydev.shared_core.string.StringUtils;
 
 /**
  * This action will pass the execution to an actual django command depending on the parameters.
@@ -29,10 +30,12 @@ public class PyDjangoOfflineAction extends Action implements IOfflineActionWithP
         this.edit = edit;
     }
 
+    @Override
     public void setParameters(List<String> parameters) {
         this.parameters = parameters;
     }
 
+    @Override
     public void run() {
         DjangoAction djangoAction = null;
         if (parameters.size() == 0) {
@@ -50,8 +53,9 @@ public class PyDjangoOfflineAction extends Action implements IOfflineActionWithP
             if (djangoAction == null) {
                 djangoAction = new DjangoAction() {
 
+                    @Override
                     public void run(IAction action) {
-                        launchDjangoCommand(org.python.pydev.shared_core.string.StringUtils.join(" ", parameters), true);
+                        launchDjangoCommand(StringUtils.join(" ", parameters), true);
                     }
                 };
             }

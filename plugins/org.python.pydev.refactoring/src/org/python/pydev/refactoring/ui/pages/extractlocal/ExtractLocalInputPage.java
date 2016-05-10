@@ -40,6 +40,7 @@ import org.python.pydev.refactoring.coderefactoring.extractlocal.ExtractLocalReq
 import org.python.pydev.refactoring.messages.Messages;
 import org.python.pydev.refactoring.ui.pages.core.eclipse.RowLayouter;
 import org.python.pydev.refactoring.ui.pages.core.eclipse.TextInputWizardPage;
+import org.python.pydev.shared_core.string.StringUtils;
 
 public class ExtractLocalInputPage extends TextInputWizardPage {
     public static final String PAGE_NAME = "ExtractLocalInputPage"; //$NON-NLS-1$
@@ -50,6 +51,7 @@ public class ExtractLocalInputPage extends TextInputWizardPage {
         super(PAGE_NAME, true);
     }
 
+    @Override
     public void createControl(Composite parent) {
         Composite result = new Composite(parent, SWT.NONE);
         setControl(result);
@@ -69,7 +71,7 @@ public class ExtractLocalInputPage extends TextInputWizardPage {
 
         replaceDuplicates = new Button(result, SWT.CHECK);
         ExtractLocalRequestProcessor requestProcessor = getRequestProcessor();
-        replaceDuplicates.setText(org.python.pydev.shared_core.string.StringUtils.format("Also replace &duplicates (%s references)?",
+        replaceDuplicates.setText(StringUtils.format("Also replace &duplicates (%s references)?",
                 requestProcessor.getDuplicatesSize()));
 
         IPreferenceStore preferences = PydevPrefs.getPreferences();
@@ -77,6 +79,7 @@ public class ExtractLocalInputPage extends TextInputWizardPage {
         replaceDuplicates.setSelection(replace);
         requestProcessor.setReplaceDuplicates(replace);
         replaceDuplicates.addSelectionListener(new SelectionAdapter() {
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 getRequestProcessor().setReplaceDuplicates(replaceDuplicates.getSelection());
                 IPreferenceStore preferences = PydevPrefs.getPreferences();
@@ -96,6 +99,7 @@ public class ExtractLocalInputPage extends TextInputWizardPage {
     /*
      * @see org.eclipse.jdt.internal.ui.refactoring.TextInputWizardPage#textModified(java.lang.String)
      */
+    @Override
     protected void textModified(String text) {
         getRequestProcessor().setVariableName(text);
         super.textModified(text);
@@ -104,6 +108,7 @@ public class ExtractLocalInputPage extends TextInputWizardPage {
     /*
      * @see org.eclipse.jdt.internal.ui.refactoring.TextInputWizardPage#validateTextField(String)
      */
+    @Override
     protected RefactoringStatus validateTextField(String text) {
         return getExtractlocalRefactoring().checkVarName(text);
     }

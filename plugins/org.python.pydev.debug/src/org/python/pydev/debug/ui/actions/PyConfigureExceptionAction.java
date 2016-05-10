@@ -18,12 +18,14 @@ import org.python.pydev.shared_ui.EditorUtils;
 
 public class PyConfigureExceptionAction extends PyAction implements IWorkbenchWindowActionDelegate {
 
+    @Override
     public void run(IAction action) {
 
         PyConfigureExceptionDialog dialog = new PyConfigureExceptionDialog(EditorUtils.getShell(), "",
                 new PyExceptionListProvider(), new LabelProvider(), "");
 
-        dialog.setInitialElementSelections(PyExceptionBreakPointManager.getInstance().getExceptionsList());
+        PyExceptionBreakPointManager instance = PyExceptionBreakPointManager.getInstance();
+        dialog.setInitialElementSelections(instance.getExceptionsList());
         dialog.setTitle("Add Python Exception Breakpoint");
         if (dialog.open() == PyConfigureExceptionDialog.OK) {
 
@@ -35,17 +37,26 @@ public class PyConfigureExceptionAction extends PyAction implements IWorkbenchWi
             } else {
                 exceptionArray = new String[0];
             }
-            PyExceptionBreakPointManager.getInstance().setBreakOn(dialog.getResultHandleCaughtExceptions(),
+
+            //must be done before setBreakOn (where listeners will be notified).
+            instance.setSkipCaughtExceptionsInSameFunction(dialog.getResultStopOnExceptionsHandledInSameContext());
+            instance.setIgnoreExceptionsThrownInLinesWithIgnoreException(dialog
+                    .getResultIgnoreExceptionsThrownInLinesWithIgnoreException());
+
+            instance.setBreakOn(dialog.getResultHandleCaughtExceptions(),
                     dialog.getResultHandleUncaughtExceptions(), exceptionArray);
         }
     }
 
+    @Override
     public void selectionChanged(IAction action, ISelection selection) {
     }
 
+    @Override
     public void dispose() {
     }
 
+    @Override
     public void init(IWorkbenchWindow window) {
     }
 }

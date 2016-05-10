@@ -20,7 +20,6 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
 import org.python.pydev.core.FullRepIterable;
 import org.python.pydev.core.IToken;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.editor.codecompletion.revisited.modules.SourceToken;
 import org.python.pydev.editor.codecompletion.revisited.visitors.AbstractVisitor;
 import org.python.pydev.parser.jython.SimpleNode;
@@ -29,6 +28,7 @@ import org.python.pydev.parser.jython.ast.ImportFrom;
 import org.python.pydev.parser.jython.ast.NameTok;
 import org.python.pydev.parser.jython.ast.aliasType;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 
 import com.python.pydev.analysis.IAnalysisPreferences;
 
@@ -101,14 +101,17 @@ public abstract class AbstractMessage implements IMessage {
 
     }
 
+    @Override
     public int getSeverity() {
         return severity;
     }
 
+    @Override
     public int getType() {
         return type;
     }
 
+    @Override
     public int getStartLine(IDocument doc) {
         if (startLine < 0) {
             startLine = getStartLine(generator, doc);
@@ -162,6 +165,7 @@ public abstract class AbstractMessage implements IMessage {
      *  
      * @see com.python.pydev.analysis.messages.IMessage#getStartCol(org.eclipse.jface.text.IDocument)
      */
+    @Override
     public int getStartCol(IDocument doc) {
         if (startCol >= 0) {
             return startCol;
@@ -282,6 +286,7 @@ public abstract class AbstractMessage implements IMessage {
      */
     int endLine = -1;
 
+    @Override
     public int getEndLine(IDocument doc) {
         return getEndLine(doc, true);
     }
@@ -308,6 +313,7 @@ public abstract class AbstractMessage implements IMessage {
 
     int endCol = -1;
 
+    @Override
     public int getEndCol(IDocument doc) {
         return getEndCol(doc, true);
     }
@@ -364,7 +370,7 @@ public abstract class AbstractMessage implements IMessage {
                 }
 
             } else if (ast instanceof Import) {
-                NameTok it = getNameForRepresentation((Import) ast, shortMessage, true);
+                NameTok it = getNameForRepresentation(ast, shortMessage, true);
                 endCol = it.beginColumn + shortMessage.length();
                 return endCol;
             } else {
@@ -379,14 +385,17 @@ public abstract class AbstractMessage implements IMessage {
         return -1;
     }
 
+    @Override
     public String toString() {
         return getMessage();
     }
 
+    @Override
     public List<String> getAdditionalInfo() {
         return additionalInfo;
     }
 
+    @Override
     public void addAdditionalInfo(String info) {
         if (this.additionalInfo == null) {
             this.additionalInfo = new ArrayList<String>();
@@ -396,6 +405,7 @@ public abstract class AbstractMessage implements IMessage {
 
     String message = null;
 
+    @Override
     public String getMessage() {
         if (message != null) {
             return message;
@@ -415,7 +425,7 @@ public abstract class AbstractMessage implements IMessage {
             //if we have the same number of %s as objects in the array, make the format
             int countPercS = StringUtils.countPercS(typeStr);
             if (countPercS == o.length) {
-                return org.python.pydev.shared_core.string.StringUtils.format(typeStr, o);
+                return StringUtils.format(typeStr, o);
 
             } else if (countPercS == 1) {
                 //if we have only 1, all parameters should be concatenated in a single string
@@ -432,10 +442,11 @@ public abstract class AbstractMessage implements IMessage {
                 throw new AssertionError("The number of %s is not the number of passed parameters nor 1");
             }
         }
-        message = org.python.pydev.shared_core.string.StringUtils.format(typeStr, shortMessage);
+        message = StringUtils.format(typeStr, shortMessage);
         return message;
     }
 
+    @Override
     public IToken getGenerator() {
         return generator;
     }

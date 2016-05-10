@@ -41,17 +41,16 @@ import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.structure.FastStack;
 import org.python.pydev.shared_core.structure.TreeNode;
 
-
 /**
  * This is the Model provider for python elements.
- * 
+ *
  * It intercepts the adds/removes and changes the original elements for elements
  * that actually reflect the python model (with source folder, etc).
- * 
- * 
+ *
+ *
  * Tests for package explorer:
  * 1. Start eclipse with a file deep in the structure and without having anything expanded in the tree, make a 'show in'
- * 
+ *
  * @author Fabio
  */
 public final class PythonModelProvider extends PythonBaseModelProvider implements IPipelinedTreeContentProvider {
@@ -83,9 +82,10 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
     /**
      * This method basically replaces all the elements for other resource elements
      * or for wrapped elements.
-     *  
+     *
      * @see org.eclipse.ui.navigator.IPipelinedTreeContentProvider#getPipelinedChildren(java.lang.Object, java.util.Set)
      */
+    @Override
     @SuppressWarnings("unchecked")
     public void getPipelinedChildren(Object parent, Set currentElements) {
         if (DEBUG) {
@@ -112,6 +112,9 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
                 case TopLevelProjectsOrWorkingSetChoice.WORKING_SETS:
                     currentElements.clear();
                     currentElements.addAll(getWorkingSetsCallback.call((IWorkspaceRoot) parent));
+                    if (currentElements.size() == 0) {
+                        currentElements.add(createErrorNoWorkingSetsDefined(parent));
+                    }
                 case TopLevelProjectsOrWorkingSetChoice.PROJECTS:
                     //Just go on...
             }
@@ -120,6 +123,9 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
             IWorkingSet workingSet = (IWorkingSet) parent;
             currentElements.clear();
             currentElements.addAll(Arrays.asList(workingSet.getElements()));
+            if (currentElements.size() == 0) {
+                currentElements.add(createErrorNoWorkingSetsDefined(workingSet));
+            }
 
         } else if (parent instanceof TreeNode) {
             TreeNode treeNode = (TreeNode) parent;
@@ -139,7 +145,7 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
 
     @SuppressWarnings("unchecked")
     private void fillChildrenForProject(Set currentElements, IProject project, Object parent) {
-        ProjectInfoForPackageExplorer projectInfo = getProjectInfo(project);
+        ProjectInfoForPackageExplorer projectInfo = ProjectInfoForPackageExplorer.getProjectInfo(project);
         if (projectInfo != null) {
             currentElements.addAll(projectInfo.configErrors);
             InterpreterInfoTreeNode<LabelAndImage> projectInfoTreeStructure = projectInfo.getProjectInfoTreeStructure(
@@ -153,9 +159,10 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
     /**
      * This method basically replaces all the elements for other resource elements
      * or for wrapped elements.
-     * 
+     *
      * @see org.eclipse.ui.navigator.IPipelinedTreeContentProvider#getPipelinedElements(java.lang.Object, java.util.Set)
      */
+    @Override
     public void getPipelinedElements(Object input, Set currentElements) {
         if (DEBUG) {
             System.out.println("getPipelinedElements for: " + input);
@@ -164,11 +171,12 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
     }
 
     /**
-     * This method basically get the actual parent for the resource or the parent 
+     * This method basically get the actual parent for the resource or the parent
      * for a wrapped element (which may be a resource or a wrapped resource).
-     * 
+     *
      * @see org.eclipse.ui.navigator.IPipelinedTreeContentProvider#getPipelinedParent(java.lang.Object, java.lang.Object)
      */
+    @Override
     public Object getPipelinedParent(Object object, Object aSuggestedParent) {
         if (DEBUG) {
             System.out.println("getPipelinedParent for: " + object);
@@ -203,11 +211,12 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
     }
 
     /**
-     * This method intercepts some addition to the tree and converts its elements to python 
+     * This method intercepts some addition to the tree and converts its elements to python
      * elements.
-     * 
+     *
      * @see org.eclipse.ui.navigator.IPipelinedTreeContentProvider#interceptAdd(org.eclipse.ui.navigator.PipelinedShapeModification)
      */
+    @Override
     public PipelinedShapeModification interceptAdd(PipelinedShapeModification addModification) {
         if (DEBUG) {
             System.out.println("interceptAdd");
@@ -216,6 +225,7 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
         return addModification;
     }
 
+    @Override
     public boolean interceptRefresh(PipelinedViewerUpdate refreshSynchronization) {
         if (DEBUG) {
             System.out.println("interceptRefresh");
@@ -223,6 +233,7 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
         return convertToPythonElementsUpdateOrRefresh(refreshSynchronization.getRefreshTargets());
     }
 
+    @Override
     public PipelinedShapeModification interceptRemove(PipelinedShapeModification removeModification) {
         if (DEBUG) {
             System.out.println("interceptRemove");
@@ -231,6 +242,7 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
         return removeModification;
     }
 
+    @Override
     public boolean interceptUpdate(PipelinedViewerUpdate updateSynchronization) {
         if (DEBUG) {
             debug("Before interceptUpdate", updateSynchronization);
@@ -269,6 +281,7 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
     /**
      * This is the function that is responsible for restoring the paths in the tree.
      */
+    @Override
     public void restoreState(IMemento memento) {
         new PyPackageStateSaver(this, viewer, memento).restoreState();
     }
@@ -276,15 +289,16 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
     /**
      * This is the function that is responsible for saving the paths in the tree.
      */
+    @Override
     public void saveState(IMemento memento) {
         new PyPackageStateSaver(this, viewer, memento).saveState();
     }
 
     /**
      * Converts the shape modification to use Python elements.
-     * 
+     *
      * @param modification: the shape modification to convert
-     * @param isAdd: boolean indicating whether this convertion is happening in an add operation 
+     * @param isAdd: boolean indicating whether this convertion is happening in an add operation
      */
     private void convertToPythonElementsAddOrRemove(PipelinedShapeModification modification, boolean isAdd) {
         if (DEBUG) {
@@ -371,8 +385,8 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
 
     /**
      * Given a Path from the 1st child of the project, will try to create that path in the python model.
-     * @param project the project 
-     * @param found a stack so that the last element added is the leaf of the path we want to discover 
+     * @param project the project
+     * @param found a stack so that the last element added is the leaf of the path we want to discover
      */
     private void tryCreateModelFromProject(IProject project, FastStack<Object> found) {
         PythonNature nature = PythonNature.getPythonNature(project);
@@ -398,7 +412,7 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
                         currentParent = pythonSourceFolder;
 
                     } else if (child instanceof IContainer) {
-                        currentParent = (IContainer) child;
+                        currentParent = child;
 
                     }
 
@@ -420,13 +434,13 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
 
     /**
      * Actually wraps some resource into a wrapped resource.
-     * 
-     * @param parent this is the parent 
+     *
+     * @param parent this is the parent
      *        it may be null -- in the case of a remove
      *        it may be a wrapped resource (if it is in the python model)
      *        it may be a resource (if it is a source folder)
-     *  
-     * 
+     *
+     *
      * @param pythonSourceFolder this is the python source folder for the resource (it may be null if the resource itself is a source folder
      *        or if it is actually a resource that has already been removed)
      * @param currentChildren those are the children that should be wrapped
@@ -488,7 +502,7 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
 
     /**
      * This method tries to wrap a given resource as a wrapped resource (if possible)
-     * 
+     *
      * @param parent the parent of the wrapped resource
      * @param pythonSourceFolder the source folder that contains this resource
      * @param child the object that should be wrapped
@@ -580,7 +594,7 @@ public final class PythonModelProvider extends PythonBaseModelProvider implement
             }
             //System.out.println("Created source folder: "+ret[i]+" - "+folder.getProject()+" - "+folder.getProjectRelativePath());
             Set<PythonSourceFolder> sourceFolders = getProjectSourceFolders(container.getProject());
-            sourceFolders.add((PythonSourceFolder) sourceFolder);
+            sourceFolders.add(sourceFolder);
             return sourceFolder;
         }
         return null;

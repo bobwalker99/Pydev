@@ -16,8 +16,8 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
-import org.python.pydev.core.resource_stubs.AbstractIFileStub;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_core.resource_stubs.AbstractIFileStub;
 
 /**
  * A stub for a file that implements the IFile interface required by Eclipse.
@@ -60,18 +60,22 @@ public class FileResourceStub extends AbstractIFileStub implements IFile {
         return actualFile.hashCode();
     }
 
+    @Override
     public String getName() {
         return this.actualFile.getName();
     }
 
+    @Override
     public boolean exists() {
         return actualFile.exists();
     }
 
+    @Override
     public IProject getProject() {
         return project;
     }
 
+    @Override
     public IPath getRawLocation() {
         return Path.fromOSString(FileUtils.getFileAbsolutePath(actualFile));
     }

@@ -30,6 +30,7 @@ import org.python.pydev.editorinput.PyOpenEditor;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.callbacks.ICallback;
+import org.python.pydev.shared_core.string.StringUtils;
 
 public class PyCodeCoverageTestWorkbench extends AbstractWorkbenchTestCase {
 
@@ -148,18 +149,20 @@ public class PyCodeCoverageTestWorkbench extends AbstractWorkbenchTestCase {
         final PyEdit modCovEditor = (PyEdit) PyOpenEditor.doOpenEditor(modCov);
         try {
             display.syncExec(new Runnable() {
+                @Override
                 public void run() {
                     LaunchShortcut launchShortcut = new LaunchShortcut();
                     launchShortcut.launch(modCovEditor, "run");
                 }
             });
 
-            final String modCovCoverageText = org.python.pydev.shared_core.string.StringUtils.replaceNewLines(getModCovCoverageText(), "\n");
+            final String modCovCoverageText = StringUtils.replaceNewLines(getModCovCoverageText(), "\n");
             //Should be enough time for the refresh to happen!
             goToManual(10000, new ICallback<Boolean, Object>() {
 
+                @Override
                 public Boolean call(Object arg) {
-                    return modCovCoverageText.equals(org.python.pydev.shared_core.string.StringUtils.replaceNewLines(view.getCoverageText(), "\n"));
+                    return modCovCoverageText.equals(StringUtils.replaceNewLines(view.getCoverageText(), "\n"));
                 }
             });
 

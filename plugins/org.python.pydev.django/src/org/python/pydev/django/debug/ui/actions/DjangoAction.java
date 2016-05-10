@@ -40,6 +40,7 @@ import org.python.pydev.core.log.Log;
 import org.python.pydev.django.launching.DjangoConstants;
 import org.python.pydev.django.launching.PythonFileRunner;
 import org.python.pydev.plugin.nature.PythonNature;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_ui.ConsoleColorCache;
 import org.python.pydev.shared_ui.EditorUtils;
 
@@ -53,6 +54,7 @@ public abstract class DjangoAction implements IObjectActionDelegate {
      */
     protected IProject selectedProject;
 
+    @Override
     public void setActivePart(IAction action, IWorkbenchPart targetPart) {
         // empty
     }
@@ -60,11 +62,13 @@ public abstract class DjangoAction implements IObjectActionDelegate {
     /**
      * Actually remove the python nature from the project.
      */
+    @Override
     public abstract void run(IAction action);
 
     /**
      * A project was just selected
      */
+    @Override
     public void selectionChanged(IAction action, ISelection selection) {
         selectedProject = null;
 
@@ -107,7 +111,7 @@ public abstract class DjangoAction implements IObjectActionDelegate {
         }
         if (manageVarible == null) {
             manageVarible = askNewManageSubstitution(pythonPathNature, variableSubstitution,
-                    org.python.pydev.shared_core.string.StringUtils.format(
+                    StringUtils.format(
                             "Unable to perform action because the %s \n" + "substitution variable is not set.\n\n"
                                     + "Please select the manage.py to be used to run the action.",
                             DjangoConstants.DJANGO_MANAGE_VARIABLE));
@@ -118,7 +122,7 @@ public abstract class DjangoAction implements IObjectActionDelegate {
         IFile manageDotPy = selectedProject.getFile(manageVarible);
         if (manageDotPy == null || !manageDotPy.exists()) {
             manageVarible = askNewManageSubstitution(pythonPathNature, variableSubstitution,
-                    org.python.pydev.shared_core.string.StringUtils.format(
+                    StringUtils.format(
                             "Unable to perform action because the %s \n"
                                     + "substitution variable is set to a non existing file.\n\n"
                                     + "Please select the manage.py to be used to run the action.",
@@ -168,7 +172,7 @@ public abstract class DjangoAction implements IObjectActionDelegate {
 
                         }
                         try {
-                            outputStream.write(org.python.pydev.shared_core.string.StringUtils.format("Finished \""
+                            outputStream.write(StringUtils.format("Finished \""
                                     + finalManageDotPy.getLocation().toOSString() + " " + command + "\" execution."));
                         } catch (IOException e1) {
                             Log.log(e1);

@@ -3,6 +3,14 @@
 '''
 import sys
 import os
+try:
+    from _pydev_imps._pydev_saved_modules import thread
+    start_new_thread = thread.start_new_thread
+except:
+    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+    from _pydev_imps._pydev_saved_modules import thread
+    start_new_thread = thread.start_new_thread
+
 
 #make it as if we were executing from the directory above this one (so that we can use pycompletionserver
 #without the need for it being in the pythonpath)
@@ -12,6 +20,13 @@ sys.path.insert(1, os.path.join(os.path.dirname(sys.argv[0])))
 
 IS_PYTHON_3K = 0
 if sys.platform.find('java') == -1:
+    
+    try:
+        import __builtin__ #@UnusedImport
+        BUILTIN_MOD = '__builtin__'
+    except ImportError:
+        BUILTIN_MOD = 'builtins'
+
     
     
     try:
@@ -24,11 +39,11 @@ if sys.platform.find('java') == -1:
                 s.send(msg)
         except ImportError:
             IS_PYTHON_3K = 1
-            from urllib.parse import quote_plus, unquote_plus #Python 3.0
+            from urllib.parse import quote_plus, unquote_plus  #Python 3.0
             def send(s, msg):
                 s.send(bytearray(msg, 'utf-8'))
     except ImportError:
-        pass #Not available in jython
+        pass  #Not available in jython
     
     import unittest
     
@@ -40,49 +55,46 @@ if sys.platform.find('java') == -1:
         def tearDown(self):
             unittest.TestCase.tearDown(self)
         
-        def testMessage(self):
-            t = pycompletionserver.T(0, 0)
+        def test_message(self):
+            t = pycompletionserver.CompletionServer(0)
             
             l = []
             l.append(('Def', 'description'  , 'args'))
             l.append(('Def1', 'description1', 'args1'))
             l.append(('Def2', 'description2', 'args2'))
             
-            msg = t.processor.formatCompletionMessage(None, l)
+            msg = t.processor.format_completion_message(None, l)
             self.assertEquals('@@COMPLETIONS(None,(Def,description,args),(Def1,description1,args1),(Def2,description2,args2))END@@', msg)
             
             l = []
             l.append(('Def', 'desc,,r,,i()ption', ''))
             l.append(('Def(1', 'descriptio(n1', ''))
             l.append(('De,f)2', 'de,s,c,ription2', ''))
-            msg = t.processor.formatCompletionMessage(None, l)
+            msg = t.processor.format_completion_message(None, l)
             self.assertEquals('@@COMPLETIONS(None,(Def,desc%2C%2Cr%2C%2Ci%28%29ption, ),(Def%281,descriptio%28n1, ),(De%2Cf%292,de%2Cs%2Cc%2Cription2, ))END@@', msg)
     
-        def createConnections(self, p1=50002, p2=50003):
+        def create_connections(self, p1=50002):
             '''
             Creates the connections needed for testing.
             '''
-            t = pycompletionserver.T(p1, p2)
-            
-            t.start()
+            server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server.bind((pycompletionserver.HOST, p1))
+            server.listen(1)  #socket to receive messages.
     
-            sToWrite = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sToWrite.connect((pycompletionserver.HOST, p1))
-            
-            sToRead = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sToRead.bind((pycompletionserver.HOST, p2))
-            sToRead.listen(1) #socket to receive messages.
+            t = pycompletionserver.CompletionServer(p1)
+            t.exit_process_on_kill = False
+            start_new_thread(t.run, ())
     
-            connToRead, addr = sToRead.accept()
+            s, addr = server.accept()
     
-            return t, sToWrite, sToRead, connToRead, addr
+            return t, s
             
     
-        def readMsg(self):
+        def read_msg(self):
             finish = False
             msg = ''
             while finish == False:
-                m = self.connToRead.recv(1024 * 4)
+                m = self.socket.recv(1024 * 4)
                 if IS_PYTHON_3K:
                     m = m.decode('utf-8')
                 if m.startswith('@@PROCESSING'):
@@ -95,19 +107,22 @@ if sys.platform.find('java') == -1:
     
             return msg
     
-        def testCompletionSocketsAndMessages(self):
-            t, sToWrite, sToRead, self.connToRead, addr = self.createConnections()
+        def test_completion_sockets_and_messages(self):
+            t, socket = self.create_connections()
+            self.socket = socket
             
             try:
                 #now that we have the connections all set up, check the code completion messages.
                 msg = quote_plus('math')
-                send(sToWrite, '@@IMPORTS:%sEND@@' % msg) #math completions
-                completions = self.readMsg()
+                send(socket, '@@IMPORTS:%sEND@@' % msg)  #math completions
+                completions = self.read_msg()
                 #print_ unquote_plus(completions)
                 
                 #math is a builtin and because of that, it starts with None as a file
                 start = '@@COMPLETIONS(None,(__doc__,'
                 start_2 = '@@COMPLETIONS(None,(__name__,'
+                if '/math.so,' in completions or '/math.cpython-33m.so,' in completions or '/math.cpython-34m.so,' in completions:
+                    return
                 self.assert_(completions.startswith(start) or completions.startswith(start_2), '%s DOESNT START WITH %s' % (completions, (start, start_2)))
         
                 self.assert_('@@COMPLETIONS' in completions)
@@ -115,35 +130,35 @@ if sys.platform.find('java') == -1:
     
     
                 #now, test i
-                msg = quote_plus('__builtin__.list')
-                send(sToWrite, "@@IMPORTS:%s\nEND@@" % msg)
-                found = self.readMsg()
+                msg = quote_plus('%s.list' % BUILTIN_MOD)
+                send(socket, "@@IMPORTS:%s\nEND@@" % msg)
+                found = self.read_msg()
                 self.assert_('sort' in found, 'Could not find sort in: %s' % (found,))
     
                 #now, test search
                 msg = quote_plus('inspect.ismodule')
-                send(sToWrite, '@@SEARCH%sEND@@' % msg) #math completions
-                found = self.readMsg()
+                send(socket, '@@SEARCH%sEND@@' % msg)  #math completions
+                found = self.read_msg()
                 self.assert_('inspect.py' in found)
                 self.assert_('33' in found or '34' in found or '51' in found or '50' in found, 'Could not find 33, 34, 50 or 51 in %s' % found)
     
                 #now, test search
                 msg = quote_plus('inspect.CO_NEWLOCALS')
-                send(sToWrite, '@@SEARCH%sEND@@' % msg) #math completions
-                found = self.readMsg()
+                send(socket, '@@SEARCH%sEND@@' % msg)  #math completions
+                found = self.read_msg()
                 self.assert_('inspect.py' in found)
                 self.assert_('CO_NEWLOCALS' in found)
                 
                 #now, test search
                 msg = quote_plus('inspect.BlockFinder.tokeneater')
-                send(sToWrite, '@@SEARCH%sEND@@' % msg) 
-                found = self.readMsg()
+                send(socket, '@@SEARCH%sEND@@' % msg) 
+                found = self.read_msg()
                 self.assert_('inspect.py' in found)
     #            self.assert_('CO_NEWLOCALS' in found)
     
             #reload modules test
-    #        send(sToWrite, '@@RELOAD_MODULES_END@@')
-    #        ok = self.readMsg()
+    #        send(socket, '@@RELOAD_MODULES_END@@')
+    #        ok = self.read_msg()
     #        self.assertEquals('@@MSG_OK_END@@' , ok)
     #        this test is not executed because it breaks our current enviroment.
             
@@ -151,20 +166,19 @@ if sys.platform.find('java') == -1:
             finally:
                 try:
                     sys.stdout.write('succedded...sending kill msg\n')
-                    self.sendKillMsg(sToWrite)
+                    self.send_kill_msg(socket)
                     
             
     #                while not hasattr(t, 'ended'):
     #                    pass #wait until it receives the message and quits.
             
                         
-                    sToRead.close()
-                    sToWrite.close()
-                    self.connToRead.close()
+                    socket.close()
+                    self.socket.close()
                 except:
                     pass
             
-        def sendKillMsg(self, socket):
+        def send_kill_msg(self, socket):
             socket.send(pycompletionserver.MSG_KILL_SERVER)
 
         

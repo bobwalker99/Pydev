@@ -23,8 +23,8 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.python.pydev.parser.PyParserManager;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.preferences.PydevPrefs;
+import org.python.pydev.shared_ui.field_editors.ComboFieldEditor;
 import org.python.pydev.shared_ui.field_editors.LabelFieldEditor;
-import org.python.pydev.utils.ComboFieldEditor;
 
 /**
  * @author Fabio Zadrozny
@@ -85,6 +85,7 @@ public class PyDevBuilderPrefPage extends FieldEditorPreferencePage implements I
     /**
      * @see org.eclipse.jface.preference.FieldEditorPreferencePage#createFieldEditors()
      */
+    @Override
     protected void createFieldEditors() {
         Composite p = getFieldEditorParent();
 
@@ -126,10 +127,12 @@ public class PyDevBuilderPrefPage extends FieldEditorPreferencePage implements I
         onlyAnalyzeOpenCheckBox = onlyAnalyzeOpen.getChangeControl(p);
         onlyAnalyzeOpenCheckBox.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 updateCheckEnabledState();
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
         });
@@ -162,6 +165,7 @@ public class PyDevBuilderPrefPage extends FieldEditorPreferencePage implements I
     /**
      * @see org.eclipse.ui.IWorkbenchPreferencePage#init(org.eclipse.ui.IWorkbench)
      */
+    @Override
     public void init(IWorkbench workbench) {
     }
 

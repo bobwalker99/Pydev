@@ -67,6 +67,8 @@ public abstract class TreeWithAddRemove extends Composite {
      */
     private int editingStyle;
 
+    private TreeColumn[] columns;
+
     public TreeWithAddRemove(Composite parent, int style, Object initialItems) {
         this(parent, style, initialItems, false);
     }
@@ -120,12 +122,21 @@ public abstract class TreeWithAddRemove extends Composite {
             TreeColumn column2 = new TreeColumn(tree, SWT.LEFT);
             column2.setText("Value");
             column2.setWidth(200);
+            columns = new TreeColumn[] { column1, column2 };
 
         } else {
             throw new RuntimeException("Unexpected initial items: " + initialItems);
         }
 
         setTreeItems(initialItems);
+    }
+
+    public void fitToContents() {
+        if (columns != null) {
+            for (TreeColumn c : columns) {
+                c.pack();
+            }
+        }
 
     }
 
@@ -184,10 +195,12 @@ public abstract class TreeWithAddRemove extends Composite {
         buttonRem.setToolTipText("Remove the selected item");
         buttonRem.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 handleRemove();
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
 
@@ -202,10 +215,12 @@ public abstract class TreeWithAddRemove extends Composite {
         buttonEdit.setToolTipText("Edit the selected item");
         buttonEdit.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 handleEdit();
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
 
@@ -222,10 +237,12 @@ public abstract class TreeWithAddRemove extends Composite {
     protected void customizeAddSomethingButton(Button addButton, final int nButton) {
         addButton.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 handleAddButtonSelected(nButton);
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
 

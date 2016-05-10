@@ -17,7 +17,6 @@ import org.python.pydev.core.IGrammarVersionProvider;
 import org.python.pydev.core.IIndentPrefs;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.docutils.PySelection;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.PyEdit;
 import org.python.pydev.editor.autoedit.DefaultIndentPrefs;
@@ -32,8 +31,8 @@ import org.python.pydev.parser.jython.ast.factory.PyAstFactory;
 import org.python.pydev.parser.prettyprinterv2.MakeAstValidForPrettyPrintingVisitor;
 import org.python.pydev.parser.prettyprinterv2.PrettyPrinterPrefsV2;
 import org.python.pydev.parser.prettyprinterv2.PrettyPrinterV2;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_ui.proposals.IPyCompletionProposal;
-
 
 /**
  * @author fabioz
@@ -65,6 +64,7 @@ public class OverrideMethodCompletionProposal extends AbstractPyCompletionPropos
     /* (non-Javadoc)
      * @see org.eclipse.jface.text.contentassist.ICompletionProposalExtension2#apply(org.eclipse.jface.text.ITextViewer, char, int, int)
      */
+    @Override
     public void apply(ITextViewer viewer, char trigger, int stateMask, int offset) {
         IDocument document = viewer.getDocument();
         int finalOffset = applyOnDocument(viewer, document, trigger, stateMask, offset);
@@ -94,6 +94,7 @@ public class OverrideMethodCompletionProposal extends AbstractPyCompletionPropos
         } else {
             versionProvider = new IGrammarVersionProvider() {
 
+                @Override
                 public int getGrammarVersion() throws MisconfigurationException {
                     return IGrammarVersionProvider.LATEST_GRAMMAR_VERSION;
                 }
@@ -138,7 +139,7 @@ public class OverrideMethodCompletionProposal extends AbstractPyCompletionPropos
             if (edit != null) {
                 indentPrefs = edit.getIndentPrefs();
             } else {
-                indentPrefs = DefaultIndentPrefs.get();
+                indentPrefs = DefaultIndentPrefs.get(null);
             }
 
             PrettyPrinterPrefsV2 prefsV2 = PrettyPrinterV2.createDefaultPrefs(edit, indentPrefs, lineDelimiter);

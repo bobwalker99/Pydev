@@ -25,6 +25,7 @@ import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.model.ErrorDescription;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 
 /**
@@ -106,6 +107,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
     protected DeltaSaver<Object> createDeltaSaver() {
         return new DeltaSaver<Object>(getPersistingFolder(), "v1_projectinfodelta", new ICallback<Object, String>() {
 
+            @Override
             public Object call(String arg) {
                 if (arg.startsWith("STR")) {
                     return arg.substring(3);
@@ -141,6 +143,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
                      * Tuple<String (module name), List<IInfo>) -- on addition
                      * String (module name) -- on deletion
                      */
+                    @Override
                     public String call(Object arg) {
                         if (arg instanceof String) {
                             return "STR" + (String) arg;
@@ -151,7 +154,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
                                 ModulesKey modName = (ModulesKey) tuple.o1;
                                 List<IInfo> l = (List<IInfo>) tuple.o2;
                                 String infoToString = InfoStrFactory.infoToString(l);
-                                String fileStr = modName.file.toString();
+                                String fileStr = modName.file != null ? modName.file.toString() : "no_source_available";
 
                                 FastStringBuffer buf = new FastStringBuffer("TUP", modName.name.length()
                                         + fileStr.length()
@@ -169,10 +172,12 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
                 });
     }
 
+    @Override
     public void processUpdate(Object data) {
         throw new RuntimeException("There is no update generation, only add.");
     }
 
+    @Override
     public void processDelete(Object data) {
         synchronized (lock) {
             //the moduleName is generated on delete
@@ -180,6 +185,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
         }
     }
 
+    @Override
     public void processInsert(Object data) {
         synchronized (lock) {
             if (data instanceof Tuple) {
@@ -188,6 +194,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
         }
     }
 
+    @Override
     public void endProcessing() {
         //save it when the processing is finished
         synchronized (lock) {
@@ -234,7 +241,10 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
             }
             i++;
 
-            if (PythonPathHelper.canAddAstInfoFor(key)) { //otherwise it should be treated as a compiled module (no ast generation)
+            if (PythonPathHelper.canAddAstInfoForSourceModule(key)) {
+                //Note: at this point (on the interpreter configuration), we only add the tokens for source modules
+                //but later on in InterpreterInfoBuilder, it'll actually go on and create the contents for compiled modules
+                //(which is a slower process as it has to connect through a shell).
 
                 if (i % 17 == 0) {
                     msgBuffer.clear();
@@ -254,7 +264,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
                     if (info.addAstInfo(key, false) == null) {
                         String str = "Unable to generate ast -- using %s.\nError:%s";
                         ErrorDescription errorDesc = null;
-                        throw new RuntimeException(org.python.pydev.shared_core.string.StringUtils.format(str, PyParser
+                        throw new RuntimeException(StringUtils.format(str, PyParser
                                 .getGrammarVersionStr(grammarVersion),
                                 (errorDesc != null && errorDesc.message != null) ? errorDesc.message
                                         : "unable to determine"));

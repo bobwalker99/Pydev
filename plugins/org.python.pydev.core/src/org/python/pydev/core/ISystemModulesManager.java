@@ -17,6 +17,7 @@ public interface ISystemModulesManager extends IModulesManager {
     /**
      * @see org.python.pydev.editor.codecompletion.revisited.ModulesManager#getBuiltins()
      */
+    @Override
     public abstract String[] getBuiltins();
 
     /**
@@ -42,4 +43,6 @@ public interface ISystemModulesManager extends IModulesManager {
     public File getIoDirectory();
 
     public abstract IInterpreterManager getInterpreterManager();
+
+    public abstract File getCompiledModuleCacheFile(String name);
 }

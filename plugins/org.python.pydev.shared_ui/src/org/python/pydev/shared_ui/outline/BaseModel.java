@@ -11,9 +11,12 @@
 ******************************************************************************/
 package org.python.pydev.shared_ui.outline;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 import org.eclipse.swt.widgets.Display;
+import org.python.pydev.shared_core.callbacks.CallbackWithListeners;
+import org.python.pydev.shared_core.callbacks.ICallbackWithListeners;
 import org.python.pydev.shared_core.editor.IBaseEditor;
 import org.python.pydev.shared_core.log.Log;
 import org.python.pydev.shared_core.model.ErrorDescription;
@@ -24,7 +27,7 @@ public abstract class BaseModel implements IOutlineModel {
 
     protected final IBaseEditor editor;
 
-    protected final BaseOutlinePage outline;
+    private WeakReference<BaseOutlinePage> outlinePageRef;
 
     protected final IModelListener modelListener;
 
@@ -32,9 +35,22 @@ public abstract class BaseModel implements IOutlineModel {
 
     protected abstract IParsedItem createParsedItemFromSimpleNode(ISimpleNode ast);
 
-    public BaseModel(BaseOutlinePage outline, IBaseEditor editor) {
+    private boolean disposed = false;
+
+    public final ICallbackWithListeners<IOutlineModel> onModelChanged = new CallbackWithListeners<IOutlineModel>();
+
+    @Override
+    public ICallbackWithListeners<IOutlineModel> getOnModelChangedCallback() {
+        return onModelChanged;
+    }
+
+    @Override
+    public void setOutlinePage(BaseOutlinePage baseOutlinePage) {
+        outlinePageRef = new WeakReference<BaseOutlinePage>(baseOutlinePage);
+    }
+
+    public BaseModel(IBaseEditor editor) {
         this.editor = editor;
-        this.outline = outline;
 
         // The notifications are only propagated to the outline page
         //
@@ -42,8 +58,10 @@ public abstract class BaseModel implements IOutlineModel {
         // make sure that the changes are propagated on the main thread
         modelListener = new IModelListener() {
 
+            @Override
             public void modelChanged(final ISimpleNode ast) {
                 Display.getDefault().asyncExec(new Runnable() {
+                    @Override
                     public void run() {
                         synchronized (this) {
                             IParsedItem newRoot = createParsedItemFromSimpleNode(ast);
@@ -54,8 +72,10 @@ public abstract class BaseModel implements IOutlineModel {
                 });
             }
 
+            @Override
             public void errorChanged(final ErrorDescription errorDesc) {
                 Display.getDefault().asyncExec(new Runnable() {
+                    @Override
                     public void run() {
                         synchronized (this) {
                             IParsedItem newRoot = duplicateRootAddingError(errorDesc);
@@ -69,6 +89,9 @@ public abstract class BaseModel implements IOutlineModel {
         };
 
         root = this.createInitialRootFromEditor();
+        if (root == null) {
+            Log.log("null root created in: " + this + " (should not happen).");
+        }
 
         editor.addModelListener(modelListener);
     }
@@ -77,10 +100,17 @@ public abstract class BaseModel implements IOutlineModel {
 
     protected abstract IParsedItem duplicateRootAddingError(ErrorDescription errorDesc);
 
+    @Override
     public void dispose() {
-        editor.removeModelListener(modelListener);
+        if (!disposed) {
+            disposed = true;
+            editor.removeModelListener(modelListener);
+            onModelChanged.unregisterAllListeners();
+            root = null;
+        }
     }
 
+    @Override
     public IParsedItem getRoot() {
         return root;
     }
@@ -125,31 +155,42 @@ public abstract class BaseModel implements IOutlineModel {
     public void setRoot(IParsedItem newRoot) {
         // We'll try to do the 'least flicker replace'
         // compare the two root structures, and tell outline what to refresh
+        onModelChanged.call(this);
         try {
             if (root != null) {
                 ArrayList<IParsedItem> itemsToRefresh = new ArrayList<IParsedItem>();
                 ArrayList<IParsedItem> itemsToUpdate = new ArrayList<IParsedItem>();
                 patchRootHelper(root, newRoot, itemsToRefresh, itemsToUpdate);
-                if (outline != null) {
-                    if (outline.isDisposed()) {
+
+                if (outlinePageRef != null) {
+                    BaseOutlinePage outlinePage = outlinePageRef.get();
+                    if (outlinePage == null) {
+                        return;
+                    }
+                    if (outlinePage.isDisconnectedFromTree()) {
                         return;
                     }
 
                     //to update
                     int itemsToUpdateSize = itemsToUpdate.size();
                     if (itemsToUpdateSize > 0) {
-                        outline.updateItems(itemsToUpdate.toArray(new IParsedItem[itemsToUpdateSize]));
+                        outlinePage.updateItems(itemsToUpdate.toArray(new IParsedItem[itemsToUpdateSize]));
                     }
 
                     //to refresh
                     int itemsToRefreshSize = itemsToRefresh.size();
                     if (itemsToRefreshSize > 0) {
-                        outline.refreshItems(itemsToRefresh.toArray(new IParsedItem[itemsToRefreshSize]));
+                        outlinePage.refreshItems(itemsToRefresh.toArray(new IParsedItem[itemsToRefreshSize]));
                     }
                 }
 
             } else {
-                Log.log("No old model root?");
+                if (disposed) {
+                    Log.logInfo("It seems it's already disposed...");
+
+                } else {
+                    Log.logInfo("No old model root?");
+                }
             }
         } catch (Throwable e) {
             Log.log(e);

@@ -25,6 +25,7 @@ import org.eclipse.core.variables.VariablesPlugin;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.IPythonPathNature;
 import org.python.pydev.core.log.Log;
+import org.python.pydev.shared_core.string.StringUtils;
 
 /**
  * Implements a part of IStringVariableManager (just the performStringSubstitution methods).
@@ -37,13 +38,15 @@ public class StringSubstitution {
         if (nature != null) {
             try {
                 IPythonPathNature pythonPathNature = nature.getPythonPathNature();
-                IProject project = nature.getProject();
+                IProject project = nature.getProject(); //note: project can be null when creating a new project and receiving a system nature.
                 variableSubstitution = pythonPathNature.getVariableSubstitution();
 
                 try {
                     IPathVariableManager projectPathVarManager = null;
                     try {
-                        projectPathVarManager = project.getPathVariableManager();
+                        if (project != null) {
+                            projectPathVarManager = project.getPathVariableManager();
+                        }
                     } catch (Throwable e1) {
                         //Ignore: getPathVariableManager not available on earlier Eclipse versions.
                     }
@@ -57,7 +60,7 @@ public class StringSubstitution {
                     //Other possible variables may be defined in General > Workspace > Linked Resources.
 
                     //We also add PROJECT_DIR_NAME (so, we can define a source folder with /${PROJECT_DIR_NAME}
-                    if (!variableSubstitution.containsKey("PROJECT_DIR_NAME")) {
+                    if (project != null && !variableSubstitution.containsKey("PROJECT_DIR_NAME")) {
                         IPath location = project.getFullPath();
                         if (location != null) {
                             variableSubstitution.put("PROJECT_DIR_NAME", location.lastSegment());
@@ -122,7 +125,8 @@ public class StringSubstitution {
      * defined explicitly in this class)
      */
     public String performPythonpathStringSubstitution(String expression) throws CoreException {
-        if (variableSubstitution != null && variableSubstitution.size() > 0) {
+        if (variableSubstitution != null && variableSubstitution.size() > 0 && expression != null
+                && expression.length() > 0) {
             //Only throw exception here if the
             expression = new StringSubstitutionEngine().performStringSubstitution(expression, true,
                     variableSubstitution);
@@ -148,7 +152,6 @@ public class StringSubstitution {
     /**
      * Performs string substitution for context and value variables.
      */
-    @SuppressWarnings("unchecked")
     class StringSubstitutionEngine {
 
         // delimiters
@@ -208,30 +211,31 @@ public class StringSubstitution {
         public String performStringSubstitution(String expression, boolean resolveVariables,
                 Map<String, String> variableSubstitution) throws CoreException {
             substitute(expression, resolveVariables, variableSubstitution);
-            List resolvedVariableSets = new ArrayList();
+            List<HashSet<String>> resolvedVariableSets = new ArrayList<HashSet<String>>();
             while (fSubs) {
-                HashSet resolved = substitute(fResult.toString(), true, variableSubstitution);
+                HashSet<String> resolved = substitute(fResult.toString(), true, variableSubstitution);
 
                 for (int i = resolvedVariableSets.size() - 1; i >= 0; i--) {
 
-                    HashSet prevSet = (HashSet) resolvedVariableSets.get(i);
+                    HashSet<String> prevSet = resolvedVariableSets.get(i);
 
                     if (prevSet.equals(resolved)) {
-                        HashSet conflictingSet = new HashSet();
+                        HashSet<String> conflictingSet = new HashSet<String>();
                         for (; i < resolvedVariableSets.size(); i++) {
-                            conflictingSet.addAll((HashSet) resolvedVariableSets.get(i));
+                            conflictingSet.addAll(resolvedVariableSets.get(i));
                         }
 
                         StringBuffer problemVariableList = new StringBuffer();
-                        for (Iterator it = conflictingSet.iterator(); it.hasNext();) {
+                        for (Iterator<?> it = conflictingSet.iterator(); it.hasNext();) {
                             problemVariableList.append(it.next().toString());
                             problemVariableList.append(", "); //$NON-NLS-1$
                         }
                         problemVariableList.setLength(problemVariableList.length() - 2); //truncate the last ", "
                         throw new CoreException(new Status(IStatus.ERROR, VariablesPlugin.getUniqueIdentifier(),
                                 VariablesPlugin.REFERENCE_CYCLE_ERROR,
-                                org.python.pydev.shared_core.string.StringUtils.format("Cycle error on:",
-                                        problemVariableList.toString()), null));
+                                StringUtils.format("Cycle error on:",
+                                        problemVariableList.toString()),
+                                null));
                     }
                 }
 
@@ -250,7 +254,7 @@ public class StringSubstitution {
          */
         private HashSet<String> substitute(String expression, boolean resolveVariables,
                 Map<String, String> variableSubstitution)
-                throws CoreException {
+                        throws CoreException {
             fResult = new StringBuffer(expression.length());
             fStack = new Stack<VariableReference>();
             fSubs = false;
@@ -350,8 +354,9 @@ public class StringSubstitution {
          * @return variable value, possibly <code>null</code>
          * @exception CoreException if unable to resolve a value
          */
-        private String resolve(VariableReference var, boolean resolveVariables, Map<String, String> variableSubstitution)
-                throws CoreException {
+        private String resolve(VariableReference var, boolean resolveVariables,
+                Map<String, String> variableSubstitution)
+                        throws CoreException {
             String text = var.getText();
             int pos = text.indexOf(VARIABLE_ARG);
             String name = null;

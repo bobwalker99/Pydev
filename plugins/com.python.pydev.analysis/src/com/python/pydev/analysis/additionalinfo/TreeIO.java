@@ -16,11 +16,12 @@ import java.util.Set;
 import java.util.SortedMap;
 
 import org.python.pydev.core.FastBufferedReader;
-import org.python.pydev.core.ObjectsPool;
-import org.python.pydev.core.ObjectsPool.ObjectsPoolMap;
+import org.python.pydev.core.ObjectsInternPool;
+import org.python.pydev.core.ObjectsInternPool.ObjectsPoolMap;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.codecompletion.revisited.PyPublicTreeMap;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
 
 /**
  * @author Fabio
@@ -121,14 +122,17 @@ public class TreeIO {
             this.set = set;
         }
 
+        @Override
         public Object getKey() {
             return key;
         }
 
+        @Override
         public Object getValue() {
             return set;
         }
 
+        @Override
         public Object setValue(Object value) {
             throw new UnsupportedOperationException();
         }
@@ -138,7 +142,7 @@ public class TreeIO {
             final Map<Integer, String> dictionary, FastStringBuffer buf, ObjectsPoolMap objectsPoolMap)
             throws IOException {
         PyPublicTreeMap<String, Set<IInfo>> tree = new PyPublicTreeMap<String, Set<IInfo>>();
-        final int size = org.python.pydev.shared_core.string.StringUtils.parsePositiveInt(reader.readLine());
+        final int size = StringUtils.parsePositiveInt(reader.readLine());
 
         try {
 
@@ -163,7 +167,7 @@ public class TreeIO {
                     char c = internalCharsArray[i];
                     switch (c) {
                         case '|':
-                            key = ObjectsPool.internLocal(objectsPoolMap, buf.toString());
+                            key = ObjectsInternPool.internLocal(objectsPoolMap, buf.toString());
                             buf.clear();
                             i++;
                             break OUT;
@@ -177,7 +181,7 @@ public class TreeIO {
                     char c = internalCharsArray[i];
                     switch (c) {
                         case '|':
-                            hashSize = org.python.pydev.shared_core.string.StringUtils.parsePositiveInt(buf);
+                            hashSize = StringUtils.parsePositiveInt(buf);
                             buf.clear();
                             i++;
                             break OUT2;
@@ -191,17 +195,17 @@ public class TreeIO {
                     char c = internalCharsArray[i];
                     switch (c) {
                         case '!':
-                            infoName = ObjectsPool.internLocal(objectsPoolMap, buf.toString());
+                            infoName = ObjectsInternPool.internLocal(objectsPoolMap, buf.toString());
                             buf.clear();
                             break;
 
                         case '&':
-                            path = dictionary.get(org.python.pydev.shared_core.string.StringUtils.parsePositiveInt(buf));
+                            path = dictionary.get(StringUtils.parsePositiveInt(buf));
                             buf.clear();
                             break;
 
                         case '@':
-                            int dictKey = org.python.pydev.shared_core.string.StringUtils.parsePositiveInt(buf);
+                            int dictKey = StringUtils.parsePositiveInt(buf);
                             byte type = (byte) dictKey;
                             type &= 0x07; //leave only the 3 least significant bits there (this is the type -- value from 0 - 8).
 
@@ -245,16 +249,19 @@ public class TreeIO {
             tree.buildFromSorted(size, new Iterator() {
                 private int iNext;
 
+                @Override
                 public boolean hasNext() {
                     return iNext > size;
                 }
 
+                @Override
                 public Object next() {
                     Object o = entries[iNext];
                     iNext++;
                     return o;
                 }
 
+                @Override
                 public void remove() {
                 }
 
@@ -267,7 +274,7 @@ public class TreeIO {
 
     public static Map<Integer, String> loadDictFrom(FastBufferedReader reader, FastStringBuffer buf,
             ObjectsPoolMap objectsPoolMap) throws IOException {
-        int size = org.python.pydev.shared_core.string.StringUtils.parsePositiveInt(reader.readLine());
+        int size = StringUtils.parsePositiveInt(reader.readLine());
         HashMap<Integer, String> map = new HashMap<Integer, String>(size + 5);
 
         FastStringBuffer line;
@@ -289,7 +296,7 @@ public class TreeIO {
                 for (int i = 0; i < length; i++) {
                     char c = line.charAt(i);
                     if (c == '=') {
-                        val = org.python.pydev.shared_core.string.StringUtils.parsePositiveInt(buf);
+                        val = StringUtils.parsePositiveInt(buf);
                         buf.clear();
                     } else {
                         buf.appendResizeOnExc(c);

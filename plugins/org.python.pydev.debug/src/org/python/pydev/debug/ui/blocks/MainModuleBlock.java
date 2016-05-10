@@ -7,9 +7,9 @@
 package org.python.pydev.debug.ui.blocks;
 
 import java.io.File;
-import java.net.URI;
 import java.util.ArrayList;
 
+import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -17,6 +17,8 @@ import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.debug.ui.AbstractLaunchConfigurationTab;
@@ -35,12 +37,13 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Widget;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.docutils.StringSubstitution;
-import org.python.pydev.core.docutils.StringUtils;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.core.Constants;
 import org.python.pydev.debug.ui.launching.FileOrResource;
 import org.python.pydev.debug.ui.launching.LaunchConfigurationCreator;
+import org.python.pydev.editorinput.PySourceLocatorBase;
 import org.python.pydev.plugin.nature.PythonNature;
+import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.ui.dialogs.PythonModulePickerDialog;
 
 /**
@@ -57,6 +60,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
     /* (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#createControl(org.eclipse.swt.widgets.Composite)
      */
+    @Override
     public void createControl(Composite parent) {
         Font font = parent.getFont();
 
@@ -75,6 +79,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
         fMainModuleText.setLayoutData(gd);
         fMainModuleText.setFont(font);
         fMainModuleText.addModifyListener(new ModifyListener() {
+            @Override
             public void modifyText(ModifyEvent evt) {
                 updateLaunchConfigurationDialog();
             }
@@ -140,6 +145,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
         // Create a ModifyListener, used to listen for project modifications in the ProjectBlock. 
         // This assumes that the Project is in a Text control...
         fProjectModifyListener = new ModifyListener() {
+            @Override
             public void modifyText(ModifyEvent e) {
                 Widget widget = e.widget;
                 if (widget instanceof Text) {
@@ -166,6 +172,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
      * 
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#getName()
      */
+    @Override
     public String getName() {
         return "Main module";
     }
@@ -175,6 +182,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
      * 
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#initializeFrom(org.eclipse.debug.core.ILaunchConfiguration)
      */
+    @Override
     public void initializeFrom(ILaunchConfiguration configuration) {
 
         // Initialize the location field
@@ -208,6 +216,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#performApply(org.eclipse.debug.core.ILaunchConfigurationWorkingCopy)
      */
+    @Override
     public void performApply(ILaunchConfigurationWorkingCopy configuration) {
         String value = fMainModuleText.getText().trim();
         setAttribute(configuration, Constants.ATTR_LOCATION, value);
@@ -218,6 +227,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#setDefaults(org.eclipse.debug.core.ILaunchConfigurationWorkingCopy)
      */
+    @Override
     public void setDefaults(ILaunchConfigurationWorkingCopy configuration) {
         //no defaults to set
     }
@@ -231,35 +241,49 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
      */
     private IResource[] getMainModuleResources() {
         String path = fMainModuleText.getText();
-        ArrayList<IResource> res_list = new ArrayList<IResource>();
+        ArrayList<IResource> resourceList = new ArrayList<IResource>();
         if (path.length() > 0) {
             IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 
+            IPath projectPath = new Path(null, fProjectName).makeAbsolute();
+            if (projectPath.segmentCount() != 1) {
+                return null;
+            }
+
+            IResource resource = root.getProject(fProjectName);
+            IProject project = null;
+            if (resource != null) {
+                project = resource.getProject();
+            }
+
             StringSubstitution stringSubstitution = getStringSubstitution(root);
-            try {
-                //may have multiple files selected for the run for unittest and code-coverage
-                for (String loc : StringUtils.splitAndRemoveEmptyTrimmed(path, '|')) {
-                    String onepath = stringSubstitution.performStringSubstitution(loc, false);
-                    URI uri = new File(onepath).toURI();
-                    IFile[] tfiles = root.findFilesForLocationURI(uri);
-                    if (tfiles.length > 0) {
-                        res_list.add(tfiles[0]);
-                        continue;
+            if (stringSubstitution != null) {
+                try {
+                    //may have multiple files selected for the run for unittest and code-coverage
+                    for (String loc : StringUtils.splitAndRemoveEmptyTrimmed(path, '|')) {
+                        String onepath = stringSubstitution.performStringSubstitution(loc, false);
+                        IFile f = new PySourceLocatorBase().getFileForLocation(Path.fromOSString(onepath), project);
+                        if (f != null) {
+                            resourceList.add(f);
+                            continue;
+                        }
+                        IContainer container = new PySourceLocatorBase().getContainerForLocation(
+                                Path.fromOSString(onepath),
+                                project);
+                        if (container != null) {
+                            resourceList.add(container);
+                        }
                     }
-                    IResource[] tres = root.findContainersForLocationURI(uri);
-                    if (tres.length > 0) {
-                        res_list.add(tres[0]);
-                    }
+                } catch (CoreException e) {
+                    Log.log(e);
                 }
-            } catch (CoreException e) {
-                Log.log(e);
             }
 
         }
-        if (res_list.isEmpty()) {
+        if (resourceList.isEmpty()) {
             return null;
         }
-        return res_list.toArray(new IResource[res_list.size()]);
+        return resourceList.toArray(new IResource[resourceList.size()]);
     }
 
     /**
@@ -267,9 +291,15 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
      * @return an object capable on making string substitutions based on variables in the project and in the workspace.
      */
     public StringSubstitution getStringSubstitution(IWorkspaceRoot root) {
-        IResource resource = root.findMember(fProjectName);
+        IPath projectPath = new Path(null, fProjectName).makeAbsolute();
+        if (projectPath.segmentCount() != 1) {
+            // Path for project must have (only) one segment.
+            return null;
+        }
+
+        IProject resource = root.getProject(fProjectName);
         IPythonNature nature = null;
-        if (resource instanceof IProject) {
+        if (resource != null) {
             nature = PythonNature.getPythonNature(resource);
         }
 
@@ -304,8 +334,20 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
             setMessage(null);
             setErrorMessage(null);
 
+            IPath projectPath = new Path(null, fProjectName).makeAbsolute();
+            if (projectPath.segmentCount() != 1) {
+                String message = "Path for project must have (only) one segment."; //$NON-NLS-1$
+                setErrorMessage(message);
+                return false;
+            }
+
             IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
             StringSubstitution stringSubstitution = getStringSubstitution(root);
+            if (stringSubstitution == null) {
+                String message = "Unable to get StringSubstitution (shouldn't happen)."; //$NON-NLS-1$
+                setErrorMessage(message);
+                return false;
+            }
 
             String location = fMainModuleText.getText();
             try {
@@ -317,7 +359,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
                         String expandedLocation = stringSubstitution.performStringSubstitution(loc);
                         File file = new File(expandedLocation);
                         if (!file.exists()) {
-                            setErrorMessage(org.python.pydev.shared_core.string.StringUtils.format(
+                            setErrorMessage(StringUtils.format(
                                     "The file \"%s\" does not exist.", file));
                             result = false;
                             break;
@@ -328,14 +370,19 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
                     String expandedLocation = stringSubstitution.performStringSubstitution(location);
                     File file = new File(expandedLocation);
                     if (!file.exists()) {
-                        setErrorMessage(org.python.pydev.shared_core.string.StringUtils.format(
+                        setErrorMessage(StringUtils.format(
                                 "The file \"%s\" does not exist.", file));
                         result = false;
 
                     } else if (!file.isFile()) {
-                        setErrorMessage(org.python.pydev.shared_core.string.StringUtils.format(
-                                "The file \"%s\" does not actually map to a file.", file));
-                        result = false;
+
+                        File mainModule = new File(expandedLocation + File.separator + "__main__.py");
+
+                        if (!mainModule.isFile()) {
+                            setErrorMessage(StringUtils.format(
+                                    "The file \"%s\" does not actually map to a file.", file));
+                            result = false;
+                        }
                     }
                 }
 

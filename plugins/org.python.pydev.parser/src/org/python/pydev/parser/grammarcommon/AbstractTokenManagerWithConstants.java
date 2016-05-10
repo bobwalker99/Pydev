@@ -435,421 +435,110 @@ public abstract class AbstractTokenManagerWithConstants {
         private final int lexerInString23Id;
 
         //Getters ----------
-    public final int getEofId() {
-        return eofId;
-    }
-
-    public final int getSpaceId() {
-        return spaceId;
-    }
-
-    public final int getContinuationId() {
-        return continuationId;
-    }
-
-    public final int getNewline1Id() {
-        return newline1Id;
-    }
-
-    public final int getNewlineId() {
-        return newlineId;
-    }
-
-    public final int getNewline2Id() {
-        return newline2Id;
-    }
-
-    public final int getCrlf1Id() {
-        return crlf1Id;
-    }
-
-    public final int getDedentId() {
-        return dedentId;
-    }
-
-    public final int getIndentId() {
-        return indentId;
-    }
-
-    public final int getTrailingCommentId() {
-        return trailingCommentId;
-    }
-
-    public final int getSingleLineCommentId() {
-        return singleLineCommentId;
-    }
-
-    public final int getLparenId() {
-        return lparenId;
-    }
-
-    public final int getRparenId() {
-        return rparenId;
-    }
-
-    public final int getLbraceId() {
-        return lbraceId;
-    }
-
-    public final int getRbraceId() {
-        return rbraceId;
-    }
-
-    public final int getLbracketId() {
-        return lbracketId;
-    }
-
-    public final int getRbracketId() {
-        return rbracketId;
-    }
-
-    public final int getSemicolonId() {
-        return semicolonId;
-    }
-
-    public final int getCommaId() {
-        return commaId;
-    }
-
-    public final int getDotId() {
-        return dotId;
-    }
-
-    public final int getColonId() {
-        return colonId;
-    }
-
-    public final int getPlusId() {
-        return plusId;
-    }
-
-    public final int getMinusId() {
-        return minusId;
-    }
-
-    public final int getMultiplyId() {
-        return multiplyId;
-    }
-
-    public final int getDivideId() {
-        return divideId;
-    }
-
-    public final int getFloordivideId() {
-        return floordivideId;
-    }
-
-    public final int getPowerId() {
-        return powerId;
-    }
-
-    public final int getLshiftId() {
-        return lshiftId;
-    }
-
-    public final int getRshiftId() {
-        return rshiftId;
-    }
-
-    public final int getModuloId() {
-        return moduloId;
-    }
-
-    public final int getNotId() {
-        return notId;
-    }
-
-    public final int getXorId() {
-        return xorId;
-    }
-
-    public final int getOrId() {
-        return orId;
-    }
-
-    public final int getAndId() {
-        return andId;
-    }
-
-    public final int getEqualId() {
-        return equalId;
-    }
-
-    public final int getGreaterId() {
-        return greaterId;
-    }
-
-    public final int getLessId() {
-        return lessId;
-    }
-
-    public final int getEqequalId() {
-        return eqequalId;
-    }
-
-    public final int getEqlessId() {
-        return eqlessId;
-    }
-
-    public final int getEqgreaterId() {
-        return eqgreaterId;
-    }
-
-    public final int getNotequalId() {
-        return notequalId;
-    }
-
-    public final int getPluseqId() {
-        return pluseqId;
-    }
-
-    public final int getMinuseqId() {
-        return minuseqId;
-    }
-
-    public final int getMultiplyeqId() {
-        return multiplyeqId;
-    }
-
-    public final int getDivideeqId() {
-        return divideeqId;
-    }
-
-    public final int getFloordivideeqId() {
-        return floordivideeqId;
-    }
-
-    public final int getModuloeqId() {
-        return moduloeqId;
-    }
-
-    public final int getAndeqId() {
-        return andeqId;
-    }
-
-    public final int getOreqId() {
-        return oreqId;
-    }
-
-    public final int getXoreqId() {
-        return xoreqId;
-    }
-
-    public final int getLshifteqId() {
-        return lshifteqId;
-    }
-
-    public final int getRshifteqId() {
-        return rshifteqId;
-    }
-
-    public final int getPowereqId() {
-        return powereqId;
-    }
-
-    public final int getOrBoolId() {
-        return orBoolId;
-    }
-
-    public final int getAndBoolId() {
-        return andBoolId;
-    }
-
-    public final int getNotBoolId() {
-        return notBoolId;
-    }
-
-    public final int getIsId() {
-        return isId;
-    }
-
-    public final int getInId() {
-        return inId;
-    }
-
-    public final int getLambdaId() {
-        return lambdaId;
-    }
-
-    public final int getIfId() {
-        return ifId;
-    }
-
-    public final int getElseId() {
-        return elseId;
-    }
-
-    public final int getElifId() {
-        return elifId;
-    }
-
-    public final int getWhileId() {
-        return whileId;
-    }
-
-    public final int getForId() {
-        return forId;
-    }
-
-    public final int getTryId() {
-        return tryId;
-    }
-
-    public final int getExceptId() {
-        return exceptId;
-    }
-
-    public final int getDefId() {
-        return defId;
-    }
-
-    public final int getClassId() {
-        return classId;
-    }
-
-    public final int getFinallyId() {
-        return finallyId;
-    }
-
-    public final int getPassId() {
-        return passId;
-    }
-
-    public final int getBreakId() {
-        return breakId;
-    }
-
-    public final int getContinueId() {
-        return continueId;
-    }
-
-    public final int getReturnId() {
-        return returnId;
-    }
-
-    public final int getYieldId() {
-        return yieldId;
-    }
-
-    public final int getImportId() {
-        return importId;
-    }
-
-    public final int getFromId() {
-        return fromId;
-    }
-
-    public final int getDelId() {
-        return delId;
-    }
-
-    public final int getRaiseId() {
-        return raiseId;
-    }
-
-    public final int getGlobalId() {
-        return globalId;
-    }
-
-    public final int getAssertId() {
-        return assertId;
-    }
-
-    public final int getAtId() {
-        return atId;
-    }
-
-    public final int getNameId() {
-        return nameId;
-    }
-
-    public final int getLetterId() {
-        return letterId;
-    }
-
-    public final int getDecnumberId() {
-        return decnumberId;
-    }
-
-    public final int getHexnumberId() {
-        return hexnumberId;
-    }
-
-    public final int getOctnumberId() {
-        return octnumberId;
-    }
-
-    public final int getFloatId() {
-        return floatId;
-    }
-
-    public final int getComplexId() {
-        return complexId;
-    }
-
-    public final int getExponentId() {
-        return exponentId;
-    }
-
-    public final int getDigitId() {
-        return digitId;
-    }
-
-    public final int getSingleStringId() {
-        return singleStringId;
-    }
-
-    public final int getSingleString2Id() {
-        return singleString2Id;
-    }
-
-    public final int getTripleStringId() {
-        return tripleStringId;
-    }
-
-    public final int getTripleString2Id() {
-        return tripleString2Id;
-    }
-
-    public final int getLexerDefaultId() {
-        return lexerDefaultId;
-    }
-
-    public final int getLexerForceNewline1Id() {
-        return lexerForceNewline1Id;
-    }
-
-    public final int getLexerForceNewline2Id() {
-        return lexerForceNewline2Id;
-    }
-
-    public final int getLexerIndentingId() {
-        return lexerIndentingId;
-    }
-
-    public final int getLexerIndentationUnchangedId() {
-        return lexerIndentationUnchangedId;
-    }
-
-    public final int getLexerUnreachableId() {
-        return lexerUnreachableId;
-    }
-
-    public final int getLexerInString11Id() {
-        return lexerInString11Id;
-    }
-
-    public final int getLexerInString21Id() {
-        return lexerInString21Id;
-    }
-
-    public final int getLexerInString13Id() {
-        return lexerInString13Id;
-    }
-
-    public final int getLexerInString23Id() {
-        return lexerInString23Id;
-    }
+        public final int getEofId(){return eofId;}
+        public final int getSpaceId(){return spaceId;}
+        public final int getContinuationId(){return continuationId;}
+        public final int getNewline1Id(){return newline1Id;}
+        public final int getNewlineId(){return newlineId;}
+        public final int getNewline2Id(){return newline2Id;}
+        public final int getCrlf1Id(){return crlf1Id;}
+        public final int getDedentId(){return dedentId;}
+        public final int getIndentId(){return indentId;}
+        public final int getTrailingCommentId(){return trailingCommentId;}
+        public final int getSingleLineCommentId(){return singleLineCommentId;}
+        public final int getLparenId(){return lparenId;}
+        public final int getRparenId(){return rparenId;}
+        public final int getLbraceId(){return lbraceId;}
+        public final int getRbraceId(){return rbraceId;}
+        public final int getLbracketId(){return lbracketId;}
+        public final int getRbracketId(){return rbracketId;}
+        public final int getSemicolonId(){return semicolonId;}
+        public final int getCommaId(){return commaId;}
+        public final int getDotId(){return dotId;}
+        public final int getColonId(){return colonId;}
+        public final int getPlusId(){return plusId;}
+        public final int getMinusId(){return minusId;}
+        public final int getMultiplyId(){return multiplyId;}
+        public final int getDivideId(){return divideId;}
+        public final int getFloordivideId(){return floordivideId;}
+        public final int getPowerId(){return powerId;}
+        public final int getLshiftId(){return lshiftId;}
+        public final int getRshiftId(){return rshiftId;}
+        public final int getModuloId(){return moduloId;}
+        public final int getNotId(){return notId;}
+        public final int getXorId(){return xorId;}
+        public final int getOrId(){return orId;}
+        public final int getAndId(){return andId;}
+        public final int getEqualId(){return equalId;}
+        public final int getGreaterId(){return greaterId;}
+        public final int getLessId(){return lessId;}
+        public final int getEqequalId(){return eqequalId;}
+        public final int getEqlessId(){return eqlessId;}
+        public final int getEqgreaterId(){return eqgreaterId;}
+        public final int getNotequalId(){return notequalId;}
+        public final int getPluseqId(){return pluseqId;}
+        public final int getMinuseqId(){return minuseqId;}
+        public final int getMultiplyeqId(){return multiplyeqId;}
+        public final int getDivideeqId(){return divideeqId;}
+        public final int getFloordivideeqId(){return floordivideeqId;}
+        public final int getModuloeqId(){return moduloeqId;}
+        public final int getAndeqId(){return andeqId;}
+        public final int getOreqId(){return oreqId;}
+        public final int getXoreqId(){return xoreqId;}
+        public final int getLshifteqId(){return lshifteqId;}
+        public final int getRshifteqId(){return rshifteqId;}
+        public final int getPowereqId(){return powereqId;}
+        public final int getOrBoolId(){return orBoolId;}
+        public final int getAndBoolId(){return andBoolId;}
+        public final int getNotBoolId(){return notBoolId;}
+        public final int getIsId(){return isId;}
+        public final int getInId(){return inId;}
+        public final int getLambdaId(){return lambdaId;}
+        public final int getIfId(){return ifId;}
+        public final int getElseId(){return elseId;}
+        public final int getElifId(){return elifId;}
+        public final int getWhileId(){return whileId;}
+        public final int getForId(){return forId;}
+        public final int getTryId(){return tryId;}
+        public final int getExceptId(){return exceptId;}
+        public final int getDefId(){return defId;}
+        public final int getClassId(){return classId;}
+        public final int getFinallyId(){return finallyId;}
+        public final int getPassId(){return passId;}
+        public final int getBreakId(){return breakId;}
+        public final int getContinueId(){return continueId;}
+        public final int getReturnId(){return returnId;}
+        public final int getYieldId(){return yieldId;}
+        public final int getImportId(){return importId;}
+        public final int getFromId(){return fromId;}
+        public final int getDelId(){return delId;}
+        public final int getRaiseId(){return raiseId;}
+        public final int getGlobalId(){return globalId;}
+        public final int getAssertId(){return assertId;}
+        public final int getAtId(){return atId;}
+        public final int getNameId(){return nameId;}
+        public final int getLetterId(){return letterId;}
+        public final int getDecnumberId(){return decnumberId;}
+        public final int getHexnumberId(){return hexnumberId;}
+        public final int getOctnumberId(){return octnumberId;}
+        public final int getFloatId(){return floatId;}
+        public final int getComplexId(){return complexId;}
+        public final int getExponentId(){return exponentId;}
+        public final int getDigitId(){return digitId;}
+        public final int getSingleStringId(){return singleStringId;}
+        public final int getSingleString2Id(){return singleString2Id;}
+        public final int getTripleStringId(){return tripleStringId;}
+        public final int getTripleString2Id(){return tripleString2Id;}
+        public final int getLexerDefaultId(){return lexerDefaultId;}
+        public final int getLexerForceNewline1Id(){return lexerForceNewline1Id;}
+        public final int getLexerForceNewline2Id(){return lexerForceNewline2Id;}
+        public final int getLexerIndentingId(){return lexerIndentingId;}
+        public final int getLexerIndentationUnchangedId(){return lexerIndentationUnchangedId;}
+        public final int getLexerUnreachableId(){return lexerUnreachableId;}
+        public final int getLexerInString11Id(){return lexerInString11Id;}
+        public final int getLexerInString21Id(){return lexerInString21Id;}
+        public final int getLexerInString13Id(){return lexerInString13Id;}
+        public final int getLexerInString23Id(){return lexerInString23Id;}
     //[[[end]]]
 
 }

@@ -6,6 +6,8 @@
  */
 package org.python.pydev.editor.autoedit;
 
+import org.python.pydev.core.ITabChangedListener;
+
 /**
  * Code to be used in tests.
  */
@@ -24,10 +26,21 @@ public class TestIndentPrefs extends AbstractIndentPrefs {
     public int indentAfterParWidth = 1;
     public boolean autoAddLiterals = true;
     public boolean autoLink = true;
+    public boolean tabStopInComment = false;
 
     public TestIndentPrefs(boolean useSpaces, int tabWidth) {
         this.useSpaces = useSpaces;
         this.tabWidth = tabWidth;
+    }
+
+    @Override
+    public boolean getGuessTabSubstitution() {
+        return false;
+    }
+
+    @Override
+    public void addTabChangedListener(ITabChangedListener listener) {
+        // No-op for testing.
     }
 
     public TestIndentPrefs(boolean useSpaces, int tabWidth, boolean autoPar) {
@@ -40,6 +53,7 @@ public class TestIndentPrefs extends AbstractIndentPrefs {
         this.autoElse = autoElse;
     }
 
+    @Override
     public boolean getUseSpaces(boolean considerForceTabs) {
         if (considerForceTabs && getForceTabs()) {
             return false;//force use tabs
@@ -47,58 +61,77 @@ public class TestIndentPrefs extends AbstractIndentPrefs {
         return useSpaces;
     }
 
+    @Override
     public boolean getAutoLink() {
         return autoLink;
     }
 
+    @Override
     public int getTabWidth() {
         return tabWidth;
     }
 
+    @Override
     public boolean getAutoParentesis() {
         return autoPar;
     }
 
+    @Override
     public boolean getAutoColon() {
         return autoColon;
     }
 
+    @Override
     public boolean getAutoBraces() {
         return autoBraces;
     }
 
+    @Override
     public boolean getAutoWriteImport() {
         return autoWriteImport;
     }
 
+    @Override
     public boolean getSmartIndentPar() {
         return smartIndentAfterPar;
     }
 
+    @Override
     public boolean getAutoAddSelf() {
         return autoAddSelf;
     }
 
+    @Override
     public boolean getAutoDedentElse() {
         return autoElse;
     }
 
+    @Override
     public boolean getIndentToParLevel() {
         return indentToParLevel;
     }
 
+    @Override
     public int getIndentAfterParWidth() {
         return indentAfterParWidth;
     }
 
+    @Override
     public boolean getSmartLineMove() {
         return true;
     }
 
+    @Override
     public boolean getAutoLiterals() {
         return autoAddLiterals;
     }
 
+    @Override
+    public boolean getTabStopInComment() {
+        return tabStopInComment;
+    }
+
+    @Override
     public void regenerateIndentString() {
         //ignore it
     }

@@ -64,7 +64,8 @@ public class PyRenameInFileAction extends Action {
         /**
          * As soon as the reparse is done, this method is called to actually make the rename.
          */
-        public void parserChanged(ISimpleNode root, IAdaptable file, IDocument doc) {
+        @Override
+        public void parserChanged(ISimpleNode root, IAdaptable file, IDocument doc, long docModificationStamp) {
             pyEdit.getParser().removeParseListener(this); //we'll only listen for this single parse
 
             /**
@@ -110,6 +111,7 @@ public class PyRenameInFileAction extends Action {
             job.schedule();
         }
 
+        @Override
         public void parserError(Throwable error, IAdaptable file, IDocument doc) {
             pyEdit.getParser().removeParseListener(this); //we'll only listen for this single parse
         }
@@ -140,6 +142,7 @@ public class PyRenameInFileAction extends Action {
         this.pyEdit = edit;
     }
 
+    @Override
     public void run() {
         Job j = new RenameInFileJob("Rename In File");
         j.setPriority(Job.INTERACTIVE);
@@ -190,6 +193,7 @@ public class PyRenameInFileAction extends Action {
             ArrayList<ASTEntry> sortedOccurrences = new ArrayList<ASTEntry>(occurrences);
             Collections.sort(sortedOccurrences, new Comparator<ASTEntry>() {
 
+                @Override
                 public int compare(ASTEntry o1, ASTEntry o2) {
                     int thisVal = o1.node.beginLine;
                     int anotherVal = o2.node.beginLine;

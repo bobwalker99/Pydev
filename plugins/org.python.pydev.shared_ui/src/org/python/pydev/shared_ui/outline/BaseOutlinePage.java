@@ -57,11 +57,10 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
 
     public abstract IPreferenceStore getStore();
 
-    public abstract IOutlineModel createParsedModel();
-
     protected IDocument document;
 
-    protected IOutlineModel model;
+    //Important: it must be final (i.e.: never change)
+    protected final IOutlineModel model;
 
     protected final ImageCache imageCache;
 
@@ -84,6 +83,8 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
         this.imageCache = imageCache;
         this.editorView = editorView;
         this.pluginId = pluginId;
+        this.model = (IOutlineModel) editorView.getAdapter(IOutlineModel.class);
+        this.model.setOutlinePage(this);
     }
 
     public IOutlineModel getOutlineModel() {
@@ -101,15 +102,22 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
         final TreeViewer tree = getTreeViewer();
         IDocumentProvider provider = editorView.getDocumentProvider();
         document = provider.getDocument(editorView.getEditorInput());
-        model = createParsedModel();
         tree.setAutoExpandLevel(2);
         tree.setContentProvider(new ParsedContentProvider());
         tree.setLabelProvider(new ParsedLabelProvider(imageCache));
-        tree.setInput(model.getRoot());
+        tree.setInput(getOutlineModel().getRoot());
     }
 
-    public boolean isDisposed() {
-        return getTreeViewer().getTree().isDisposed();
+    public boolean isDisconnectedFromTree() {
+        TreeViewer treeViewer2 = getTreeViewer();
+        if (treeViewer2 == null) {
+            return true;
+        }
+        Tree tree = treeViewer2.getTree();
+        if (tree == null) {
+            return true;
+        }
+        return tree.isDisposed();
     }
 
     @Override
@@ -121,11 +129,7 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
             }
             createdCallbacksForControls = null;
         }
-
-        if (model != null) {
-            model.dispose();
-            model = null;
-        }
+        //note: don't dispose on the model (we don't have ownership for it).
         if (selectionListener != null) {
             removeSelectionChangedListener(selectionListener);
         }
@@ -151,7 +155,7 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
             TreeViewer viewer = getTreeViewer();
             if (viewer != null) {
                 Tree treeWidget = viewer.getTree();
-                if (isDisposed()) {
+                if (isDisconnectedFromTree()) {
                     return;
                 }
 
@@ -161,13 +165,13 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
                     barPosition = bar.getSelection();
                 }
                 if (items == null) {
-                    if (isDisposed()) {
+                    if (isDisconnectedFromTree()) {
                         return;
                     }
                     viewer.refresh();
 
                 } else {
-                    if (isDisposed()) {
+                    if (isDisconnectedFromTree()) {
                         return;
                     }
                     for (int i = 0; i < items.length; i++) {
@@ -193,7 +197,7 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
     public void updateItems(Object[] items) {
         try {
             unlinkAll();
-            if (isDisposed()) {
+            if (isDisconnectedFromTree()) {
                 return;
             }
             TreeViewer tree = getTreeViewer();
@@ -311,6 +315,7 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
             // selecting an item in the outline scrolls the document
             selectionListener = new ISelectionChangedListener() {
 
+                @Override
                 public void selectionChanged(SelectionChangedEvent event) {
                     if (linkWithEditor == null) {
                         return;
@@ -332,7 +337,7 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
                             }
                         }
                         if (!alreadySelected) {
-                            ISimpleNode[] node = model.getSelectionPosition(sel);
+                            ISimpleNode[] node = getOutlineModel().getSelectionPosition(sel);
                             editorView.revealModelNodes(node);
                         }
                     } finally {
@@ -357,13 +362,16 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
 
             tree.addMouseListener(new MouseListener() {
 
+                @Override
                 public void mouseDoubleClick(MouseEvent e) {
                     tryToMakeSelection();
                 }
 
+                @Override
                 public void mouseDown(MouseEvent e) {
                 }
 
+                @Override
                 public void mouseUp(MouseEvent e) {
                     tryToMakeSelection();
                 }
@@ -371,9 +379,11 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
 
             tree.addKeyListener(new KeyListener() {
 
+                @Override
                 public void keyPressed(KeyEvent e) {
                 }
 
+                @Override
                 public void keyReleased(KeyEvent e) {
                     if (e.keyCode == SWT.ARROW_UP || e.keyCode == SWT.ARROW_DOWN) {
                         tryToMakeSelection();
@@ -409,12 +419,14 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
         return controls;
     }
 
+    @Override
     public boolean show(ShowInContext context) {
         linkWithEditor.doLinkOutlinePosition(this.editorView, this,
                 EditorUtils.createTextSelectionUtils(this.editorView));
         return true;
     }
 
+    @Override
     public Object getAdapter(Class adapter) {
         if (adapter == IShowInTarget.class) {
             return this;
@@ -460,4 +472,5 @@ public abstract class BaseOutlinePage extends ContentOutlinePageWithFilter imple
     public ICallbackWithListeners getOnControlDisposed() {
         return onControlDisposed;
     }
+
 }

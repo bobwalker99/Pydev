@@ -1,3 +1,17 @@
+/******************************************************************************
+* Copyright (C) 2006-2013  IFS Institute for Software and others
+*
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Eclipse Public License v1.0
+* which accompanies this distribution, and is available at
+* http://www.eclipse.org/legal/epl-v10.html
+*
+* Original authors:
+*     Dennis Hunziker
+*     Ueli Kistler
+* Contributors:
+*     Fabio Zadrozny <fabiofz@gmail.com> - initial implementation
+******************************************************************************/
 /* 
  * Copyright (C) 2006, 2007  Dennis Hunziker, Ueli Kistler 
  */
@@ -27,8 +41,7 @@ import org.jgraph.graph.GraphConstants;
 import org.jgraph.graph.GraphLayoutCache;
 import org.jgraph.graph.GraphModel;
 import org.python.pydev.parser.jython.SimpleNode;
-import org.python.pydev.shared_core.model.ISimpleNode;
-import org.python.pydev.shared_core.structure.Tuple;
+import org.python.pydev.shared_core.parsing.BaseParser.ParseOutput;
 
 public class GraphView extends JFrame {
 
@@ -126,6 +139,7 @@ public class GraphView extends JFrame {
             saveImage = new JButton();
             saveImage.setText("Save as PNG");
             saveImage.addActionListener(new java.awt.event.ActionListener() {
+                @Override
                 public void actionPerformed(java.awt.event.ActionEvent event) {
 
                     FileFilter filter = new PNGFilter();
@@ -156,6 +170,7 @@ public class GraphView extends JFrame {
             loadPython = new JButton();
             loadPython.setText("Load Python source");
             loadPython.addActionListener(new java.awt.event.ActionListener() {
+                @Override
                 public void actionPerformed(java.awt.event.ActionEvent event) {
                     FileFilter filter = new PythonFilter();
                     try {
@@ -199,10 +214,10 @@ public class GraphView extends JFrame {
 
     private void loadGraph(String fileName) throws FileNotFoundException, IOException, Throwable {
         ASTGraph ast = new ASTGraph();
-        Tuple<ISimpleNode, Throwable> objects = ast.parseFile(fileName);
+        ParseOutput objects = ast.parseFile(fileName);
 
         graph.setGraphLayoutCache(new GraphLayoutCache());
-        DefaultGraphCell[] cells = ast.generateTree((SimpleNode) objects.o1);
+        DefaultGraphCell[] cells = ast.generateTree((SimpleNode) objects.ast);
 
         graph.getGraphLayoutCache().insert(cells);
         graph.clearSelection();
@@ -224,13 +239,16 @@ public class GraphView extends JFrame {
     }
 
     class PNGFilter extends javax.swing.filechooser.FileFilter {
+        @Override
         public boolean accept(File file) {
-            if (file.isDirectory())
+            if (file.isDirectory()) {
                 return true;
+            }
             String filename = file.getName();
             return filename.endsWith(".png");
         }
 
+        @Override
         public String getDescription() {
             return "PNG image (*.png)";
         }
@@ -238,13 +256,16 @@ public class GraphView extends JFrame {
 
     class PythonFilter extends javax.swing.filechooser.FileFilter {
 
+        @Override
         public boolean accept(File file) {
-            if (file.isDirectory())
+            if (file.isDirectory()) {
                 return true;
+            }
             String filename = file.getName();
             return filename.endsWith(".py");
         }
 
+        @Override
         public String getDescription() {
             return "Python Source code (*.py)";
         }

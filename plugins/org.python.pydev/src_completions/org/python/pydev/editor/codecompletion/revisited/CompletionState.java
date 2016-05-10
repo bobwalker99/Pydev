@@ -28,7 +28,9 @@ import org.python.pydev.core.IModule;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.IToken;
 import org.python.pydev.core.structure.CompletionRecursionException;
+import org.python.pydev.editor.codecompletion.PyCodeCompletionPreferencesPage;
 import org.python.pydev.editor.codecompletion.revisited.visitors.Definition;
+import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_core.structure.Tuple3;
 
 /**
@@ -41,6 +43,7 @@ public final class CompletionState implements ICompletionState {
     private int col = -1;
     private IPythonNature nature;
     private String qualifier;
+    private int levelGetCompletionsUnpackingObject = 0;
 
     private final Memo<String> memory = new Memo<String>();
     private final Memo<Definition> definitionMemory = new Memo<Definition>();
@@ -62,11 +65,15 @@ public final class CompletionState implements ICompletionState {
     private List<IToken> tokenImportedModules;
     private ICompletionCache completionCache;
     private String fullActivationToken;
+    private long initialMillis = 0;
+    private long maxMillisToComplete;
 
+    @Override
     public ICompletionState getCopy() {
         return new CompletionStateWrapper(this);
     }
 
+    @Override
     public ICompletionState getCopyForResolveImportWithActTok(String actTok) {
         CompletionState state = (CompletionState) CompletionStateFactory.getEmptyCompletionState(actTok, this.nature,
                 this.completionCache);
@@ -78,7 +85,7 @@ public final class CompletionState implements ICompletionState {
 
     /**
      * this is a class that can act as a memo and check if something is defined more than 'n' times
-     * 
+     *
      * @author Fabio Zadrozny
      */
     private static class Memo<E> {
@@ -172,6 +179,7 @@ public final class CompletionState implements ICompletionState {
      * @param module
      * @param base
      */
+    @Override
     public void checkWildImportInMemory(IModule caller, IModule wild) throws CompletionRecursionException {
         if (this.wildImportMemory.isInRecursion(caller, wild)) {
             throw new CompletionRecursionException(
@@ -185,6 +193,7 @@ public final class CompletionState implements ICompletionState {
      * @param module
      * @param definition
      */
+    @Override
     public void checkDefinitionMemory(IModule module, IDefinition definition) throws CompletionRecursionException {
         if (this.definitionMemory.isInRecursion(module, (Definition) definition)) {
             throw new CompletionRecursionException(
@@ -197,6 +206,7 @@ public final class CompletionState implements ICompletionState {
     /**
      * @param module
      */
+    @Override
     public void checkFindMemory(IModule module, String value) throws CompletionRecursionException {
         if (this.findMemory.isInRecursion(module, value)) {
             throw new CompletionRecursionException(
@@ -208,8 +218,9 @@ public final class CompletionState implements ICompletionState {
 
     /**
      * @param module
-     * @throws CompletionRecursionException 
+     * @throws CompletionRecursionException
      */
+    @Override
     public void checkResolveImportMemory(IModule module, String value) throws CompletionRecursionException {
         if (this.resolveImportMemory.isInRecursion(module, value)) {
             throw new CompletionRecursionException(
@@ -219,6 +230,7 @@ public final class CompletionState implements ICompletionState {
 
     }
 
+    @Override
     public void checkFindDefinitionMemory(IModule mod, String tok) throws CompletionRecursionException {
         if (this.findDefinitionMemory.isInRecursion(mod, tok)) {
             throw new CompletionRecursionException(
@@ -227,6 +239,7 @@ public final class CompletionState implements ICompletionState {
         }
     }
 
+    @Override
     public void checkFindLocalDefinedDefinitionMemory(IModule mod, String tok) throws CompletionRecursionException {
         if (this.findLocalDefinedDefinitionMemory.isInRecursion(mod, tok)) {
             throw new CompletionRecursionException(
@@ -239,6 +252,7 @@ public final class CompletionState implements ICompletionState {
      * @param module
      * @param base
      */
+    @Override
     public void checkMemory(IModule module, String base) throws CompletionRecursionException {
         if (this.memory.isInRecursion(module, base)) {
             throw new CompletionRecursionException(
@@ -247,8 +261,30 @@ public final class CompletionState implements ICompletionState {
         }
     }
 
+    @Override
+    public void checkMaxTimeForCompletion() throws CompletionRecursionException {
+        if (this.initialMillis <= 0) {
+            this.initialMillis = System.currentTimeMillis();
+            if (SharedCorePlugin.inTestMode()) {
+                this.maxMillisToComplete = Long.MAX_VALUE; //2 * 1000; //In test mode the max is 2 seconds.
+            } else {
+                this.maxMillisToComplete = PyCodeCompletionPreferencesPage
+                        .getMaximumNumberOfMillisToCompleteCodeCompletionRequest();
+            }
+        } else {
+            long diff = System.currentTimeMillis() - this.initialMillis;
+            if (diff > this.maxMillisToComplete) {
+                throw new CompletionRecursionException(
+                        "Stopping analysis: completion took too much time to complete. Max set to: "
+                                + this.maxMillisToComplete + " millis. Current: " + diff + " millis. Note: this "
+                                + "value may be changed in the code-completion preferences.");
+            }
+        }
+    };
+
     Set<Tuple3<Integer, Integer, IModule>> foundSameDefinitionMemory = new HashSet<Tuple3<Integer, Integer, IModule>>();
 
+    @Override
     public boolean checkFoudSameDefinition(int line, int col, IModule mod) {
         Tuple3<Integer, Integer, IModule> key = new Tuple3<Integer, Integer, IModule>(line, col, mod);
         if (foundSameDefinitionMemory.contains(key)) {
@@ -258,6 +294,7 @@ public final class CompletionState implements ICompletionState {
         return false;
     }
 
+    @Override
     public boolean canStillCheckFindSourceFromCompiled(IModule mod, String tok) {
         if (!findSourceFromCompiledMemory.isInRecursion(mod, tok)) {
             return true;
@@ -267,10 +304,11 @@ public final class CompletionState implements ICompletionState {
 
     /**
      * This check is a bit different from the others because of the context it will work in...
-     * 
-     *  This check is used when resolving things from imports, so, it may check for recursions found when in previous context, but 
+     *
+     *  This check is used when resolving things from imports, so, it may check for recursions found when in previous context, but
      *  if a recursion is found in the current context, that's ok (because it's simply trying to get the actual representation for a token)
      */
+    @Override
     public void checkFindResolveImportMemory(IToken token) throws CompletionRecursionException {
         Iterator<Memo<IToken>> it = findResolveImportMemory.iterator();
         while (it.hasNext()) {
@@ -285,10 +323,12 @@ public final class CompletionState implements ICompletionState {
         }
     }
 
+    @Override
     public void popFindResolveImportMemoryCtx() {
         findResolveImportMemory.pop();
     }
 
+    @Override
     public void pushFindResolveImportMemoryCtx() {
         findResolveImportMemory.push(new Memo<IToken>());
     }
@@ -297,6 +337,7 @@ public final class CompletionState implements ICompletionState {
      * @param module
      * @param base
      */
+    @Override
     public void checkFindModuleCompletionsMemory(IModule mod, String tok) throws CompletionRecursionException {
         if (this.findModuleCompletionsMemory.isInRecursion(mod, tok)) {
             throw new CompletionRecursionException(
@@ -305,26 +346,32 @@ public final class CompletionState implements ICompletionState {
         }
     }
 
+    @Override
     public String getActivationToken() {
         return activationToken;
     }
 
+    @Override
     public IPythonNature getNature() {
         return nature;
     }
 
+    @Override
     public void setActivationToken(String string) {
         activationToken = string;
     }
 
+    @Override
     public String getFullActivationToken() {
         return this.fullActivationToken;
     }
 
+    @Override
     public void setFullActivationToken(String act) {
         this.fullActivationToken = act;
     }
 
+    @Override
     public void setBuiltinsGotten(boolean b) {
         builtinsGotten = b;
     }
@@ -332,6 +379,7 @@ public final class CompletionState implements ICompletionState {
     /**
      * @param i: starting at 0
      */
+    @Override
     public void setCol(int i) {
         col = i;
     }
@@ -339,30 +387,37 @@ public final class CompletionState implements ICompletionState {
     /**
      * @param i: starting at 0
      */
+    @Override
     public void setLine(int i) {
         line = i;
     }
 
+    @Override
     public void setLocalImportsGotten(boolean b) {
         localImportsGotten = b;
     }
 
+    @Override
     public boolean getLocalImportsGotten() {
         return localImportsGotten;
     }
 
+    @Override
     public int getLine() {
         return line;
     }
 
+    @Override
     public int getCol() {
         return col;
     }
 
+    @Override
     public boolean getBuiltinsGotten() {
         return builtinsGotten;
     }
 
+    @Override
     public void raiseNFindTokensOnImportedModsCalled(IModule mod, String tok) throws CompletionRecursionException {
         if (this.importedModsCalled.isInRecursion(mod, tok)) {
             throw new CompletionRecursionException("Possible recursion found (mod: " + mod.getName() + ", tok: " + tok
@@ -370,14 +425,17 @@ public final class CompletionState implements ICompletionState {
         }
     }
 
+    @Override
     public boolean getIsInCalltip() {
         return isInCalltip;
     }
 
+    @Override
     public void setLookingFor(int b) {
         this.setLookingFor(b, false);
     }
 
+    @Override
     public void setLookingFor(int b, boolean force) {
         //the 1st is the one that counts (or it can be forced)
         if (this.lookingForInstance == ICompletionState.LOOKING_FOR_INSTANCE_UNDEFINED || force) {
@@ -385,24 +443,29 @@ public final class CompletionState implements ICompletionState {
         }
     }
 
+    @Override
     public int getLookingFor() {
         return this.lookingForInstance;
     }
 
+    @Override
     public ICompletionState getCopyWithActTok(String value) {
         ICompletionState copy = getCopy();
         copy.setActivationToken(value);
         return copy;
     }
 
+    @Override
     public String getQualifier() {
         return this.qualifier;
     }
 
+    @Override
     public void setIsInCalltip(boolean isInCalltip) {
         this.isInCalltip = isInCalltip;
     }
 
+    @Override
     public void setTokenImportedModules(List<IToken> tokenImportedModules) {
         if (tokenImportedModules != null) {
             if (this.tokenImportedModules == null) {
@@ -411,29 +474,150 @@ public final class CompletionState implements ICompletionState {
         }
     }
 
+    @Override
     public List<IToken> getTokenImportedModules() {
         return this.tokenImportedModules;
     }
 
     // ICompletionCache interface implementation -----------------------------------------------------------------------
 
+    @Override
     public void add(Object key, Object n) {
         this.completionCache.add(key, n);
     }
 
+    @Override
     public Object getObj(Object o) {
         return this.completionCache.getObj(o);
     }
 
+    @Override
     public void remove(Object key) {
         this.completionCache.remove(key);
     }
 
+    @Override
     public void removeStaleEntries() {
         this.completionCache.removeStaleEntries();
     }
 
+    @Override
     public void clear() {
         this.completionCache.clear();
+    }
+
+    private static class AlreadySerched {
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((actTok == null) ? 0 : actTok.hashCode());
+            result = prime * result + col;
+            result = prime * result + line;
+            result = prime * result + ((module == null) ? 0 : module.hashCode());
+            result = prime * result + ((value == null) ? 0 : value.hashCode());
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            AlreadySerched other = (AlreadySerched) obj;
+            if (actTok == null) {
+                if (other.actTok != null) {
+                    return false;
+                }
+            } else if (!actTok.equals(other.actTok)) {
+                return false;
+            }
+            if (col != other.col) {
+                return false;
+            }
+            if (line != other.line) {
+                return false;
+            }
+            if (module == null) {
+                if (other.module != null) {
+                    return false;
+                }
+            } else if (!module.equals(other.module)) {
+                return false;
+            }
+            if (value == null) {
+                if (other.value != null) {
+                    return false;
+                }
+            } else if (!value.equals(other.value)) {
+                return false;
+            }
+            return true;
+        }
+
+        private final int line;
+        private final int col;
+        private final IModule module;
+        private final String actTok;
+        private final String value;
+
+        AlreadySerched(int line, int col, IModule module, String value, String actTok) {
+            this.line = line;
+            this.col = col;
+            this.module = module;
+            this.actTok = actTok;
+            this.value = value;
+        }
+    }
+
+    private Set<AlreadySerched> alreadySearchedInAssign = new HashSet<CompletionState.AlreadySerched>();
+
+    @Override
+    public boolean getAlreadySearchedInAssign(int line, int col, IModule module, String value, String actTok) {
+        AlreadySerched s = new AlreadySerched(line, col, module, value, actTok);
+        if (alreadySearchedInAssign.contains(s)) {
+            return true;
+        }
+        alreadySearchedInAssign.add(s);
+        return false;
+    }
+
+    int assign = 0;
+
+    @Override
+    public int pushAssign() {
+        assign += 1;
+        return assign;
+    }
+
+    @Override
+    public void popAssign() {
+        assign -= 1;
+        if (assign == 0) {
+            // When we get to level 0, clear anything searched previously
+            alreadySearchedInAssign.clear();
+        }
+    }
+
+    @Override
+    public void pushGetCompletionsUnpackingObject() throws CompletionRecursionException {
+        levelGetCompletionsUnpackingObject += 1;
+        if (levelGetCompletionsUnpackingObject > 15) {
+            throw new CompletionRecursionException(
+                    "Error: recursion detected getting completions unpacking object. Activation token: "
+                            + this.getActivationToken());
+        }
+    }
+
+    @Override
+    public void popGetCompletionsUnpackingObject() {
+        levelGetCompletionsUnpackingObject -= 1;
     }
 }

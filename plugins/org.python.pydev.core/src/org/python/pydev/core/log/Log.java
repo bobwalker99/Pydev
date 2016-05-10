@@ -66,6 +66,10 @@ public class Log {
         return log(IStatus.INFO, msg, new RuntimeException(msg));
     }
 
+    public static CoreException logWarn(String msg) {
+        return log(IStatus.WARNING, msg, new RuntimeException(msg));
+    }
+
     public static CoreException logInfo(String msg, Throwable e) {
         return log(IStatus.INFO, msg, e);
     }
@@ -113,6 +117,7 @@ public class Log {
     private static void toLogFile(final String buffer) {
         final Runnable r = new Runnable() {
 
+            @Override
             public void run() {
                 synchronized (lock) {
                     try {
