@@ -17,13 +17,13 @@ public class MinimapPreferenceInitializer extends AbstractPreferenceInitializer 
 
     @Override
     public void initializeDefaultPreferences() {
-        Preferences node = new DefaultScope().getNode(SharedUiPlugin.PLUGIN_ID);
+        Preferences node = DefaultScope.INSTANCE.getNode(SharedUiPlugin.PLUGIN_ID);
 
         node.putBoolean(MinimapOverviewRulerPreferencesPage.USE_MINIMAP, true);
         node.putBoolean(MinimapOverviewRulerPreferencesPage.SHOW_VERTICAL_SCROLLBAR, false);
         node.putBoolean(MinimapOverviewRulerPreferencesPage.SHOW_HORIZONTAL_SCROLLBAR, true);
-        node.putBoolean(MinimapOverviewRulerPreferencesPage.SHOW_MINIMAP_CONTENTS, true);
-        node.putInt(MinimapOverviewRulerPreferencesPage.MINIMAP_WIDTH, 70);
+        node.putBoolean(MinimapOverviewRulerPreferencesPage.SHOW_MINIMAP_CONTENTS, false);
+        node.putInt(MinimapOverviewRulerPreferencesPage.MINIMAP_WIDTH, 25); // Change default from 70 -> 25
         node.put(MinimapOverviewRulerPreferencesPage.MINIMAP_SELECTION_COLOR,
                 StringConverter.asString(new RGB(51, 153, 255)));
 

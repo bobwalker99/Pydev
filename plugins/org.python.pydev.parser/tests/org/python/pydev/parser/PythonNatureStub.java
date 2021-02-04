@@ -19,54 +19,65 @@ import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.IModule;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.IPythonPathNature;
-import org.python.pydev.core.IToken;
 import org.python.pydev.core.MisconfigurationException;
+import org.python.pydev.core.TokensList;
+import org.python.pydev.shared_core.structure.Tuple;
 
 public class PythonNatureStub implements IPythonNature, IAdaptable {
 
     @Override
-    public Object getAdapter(Class adapter) {
+    public <T> T getAdapter(Class<T> adapter) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void endRequests() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public ICodeCompletionASTManager getAstManager() {
         throw new RuntimeException("Not implemented");
     }
 
-    public IToken[] getBuiltinCompletions() {
+    @Override
+    public TokensList getBuiltinCompletions() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public IModule getBuiltinMod() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public File getCompletionsCacheDir() {
         throw new RuntimeException("Not implemented");
     }
 
-    public String getDefaultVersion() {
-        throw new RuntimeException("Not implemented");
-    }
-
+    @Override
     public IPythonPathNature getPythonPathNature() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public int getInterpreterType() throws CoreException {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public IInterpreterManager getRelatedInterpreterManager() {
         throw new RuntimeException("Not implemented");
     }
 
-    public String getVersion() throws CoreException {
+    @Override
+    public String getVersion(boolean translateIfInterpreter) throws CoreException {
         throw new RuntimeException("Not implemented");
+    }
+
+    @Override
+    public AdditionalGrammarVersionsToCheck getAdditionalGrammarVersions() throws MisconfigurationException {
+        return null;
     }
 
     public boolean isJython() throws CoreException {
@@ -77,24 +88,29 @@ public class PythonNatureStub implements IPythonNature, IAdaptable {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public boolean isResourceInPythonpath(IResource resource) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public boolean isResourceInPythonpath(String resource) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public boolean isResourceInPythonpathProjectSources(IResource resource, boolean addExternal)
             throws MisconfigurationException {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public boolean isResourceInPythonpathProjectSources(String resource, boolean addExternal)
             throws MisconfigurationException {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void rebuildPath() {
         throw new RuntimeException("Not implemented");
     }
@@ -103,73 +119,105 @@ public class PythonNatureStub implements IPythonNature, IAdaptable {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public String resolveModule(File file) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public String resolveModule(String fileAbsolutePath) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public String resolveModule(IResource resource) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void saveAstManager() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void clearBuiltinCompletions() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void clearBuiltinMod() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void setVersion(String version, String interpreter) throws CoreException {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public boolean startRequests() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void configure() throws CoreException {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void deconfigure() throws CoreException {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public IProject getProject() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void setProject(IProject project) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public int getGrammarVersion() {
         return IPythonNature.GRAMMAR_PYTHON_VERSION_2_5;
     }
 
+    @Override
     public IInterpreterInfo getProjectInterpreter() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public boolean isOkToUse() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public String resolveModuleOnlyInProjectSources(String fileAbsolutePath, boolean addExternal) throws CoreException,
             MisconfigurationException {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public String resolveModuleOnlyInProjectSources(IResource fileAbsolutePath, boolean addExternal)
             throws CoreException, MisconfigurationException {
+        throw new RuntimeException("Not implemented");
+    }
+
+    @Override
+    public void updateMtime() {
+        throw new RuntimeException("Not implemented");
+    }
+
+    @Override
+    public long getMtime() {
+        throw new RuntimeException("Not implemented");
+    }
+
+    @Override
+    public Tuple<String, String> getVersionAndError(boolean translateIfInterpreter) throws CoreException {
         throw new RuntimeException("Not implemented");
     }
 }

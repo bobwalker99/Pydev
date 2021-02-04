@@ -36,8 +36,8 @@ import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.core.Constants;
 import org.python.pydev.navigator.PythonLabelProvider;
-import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
+import org.python.pydev.shared_core.SharedCorePlugin;
 
 
 /**
@@ -52,6 +52,7 @@ public class ProjectBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#createControl(org.eclipse.swt.widgets.Composite)
      */
+    @Override
     public void createControl(Composite parent) {
         Font font = parent.getFont();
         Group group = new Group(parent, SWT.NONE);
@@ -69,6 +70,7 @@ public class ProjectBlock extends AbstractLaunchConfigurationTab {
         fProjectText.setLayoutData(gd);
         fProjectText.setFont(font);
         fProjectText.addModifyListener(new ModifyListener() {
+            @Override
             public void modifyText(ModifyEvent evt) {
                 updateLaunchConfigurationDialog();
             }
@@ -76,6 +78,7 @@ public class ProjectBlock extends AbstractLaunchConfigurationTab {
 
         fProjectBrowseButton = createPushButton(group, "Browse...", null); //$NON-NLS-1$
         fProjectBrowseButton.addSelectionListener(new SelectionAdapter() {
+            @Override
             public void widgetSelected(SelectionEvent e) {
 
                 // Filter out project by python nature
@@ -112,7 +115,7 @@ public class ProjectBlock extends AbstractLaunchConfigurationTab {
                         String msg = "The selected project must have the python nature associated.";
                         String title = "Invalid project (no python nature associated).";
                         ErrorDialog.openError(getShell(), title, msg,
-                                PydevPlugin.makeStatus(IStatus.WARNING, title, null));
+                                SharedCorePlugin.makeStatus(IStatus.WARNING, title, null));
                     }
 
                     String projectName = project.getName();
@@ -127,6 +130,7 @@ public class ProjectBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#getName()
      */
+    @Override
     public String getName() {
         return "Project";
     }
@@ -135,6 +139,7 @@ public class ProjectBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#initializeFrom(org.eclipse.debug.core.ILaunchConfiguration)
      */
+    @Override
     public void initializeFrom(ILaunchConfiguration configuration) {
         String projectName = "";
         try {
@@ -148,6 +153,7 @@ public class ProjectBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#performApply(org.eclipse.debug.core.ILaunchConfigurationWorkingCopy)
      */
+    @Override
     public void performApply(ILaunchConfigurationWorkingCopy configuration) {
         String value = fProjectText.getText().trim();
         setAttribute(configuration, Constants.ATTR_PROJECT, value);
@@ -157,6 +163,7 @@ public class ProjectBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#setDefaults(org.eclipse.debug.core.ILaunchConfigurationWorkingCopy)
      */
+    @Override
     public void setDefaults(ILaunchConfigurationWorkingCopy configuration) {
         // No defaults to set
     }

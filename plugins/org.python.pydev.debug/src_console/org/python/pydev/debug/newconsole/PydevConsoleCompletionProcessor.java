@@ -12,19 +12,21 @@ import org.eclipse.jface.text.contentassist.ICompletionListener;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
 import org.eclipse.jface.text.contentassist.IContextInformation;
 import org.eclipse.jface.text.contentassist.IContextInformationValidator;
+import org.python.pydev.ast.codecompletion.PyCodeCompletionPreferences;
+import org.python.pydev.core.interactive_console.IScriptConsoleViewer;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.codecompletion.CompletionError;
-import org.python.pydev.editor.codecompletion.PyCodeCompletionPreferencesPage;
+import org.python.pydev.editor.codecompletion.ConvertCompletionProposals;
 import org.python.pydev.editor.codecompletion.PyContentAssistant;
 import org.python.pydev.editor.codecompletion.PyContextInformationValidator;
 import org.python.pydev.editor.codecompletion.PythonCompletionProcessor;
+import org.python.pydev.shared_core.code_completion.ICompletionProposalHandle;
 import org.python.pydev.shared_interactive_console.console.IScriptConsoleShell;
-import org.python.pydev.shared_interactive_console.console.ui.IScriptConsoleViewer;
 import org.python.pydev.shared_ui.content_assist.AbstractCompletionProcessorWithCycling;
 
 /**
  * Gathers completions for the pydev console.
- * 
+ *
  * @author fabioz
  */
 public class PydevConsoleCompletionProcessor extends AbstractCompletionProcessorWithCycling implements
@@ -40,17 +42,20 @@ public class PydevConsoleCompletionProcessor extends AbstractCompletionProcessor
     private String errorMessage = null;
     private int lastActivationCount = -1;
 
-    public PydevConsoleCompletionProcessor(IScriptConsoleShell interpreterShell, PyContentAssistant pyContentAssistant) {
+    public PydevConsoleCompletionProcessor(IScriptConsoleShell interpreterShell,
+            PyContentAssistant pyContentAssistant) {
         super(pyContentAssistant);
         pyContentAssistant.addCompletionListener(this);
         this.interpreterShell = interpreterShell;
 
     }
 
+    @Override
     public char[] getContextInformationAutoActivationCharacters() {
         return null;
     }
 
+    @Override
     public char[] getCompletionProposalAutoActivationCharacters() {
         return PythonCompletionProcessor.getStaticCompletionProposalAutoActivationCharacters();
     }
@@ -58,6 +63,7 @@ public class PydevConsoleCompletionProcessor extends AbstractCompletionProcessor
     /**
      * Get the completions (and cycle the completion mode if needed).
      */
+    @Override
     public ICompletionProposal[] computeCompletionProposals(ITextViewer v, int offset) {
         //cycle if we're in a new activation for requests (a second ctrl+space or
         //a new request)
@@ -82,13 +88,15 @@ public class PydevConsoleCompletionProcessor extends AbstractCompletionProcessor
         IScriptConsoleViewer viewer = (IScriptConsoleViewer) v;
 
         try {
-            if (!PyCodeCompletionPreferencesPage.useCodeCompletion()) {
+            if (!PyCodeCompletionPreferences.useCodeCompletion()) {
                 return new ICompletionProposal[0];
             }
             String commandLine = viewer.getCommandLine();
             int cursorPosition = offset - viewer.getCommandLineOffset();
 
-            return interpreterShell.getCompletions(viewer, commandLine, cursorPosition, offset, this.whatToShow);
+            ICompletionProposalHandle[] completions = interpreterShell.getCompletions(viewer, commandLine,
+                    cursorPosition, offset, this.whatToShow);
+            return ConvertCompletionProposals.convertHandlesToProposals(completions);
         } catch (Exception e) {
             Log.log(e);
             CompletionError completionError = new CompletionError(e);
@@ -98,10 +106,12 @@ public class PydevConsoleCompletionProcessor extends AbstractCompletionProcessor
         }
     }
 
+    @Override
     public IContextInformation[] computeContextInformation(ITextViewer v, int offset) {
         return null;
     }
 
+    @Override
     public IContextInformationValidator getContextInformationValidator() {
         if (contextInformationValidator == null) {
             contextInformationValidator = new PyContextInformationValidator();
@@ -113,21 +123,25 @@ public class PydevConsoleCompletionProcessor extends AbstractCompletionProcessor
     /**
      * @return an error message that happened while getting the completions
      */
+    @Override
     public String getErrorMessage() {
         String msg = errorMessage;
         errorMessage = null;
         return msg;
     }
 
+    @Override
     public void assistSessionEnded(ContentAssistEvent event) {
     }
 
+    @Override
     public void assistSessionStarted(ContentAssistEvent event) {
         this.lastActivationCount = -1;
         //we have to start with templates because it'll start already cycling.
         startCycle();
     }
 
+    @Override
     public void selectionChanged(ICompletionProposal proposal, boolean smartToggle) {
     }
 }

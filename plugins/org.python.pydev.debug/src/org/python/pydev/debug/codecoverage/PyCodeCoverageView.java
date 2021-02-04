@@ -21,10 +21,13 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.IInputValidator;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -76,6 +79,7 @@ import org.eclipse.ui.dialogs.ContainerSelectionDialog;
 import org.eclipse.ui.dialogs.FilteredTree;
 import org.eclipse.ui.dialogs.PatternFilter;
 import org.eclipse.ui.texteditor.MarkerUtilities;
+import org.python.pydev.ast.location.FindWorkspaceFiles;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.ui.launching.PythonRunnerCallbacks;
 import org.python.pydev.debug.ui.launching.PythonRunnerCallbacks.CreatedCommandLineParams;
@@ -94,6 +98,7 @@ import org.python.pydev.shared_ui.tooltips.presenter.StyleRangeWithCustomData;
 import org.python.pydev.shared_ui.tree.PyFilteredTree;
 import org.python.pydev.shared_ui.utils.IViewWithControls;
 import org.python.pydev.shared_ui.utils.RunInUiThread;
+import org.python.pydev.shared_ui.utils.UIUtils;
 import org.python.pydev.tree.AllowValidPathsFilter;
 import org.python.pydev.tree.FileTreeLabelProvider;
 import org.python.pydev.tree.FileTreePyFilesProvider;
@@ -243,7 +248,14 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         if (lastChosenDir == null) {
             return;
         }
-        PyCoverage.getPyCoverage().refreshCoverageInfo(lastChosenDir, monitor);
+        try {
+            PyCoverage.getPyCoverage().refreshCoverageInfo(lastChosenDir, monitor);
+        } catch (CoverageException e) {
+            ErrorDialog.openError(UIUtils.getActiveShell(), "Error refreshing coverage information.", e.getMessage(),
+                    new Status(IStatus.ERROR,
+                            PydevPlugin.getPluginID(), "Error refreshing coverage information.", e));
+            return;
+        }
 
         File input = lastChosenDir.getLocation().toFile();
         viewer.refresh();
@@ -268,6 +280,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
 
     private final ICallbackListener<Process> afterCreatedProcessListener = new ICallbackListener<Process>() {
 
+        @Override
         public Object call(final Process obj) {
             if (viewer == null) { //Safeguard: if the view containing this one was removed and for some reason not properly disposed, this would occur.
                 return null;
@@ -289,6 +302,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
                     if (PyCoveragePreferences.getRefreshAfterNextLaunch()) {
                         RunInUiThread.async(new Runnable() {
 
+                            @Override
                             public void run() {
                                 ProgressOperation.startAction(getSite().getShell(), refreshAction, true);
                             }
@@ -301,6 +315,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
     };
 
     private final ICallbackListener<PythonRunnerCallbacks.CreatedCommandLineParams> onCreatedCommandLineListener = new ICallbackListener<PythonRunnerCallbacks.CreatedCommandLineParams>() {
+        @Override
         public Object call(CreatedCommandLineParams arg) {
             if (viewer == null) { //Safeguard: if the view containing this one was removed and for some reason not properly disposed, this would occur.
                 return null;
@@ -357,8 +372,10 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         public void run() {
             InputDialog d = new InputDialog(EditorUtils.getShell(), "Enter number of columns",
                     "Enter the number of columns to be used for the name.", ""
-                            + PyCoveragePreferences.getNameNumberOfColumns(), new IInputValidator() {
+                            + PyCoveragePreferences.getNameNumberOfColumns(),
+                    new IInputValidator() {
 
+                        @Override
                         public String isValid(String newText) {
                             if (newText.trim().length() == 0) {
                                 return "Please enter a number > 5";
@@ -639,9 +656,25 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
             }
         });
         layoutData = new GridData();
-        layoutData.horizontalSpan = 2;
+        layoutData.horizontalSpan = 1;
         layoutData.grabExcessHorizontalSpace = false;
         allRunsGoThroughCoverage.setLayoutData(layoutData);
+
+        Button button = new Button(parent, SWT.PUSH);
+        button.setText("Open cov dir");
+        button.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(SelectionEvent e) {
+                FileUtils.openDirectory(PyCoverage.getCoverageDirLocation());
+            }
+        });
+
+        int BUTTON_WIDTH = 80;
+        layoutData = new GridData();
+        layoutData.grabExcessHorizontalSpace = false;
+        layoutData.widthHint = BUTTON_WIDTH;
+        layoutData.horizontalAlignment = GridData.END;
+        button.setLayoutData(layoutData);
         //end all runs go through coverage
 
         //Clear the coverage info on each launch?
@@ -667,7 +700,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         layoutData.horizontalAlignment = GridData.FILL;
         clearCoverageInfoOnNextLaunch.setLayoutData(layoutData);
 
-        Button button = new Button(parent, SWT.PUSH);
+        button = new Button(parent, SWT.PUSH);
         button.setText("Clear");
         button.addSelectionListener(new SelectionAdapter() {
             @Override
@@ -677,7 +710,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         });
         layoutData = new GridData();
         layoutData.grabExcessHorizontalSpace = false;
-        layoutData.widthHint = 50;
+        layoutData.widthHint = BUTTON_WIDTH;
         layoutData.horizontalAlignment = GridData.END;
         button.setLayoutData(layoutData);
         //end all runs go through coverage
@@ -714,7 +747,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
             }
         });
         layoutData = new GridData();
-        layoutData.widthHint = 50;
+        layoutData.widthHint = BUTTON_WIDTH;
         layoutData.grabExcessHorizontalSpace = true;
         layoutData.horizontalAlignment = GridData.END;
         button.setLayoutData(layoutData);
@@ -766,6 +799,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         target.setTransfer(types);
 
         target.addDropListener(new DropTargetListener() {
+            @Override
             public void dragEnter(DropTargetEvent event) {
                 if (event.detail == DND.DROP_DEFAULT) {
                     if ((event.operations & DND.DROP_COPY) != 0) {
@@ -787,9 +821,11 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
                 }
             }
 
+            @Override
             public void dragOver(DropTargetEvent event) {
             }
 
+            @Override
             public void dragOperationChanged(DropTargetEvent event) {
                 if (event.detail == DND.DROP_DEFAULT) {
                     if ((event.operations & DND.DROP_COPY) != 0) {
@@ -806,12 +842,15 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
                 }
             }
 
+            @Override
             public void dragLeave(DropTargetEvent event) {
             }
 
+            @Override
             public void dropAccept(DropTargetEvent event) {
             }
 
+            @Override
             public void drop(DropTargetEvent event) {
                 if (fileTransfer.isSupportedType(event.currentDataType)) {
                     String[] files = (String[]) event.data;
@@ -819,7 +858,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
                         File file = new File(files[0]);
                         if (file.isDirectory()) {
                             PySourceLocatorBase locator = new PySourceLocatorBase();
-                            IContainer container = locator.getContainerForLocation(
+                            IContainer container = FindWorkspaceFiles.getContainerForLocation(
                                     Path.fromOSString(file.getAbsolutePath()), null);
                             if (container != null && container.exists()) {
                                 setSelectedContainer(container);
@@ -861,10 +900,12 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         button.setText(txt);
         button.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 ProgressOperation.startAction(getSite().getShell(), action, true);
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
 
@@ -883,6 +924,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
      */
     private void hookViewerActions() {
         viewer.addDoubleClickListener(new IDoubleClickListener() {
+            @Override
             public void doubleClick(DoubleClickEvent event) {
                 doubleClickAction.runWithEvent(event);
             }
@@ -890,6 +932,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
 
         viewer.addSelectionChangedListener(new ISelectionChangedListener() {
 
+            @Override
             public void selectionChanged(SelectionChangedEvent event) {
                 selectionChangedAction.runWithEvent(event);
             }
@@ -1018,6 +1061,7 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
             if (cache != null) {
 
                 IWorkspaceRunnable r = new IWorkspaceRunnable() {
+                    @Override
                     public void run(IProgressMonitor monitor) throws CoreException {
 
                         final String type = PYDEV_COVERAGE_MARKER;
@@ -1041,11 +1085,11 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
                                 int errorEnd = region.getOffset() + region.getLength();
 
                                 map.put(IMarker.MESSAGE, message);
-                                map.put(IMarker.SEVERITY, new Integer(IMarker.SEVERITY_ERROR));
+                                map.put(IMarker.SEVERITY, IMarker.SEVERITY_ERROR);
                                 map.put(IMarker.CHAR_START, errorStart);
                                 map.put(IMarker.CHAR_END, errorEnd);
                                 map.put(IMarker.TRANSIENT, Boolean.valueOf(true));
-                                map.put(IMarker.PRIORITY, new Integer(IMarker.PRIORITY_HIGH));
+                                map.put(IMarker.PRIORITY, IMarker.PRIORITY_HIGH);
 
                                 MarkerUtilities.createMarker(original, map, type);
                             } catch (Exception e1) {
@@ -1064,10 +1108,12 @@ public class PyCodeCoverageView extends ViewPartWithOrientation implements IView
         }
     }
 
+    @Override
     public ICallbackWithListeners getOnControlCreated() {
         return onControlCreated;
     }
 
+    @Override
     public ICallbackWithListeners getOnControlDisposed() {
         return onControlDisposed;
     }

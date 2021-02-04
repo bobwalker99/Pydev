@@ -16,10 +16,10 @@ import org.eclipse.debug.core.ILaunchListener;
 import org.eclipse.debug.core.ILaunchManager;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.swt.widgets.Tree;
+import org.python.pydev.ast.codecompletion.revisited.javaintegration.AbstractWorkbenchTestCase;
 import org.python.pydev.debug.pyunit.HistoryAction.HistoryMenuCreator;
 import org.python.pydev.debug.pyunit.HistoryAction.IActionsMenu;
 import org.python.pydev.debug.ui.launching.UnitTestLaunchShortcut;
-import org.python.pydev.editor.codecompletion.revisited.javaintegration.AbstractWorkbenchTestCase;
 import org.python.pydev.shared_core.callbacks.ICallback;
 
 /**
@@ -30,6 +30,7 @@ public class PyUnitView2TestTestWorkbench extends AbstractWorkbenchTestCase impl
     private ILaunch launchAdded;
     private List<ILaunch> launchesRemoved = new ArrayList<ILaunch>();
 
+    @Override
     protected void setUp() throws Exception {
         //no need for default setup
         closeWelcomeView();
@@ -64,6 +65,7 @@ public class PyUnitView2TestTestWorkbench extends AbstractWorkbenchTestCase impl
         //1 minute for the launch to complete should be enough
         goToManual(60 * 1000, new ICallback<Boolean, Object>() {
 
+            @Override
             public Boolean call(Object arg) {
                 PyUnitView view = PyUnitView.getView();
                 PyUnitTestRun currentTestRun = view.getCurrentTestRun();
@@ -110,6 +112,7 @@ public class PyUnitView2TestTestWorkbench extends AbstractWorkbenchTestCase impl
     private ICallback<Boolean, Object> getPyUnitViewOkCallback(final int historySize, final int methodsAppearingInTree) {
         return new ICallback<Boolean, Object>() {
 
+            @Override
             public Boolean call(Object arg) {
                 PyUnitView view = PyUnitView.getView();
                 PyUnitTestRun currentTestRun = view.getCurrentTestRun();
@@ -153,6 +156,7 @@ public class PyUnitView2TestTestWorkbench extends AbstractWorkbenchTestCase impl
                 final List<ClearTerminatedAction> terminatedActions = new ArrayList<ClearTerminatedAction>();
                 IActionsMenu actionsMenu = new IActionsMenu() {
 
+                    @Override
                     public void add(IAction action) {
                         if (action instanceof SetCurrentRunAction) {
                             actions.add((SetCurrentRunAction) action);
@@ -174,17 +178,20 @@ public class PyUnitView2TestTestWorkbench extends AbstractWorkbenchTestCase impl
         };
     }
 
+    @Override
     public void launchRemoved(ILaunch launch) {
         Assert.isTrue(this.launchAdded == launch);
         this.launchesRemoved.add(launch);
         this.launchAdded = null;
     }
 
+    @Override
     public void launchAdded(ILaunch launch) {
         Assert.isTrue(this.launchAdded == null);
         this.launchAdded = launch;
     }
 
+    @Override
     public void launchChanged(ILaunch launch) {
 
     }

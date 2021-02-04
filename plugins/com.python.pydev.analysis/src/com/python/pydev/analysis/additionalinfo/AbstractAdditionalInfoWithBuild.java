@@ -12,14 +12,15 @@ import java.util.List;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.python.pydev.ast.codecompletion.revisited.PythonPathHelper;
 import org.python.pydev.core.DeltaSaver;
 import org.python.pydev.core.IDeltaProcessor;
+import org.python.pydev.core.IInfo;
 import org.python.pydev.core.IModulesManager;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.ModulesKey;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
 import org.python.pydev.parser.PyParser;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.shared_core.callbacks.ICallback;
@@ -107,6 +108,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
     protected DeltaSaver<Object> createDeltaSaver() {
         return new DeltaSaver<Object>(getPersistingFolder(), "v1_projectinfodelta", new ICallback<Object, String>() {
 
+            @Override
             public Object call(String arg) {
                 if (arg.startsWith("STR")) {
                     return arg.substring(3);
@@ -121,12 +123,11 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
                     File file = new File(tup.substring(i + 1, j));
 
                     return new Tuple<ModulesKey, List<IInfo>>(new ModulesKey(modName, file),
-                            InfoStrFactory.strToInfo(tup
-                                    .substring(j + 1)));
+                            InfoStrFactory.strToInfo(tup.substring(j + 1), getNature()));
                 }
                 if (arg.startsWith("LST")) {
                     //Backward compatibility
-                    return InfoStrFactory.strToInfo(arg.substring(3));
+                    return InfoStrFactory.strToInfo(arg.substring(3), getNature());
                 }
 
                 throw new AssertionError("Expecting string starting with STR or LST");
@@ -142,6 +143,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
                      * Tuple<String (module name), List<IInfo>) -- on addition
                      * String (module name) -- on deletion
                      */
+                    @Override
                     public String call(Object arg) {
                         if (arg instanceof String) {
                             return "STR" + (String) arg;
@@ -170,10 +172,12 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
                 });
     }
 
+    @Override
     public void processUpdate(Object data) {
         throw new RuntimeException("There is no update generation, only add.");
     }
 
+    @Override
     public void processDelete(Object data) {
         synchronized (lock) {
             //the moduleName is generated on delete
@@ -181,6 +185,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
         }
     }
 
+    @Override
     public void processInsert(Object data) {
         synchronized (lock) {
             if (data instanceof Tuple) {
@@ -189,6 +194,7 @@ public abstract class AbstractAdditionalInfoWithBuild extends AbstractAdditional
         }
     }
 
+    @Override
     public void endProcessing() {
         //save it when the processing is finished
         synchronized (lock) {

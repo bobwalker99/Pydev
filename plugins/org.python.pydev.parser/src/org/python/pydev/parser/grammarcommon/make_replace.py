@@ -1,7 +1,7 @@
 from string import Template
 import os
 import sys
-grammar_common_dir = os.path.split(__file__)[0]
+grammar_common_dir = os.path.split(os.path.abspath(__file__))[0]
 parent_dir = os.path.split(grammar_common_dir)[0]
 
 
@@ -326,6 +326,7 @@ import org.python.pydev.parser.jython.ast.Import;
 import org.python.pydev.parser.jython.ast.ImportFrom;
 import org.python.pydev.parser.jython.ast.Name;
 import org.python.pydev.parser.jython.ast.Num;
+import org.python.pydev.parser.jython.ast.Starred;
 import org.python.pydev.parser.jython.ast.Str;
 import org.python.pydev.parser.jython.ast.Suite;
 import org.python.pydev.parser.jython.ast.Yield;
@@ -418,6 +419,30 @@ void if_stmt(): {Object[] elseToks;}
 {
     temporaryToken=<IF> {this.markLastAsSuiteStart();} {grammarActions.addSpecialTokenToLastOpened(temporaryToken);} test() $COLON suite()
          (begin_elif_stmt() test() $COLON suite())*
+             [ elseToks=begin_else_stmt() suite() {grammarActions.addToPeek(elseToks[0], false, Suite.class);grammarActions.addToPeek(elseToks[1], false, Suite.class);}]
+}
+
+'''
+
+    IF = Template(IF)
+    substituted = str(IF.substitute(**definitions))
+    return substituted
+
+def CreateNamedExpr(definitions):
+    NAMED_EXPR = '''
+// namedexpr_test: test [':=' test]
+void namedexpr_test(): {}
+{ test() [<COLONEQUAL> test()] }
+'''
+    return NAMED_EXPR
+
+def CreateIfWithDeps38(definitions):
+    IF = '''
+//if_stmt: 'if' namedexpr_test ':' suite ('elif' namedexpr_test ':' suite)* ['else' ':' suite]
+void if_stmt(): {Object[] elseToks;}
+{
+    temporaryToken=<IF> {this.markLastAsSuiteStart();} {grammarActions.addSpecialTokenToLastOpened(temporaryToken);} namedexpr_test() $COLON suite()
+         (begin_elif_stmt() namedexpr_test() $COLON suite())*
              [ elseToks=begin_else_stmt() suite() {grammarActions.addToPeek(elseToks[0], false, Suite.class);grammarActions.addToPeek(elseToks[1], false, Suite.class);}]
 }
 
@@ -551,6 +576,21 @@ def CreateWhileWithDeps(definitions):
 //while_stmt: 'while' test ':' suite ['else' ':' suite]
 void while_stmt(): {Object[] elseToks;}
 { begin_while_stmt() test() $COLON suite()
+  [ elseToks=begin_else_stmt()  suite() {grammarActions.addToPeek(elseToks[0], false, Suite.class);grammarActions.addToPeek(elseToks[1], false, Suite.class);}] }
+
+void begin_while_stmt(): {}
+{ temporaryToken=<WHILE>{grammarActions.addSpecialToken(temporaryToken,STRATEGY_BEFORE_NEXT);} {this.markLastAsSuiteStart();}
+}
+'''
+    WHILE = Template(WHILE)
+    substituted = str(WHILE.substitute(**definitions))
+    return substituted
+
+def CreateWhileWithDeps38(definitions):
+    WHILE = '''
+//while_stmt: 'while' namedexpr_test ':' suite ['else' ':' suite]
+void while_stmt(): {Object[] elseToks;}
+{ begin_while_stmt() namedexpr_test() $COLON suite()
   [ elseToks=begin_else_stmt()  suite() {grammarActions.addToPeek(elseToks[0], false, Suite.class);grammarActions.addToPeek(elseToks[1], false, Suite.class);}] }
 
 void begin_while_stmt(): {}
@@ -702,14 +742,16 @@ void slice() #void: {}
     definitions['WHILE'] = CreateWhileWithDeps(definitions)
     definitions['BEGIN_ELSE'] = CreateBeginElseWithDeps(definitions)
     definitions['PY3K_WITH_STMT'] = CreatePy3KWithStmt(definitions)
+    definitions['NAMED_EXPR'] = CreateNamedExpr(definitions)
 
 
     files = [
-        (os.path.join(parent_dir, 'grammar24', 'python.jjt_template'), 24),
         (os.path.join(parent_dir, 'grammar25', 'python.jjt_template'), 25),
         (os.path.join(parent_dir, 'grammar26', 'python.jjt_template'), 26),
         (os.path.join(parent_dir, 'grammar27', 'python.jjt_template'), 27),
         (os.path.join(parent_dir, 'grammar30', 'python.jjt_template'), 30),
+        (os.path.join(parent_dir, 'grammar36', 'python.jjt_template'), 36),
+        (os.path.join(parent_dir, 'grammar38', 'python.jjt_template'), 38),
     ]
 
     for file, version in files:
@@ -725,6 +767,10 @@ void slice() #void: {}
 
         else:
             definitions['STMT'] = CreateStmt()
+
+        if version == 38:
+            definitions['IF'] = CreateIfWithDeps38(definitions)
+            definitions['WHILE'] = CreateWhileWithDeps38(definitions)
 
         s = Template(open(file, 'r').read())
         s = s.substitute(**definitions)

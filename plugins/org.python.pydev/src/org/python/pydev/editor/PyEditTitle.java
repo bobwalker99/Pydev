@@ -46,6 +46,7 @@ import org.python.pydev.plugin.preferences.PyTitlePreferencesPage;
 import org.python.pydev.shared_core.callbacks.ICallback0;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
+import org.python.pydev.shared_ui.ImageCache;
 import org.python.pydev.shared_ui.utils.RunInUiThread;
 
 /**
@@ -92,6 +93,7 @@ import org.python.pydev.shared_ui.utils.RunInUiThread;
         preferenceStore.addPropertyChangeListener(this);
     }
 
+    @Override
     public void propertyChange(PropertyChangeEvent event) {
         //When the
         String property = event.getProperty();
@@ -118,6 +120,7 @@ import org.python.pydev.shared_ui.utils.RunInUiThread;
                             final List<IEditorReference> refs = currentEditorReferences;
                             RunInUiThread.sync(new Runnable() {
 
+                                @Override
                                 public void run() {
                                     for (final IEditorReference iEditorReference : refs) {
                                         final IEditorPart editor = iEditorReference.getEditor(true);
@@ -223,6 +226,7 @@ import org.python.pydev.shared_ui.utils.RunInUiThread;
 
         RunInUiThread.async(new Runnable() {
 
+            @Override
             public void run() {
                 for (IEditorReference iEditorReference : editorReferences) {
                     try {
@@ -328,7 +332,7 @@ import org.python.pydev.shared_ui.utils.RunInUiThread;
         String lastSegment = path.lastSegment();
         if (lastSegment != null) {
             if (lastSegment.startsWith("__init__.")) {
-                Image initIcon = PyTitlePreferencesPage.getInitIcon();
+                Image initIcon = ImageCache.asImage(PyTitlePreferencesPage.getInitIcon());
                 if (initIcon != null) {
                     if (pyEdit != null) {
                         pyEdit.setEditorImage(initIcon);
@@ -347,7 +351,7 @@ import org.python.pydev.shared_ui.utils.RunInUiThread;
                     }
                     if (isDjangoHandledModule(PyTitlePreferencesPage.getDjangoModulesHandling(), editorInput,
                             lastSegment)) {
-                        Image image = PyTitlePreferencesPage.getDjangoModuleIcon(lastSegment);
+                        Image image = ImageCache.asImage(PyTitlePreferencesPage.getDjangoModuleIcon(lastSegment));
                         if (pyEdit != null) {
                             pyEdit.setEditorImage(image);
                         } else {
@@ -499,6 +503,7 @@ import org.python.pydev.shared_ui.utils.RunInUiThread;
 
         RunInUiThread.async(new Runnable() {
 
+            @Override
             public void run() {
                 IEditorReference[] found = null;
                 try {
@@ -548,6 +553,7 @@ import org.python.pydev.shared_ui.utils.RunInUiThread;
     private void setEditorReferenceImage(final IEditorReference iEditorReference, final Image image) {
         RunInUiThread.async(new Runnable() {
 
+            @Override
             public void run() {
                 try {
                     IEditorPart editor = iEditorReference.getEditor(true);
@@ -583,6 +589,7 @@ import org.python.pydev.shared_ui.utils.RunInUiThread;
 
                 RunInUiThread.async(new Runnable() {
 
+                    @Override
                     public void run() {
                         try {
                             IEditorPart editor = ref.getEditor(true);
@@ -599,6 +606,7 @@ import org.python.pydev.shared_ui.utils.RunInUiThread;
 
             RunInUiThread.async(new Runnable() {
 
+                @Override
                 public void run() {
                     try {
                         final String key = "PyEditTitleEditorNumberSet";
@@ -620,6 +628,7 @@ import org.python.pydev.shared_ui.utils.RunInUiThread;
                         final ICallback0<Integer> next = new ICallback0<Integer>() {
                             private int last = 0;
 
+                            @Override
                             public Integer call() {
                                 for (; last < Integer.MAX_VALUE; last++) {
                                     if (used.contains(last)) {

@@ -22,11 +22,13 @@ public class ScriptConsoleSession implements IScriptConsoleListener, IScriptCons
         this.session = new StringBuffer();
     }
 
+    @Override
     public void interpreterResponse(InterpreterResponse response, ScriptConsolePrompt prompt) {
         //no-op (previously we got the output from here, but it's now asynchronous and added through
         //onStdoutContentsReceived and onStderrContentsReceived).
     }
 
+    @Override
     public void userRequest(String text, ScriptConsolePrompt prompt) {
         session.append(prompt.toString());
         session.append(text);
@@ -46,5 +48,10 @@ public class ScriptConsoleSession implements IScriptConsoleListener, IScriptCons
     @Override
     public void onStderrContentsReceived(String o2) {
         session.append(o2);
+    }
+
+    @Override
+    public boolean isOnStateWhereCommandHandlingShouldStop(String commandLine) {
+        return false;
     }
 }

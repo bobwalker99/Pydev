@@ -15,24 +15,25 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.ui.IWorkbenchPart;
-import org.python.pydev.core.FullRepIterable;
+import org.python.pydev.ast.codecompletion.revisited.modules.AbstractModule;
+import org.python.pydev.ast.codecompletion.revisited.modules.SourceModule;
+import org.python.pydev.ast.interpreter_managers.InterpreterManagersAPI;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.PyEdit;
-import org.python.pydev.editor.codecompletion.revisited.modules.AbstractModule;
-import org.python.pydev.editor.codecompletion.revisited.modules.SourceModule;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.visitors.NodeUtils;
-import org.python.pydev.plugin.PydevPlugin;
-
+import org.python.pydev.shared_core.string.FullRepIterable;
 
 public class PyRunToLineTarget implements IRunToLineTarget {
 
+    @Override
     public boolean canRunToLine(IWorkbenchPart part, ISelection selection, ISuspendResume target) {
         return true;
     }
 
+    @Override
     public void runToLine(IWorkbenchPart part, ISelection selection, ISuspendResume target) throws CoreException {
         //System.out.println("Run to line:"+target);
         PyStackFrame stack = null;
@@ -60,7 +61,7 @@ public class PyRunToLineTarget implements IRunToLineTarget {
                     Log.log(e);
                     return;
                 }
-                nature = PydevPlugin.getInfoForFile(editorFile).o1;
+                nature = InterpreterManagersAPI.getInfoForFile(editorFile).o1;
             }
 
             if (nature == null) {
@@ -69,7 +70,7 @@ public class PyRunToLineTarget implements IRunToLineTarget {
             }
 
             try {
-                sourceModule = (SourceModule) AbstractModule.createModuleFromDoc("", null, doc, nature, true);
+                sourceModule = AbstractModule.createModuleFromDoc("", pyEdit.getEditorFile(), doc, nature, true);
             } catch (MisconfigurationException e) {
                 Log.log(e);
                 return;

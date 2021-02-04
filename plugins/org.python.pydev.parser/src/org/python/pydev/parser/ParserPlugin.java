@@ -9,13 +9,13 @@ package org.python.pydev.parser;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
-import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.eclipse.core.runtime.Plugin;
 import org.osgi.framework.BundleContext;
 
 /**
  * The main plugin class to be used in the desktop.
  */
-public class ParserPlugin extends AbstractUIPlugin {
+public class ParserPlugin extends Plugin {
     //The shared instance.
     private static ParserPlugin plugin;
     //Resource bundle.
@@ -37,6 +37,7 @@ public class ParserPlugin extends AbstractUIPlugin {
     /**
      * This method is called upon plug-in activation
      */
+    @Override
     public void start(BundleContext context) throws Exception {
         super.start(context);
     }
@@ -44,6 +45,7 @@ public class ParserPlugin extends AbstractUIPlugin {
     /**
      * This method is called when the plug-in is stopped
      */
+    @Override
     public void stop(BundleContext context) throws Exception {
         super.stop(context);
     }

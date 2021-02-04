@@ -12,12 +12,13 @@ import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerSorter;
+import org.python.pydev.shared_core.image.IImageCache;
+import org.python.pydev.shared_core.image.UIConstants;
 import org.python.pydev.shared_ui.ImageCache;
-import org.python.pydev.shared_ui.UIConstants;
 
 /**
  * Action that addds a way to sort items by the name.
- * 
+ *
  * @author Fabio
  */
 public class OutlineSortByNameAction extends Action {
@@ -28,7 +29,7 @@ public class OutlineSortByNameAction extends Action {
 
     private WeakReference<BaseOutlinePage> page;
 
-    public OutlineSortByNameAction(BaseOutlinePage page, ImageCache imageCache, String pluginId) {
+    public OutlineSortByNameAction(BaseOutlinePage page, IImageCache imageCache, String pluginId) {
         super("Sort by name", IAction.AS_CHECK_BOX);
         PREF_ALPHA_SORT = pluginId + ".OUTLINE_ALPHA_SORT";
         this.page = new WeakReference<BaseOutlinePage>(page);
@@ -36,7 +37,7 @@ public class OutlineSortByNameAction extends Action {
         setChecked(page.getStore().getBoolean(PREF_ALPHA_SORT));
         setAlphaSort(isChecked());
 
-        setImageDescriptor(imageCache.getDescriptor(UIConstants.ALPHA_SORT));
+        setImageDescriptor(ImageCache.asImageDescriptor(imageCache.getDescriptor(UIConstants.ALPHA_SORT)));
         setToolTipText("Sort by name");
     }
 
@@ -50,6 +51,7 @@ public class OutlineSortByNameAction extends Action {
             p.getStore().setValue(PREF_ALPHA_SORT, doSort);
             if (sortByNameSorter == null) {
                 sortByNameSorter = new ViewerSorter() {
+                    @Override
                     @SuppressWarnings("unchecked")
                     public int compare(Viewer viewer, Object e1, Object e2) {
                         return ((Comparable<Object>) e1).compareTo(e2);
@@ -60,6 +62,7 @@ public class OutlineSortByNameAction extends Action {
         }
     }
 
+    @Override
     public void run() {
         setAlphaSort(isChecked());
     }

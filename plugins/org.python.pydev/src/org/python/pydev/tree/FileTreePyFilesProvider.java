@@ -13,13 +13,14 @@ package org.python.pydev.tree;
 
 import java.io.File;
 
-import org.python.pydev.utils.PyFileListing;
+import org.python.pydev.ast.listing_utils.PyFileListing;
 
 /**
  * @author Fabio Zadrozny
  */
 public class FileTreePyFilesProvider extends FileTreeContentProvider {
 
+    @Override
     public Object[] getChildren(Object element) {
         Object[] kids = ((File) element).listFiles(PyFileListing.getPyFilesFileFilter(true));
         return kids == null ? new Object[0] : kids;

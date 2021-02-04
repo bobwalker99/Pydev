@@ -32,8 +32,9 @@ import org.python.pydev.core.IPythonPathNature;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
-import org.python.pydev.shared_ui.UIConstants;
-
+import org.python.pydev.shared_core.image.UIConstants;
+import org.python.pydev.shared_ui.ImageCache;
+import org.python.pydev.shared_ui.SharedUiPlugin;
 
 /**
  * Dialog to select some source folder (in the workspace)
@@ -62,7 +63,7 @@ public class PythonPackageSelectionDialog extends ElementTreeSelectionDialog {
                     element = ((Package) element).folder;
                 }
                 if (element instanceof SourceFolder) {
-                    return PydevPlugin.getImageCache().get(UIConstants.SOURCE_FOLDER_ICON);
+                    return ImageCache.asImage(SharedUiPlugin.getImageCache().get(UIConstants.SOURCE_FOLDER_ICON));
                 }
                 return super.getImage(element);
             }
@@ -73,6 +74,7 @@ public class PythonPackageSelectionDialog extends ElementTreeSelectionDialog {
 
         //let's set the validator
         this.setValidator(new ISelectionStatusValidator() {
+            @Override
             public IStatus validate(Object selection[]) {
                 if (selection.length == 1) {
                     if (selection[0] instanceof SourceFolder) {
@@ -106,6 +108,7 @@ class PackageContentProvider implements ITreeContentProvider {
         this.selectOnlySourceFolders = selectOnlySourceFolders;
     }
 
+    @Override
     public Object[] getChildren(Object parentElement) {
         //workspace root
         if (parentElement instanceof IWorkspaceRoot) {
@@ -188,6 +191,7 @@ class PackageContentProvider implements ITreeContentProvider {
         return new Object[0];
     }
 
+    @Override
     public Object getParent(Object element) {
         if (element instanceof Package) {
             return ((Package) element).sourceFolder;
@@ -198,6 +202,7 @@ class PackageContentProvider implements ITreeContentProvider {
         return null;
     }
 
+    @Override
     public boolean hasChildren(Object element) {
         if (selectOnlySourceFolders) {
             if (element instanceof SourceFolder) {
@@ -207,13 +212,16 @@ class PackageContentProvider implements ITreeContentProvider {
         return getChildren(element).length > 0;
     }
 
+    @Override
     public Object[] getElements(Object inputElement) {
         return getChildren(inputElement);
     }
 
+    @Override
     public void dispose() {
     }
 
+    @Override
     public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
     }
 

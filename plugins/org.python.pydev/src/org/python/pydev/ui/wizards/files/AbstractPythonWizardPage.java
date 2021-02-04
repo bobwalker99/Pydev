@@ -40,9 +40,10 @@ import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 import org.eclipse.ui.model.WorkbenchLabelProvider;
 import org.python.pydev.core.IPythonPathNature;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
-import org.python.pydev.shared_ui.UIConstants;
+import org.python.pydev.shared_core.image.UIConstants;
+import org.python.pydev.shared_ui.ImageCache;
+import org.python.pydev.shared_ui.SharedUiPlugin;
 import org.python.pydev.ui.dialogs.PythonPackageSelectionDialog;
 import org.python.pydev.ui.dialogs.SourceFolder;
 
@@ -140,6 +141,7 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
         }
     }
 
+    @Override
     public void createControl(Composite parent) {
         // top level group
         Composite topLevel = new Composite(parent, SWT.NONE);
@@ -180,9 +182,9 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
 
     /**
      * Decide whether a source folder must be selected to complete the dialog.
-     * 
+     *
      * Subclasses can override.
-     * 
+     *
      * @return true if a source folder should be selected and false if it shouldn't
      */
     protected boolean shouldCreateSourceFolderSelect() {
@@ -191,9 +193,9 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
 
     /**
      * Decide whether an external source folder must be selected to complete the dialog.
-     * 
+     *
      * Subclasses can override.
-     * 
+     *
      * @return true if an external source should be selected and false if it shouldn't
      */
     protected boolean shouldCreateExistingSourceFolderSelect() {
@@ -248,6 +250,7 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
 
         btBrowseProject.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 ElementListSelectionDialog dialog = new ElementListSelectionDialog(getShell(),
                         new WorkbenchLabelProvider());
@@ -263,6 +266,7 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
                 }
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
 
@@ -291,7 +295,7 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
 
     /**
      * @param topLevel
-     * @return 
+     * @return
      */
     private boolean createPackageSelect(Composite topLevel, boolean setFocus) {
         if (shouldCreatePackageSelect()) {
@@ -305,7 +309,8 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
 
             labelWarningImageWillCreate = new Label(topLevel, SWT.NONE);
             labelWarningImageWillCreate.setVisible(false);
-            labelWarningImageWillCreate.setImage(PydevPlugin.getImageCache().get(UIConstants.WARNING));
+            labelWarningImageWillCreate
+                    .setImage(ImageCache.asImage(SharedUiPlugin.getImageCache().get(UIConstants.WARNING)));
 
             labelWarningWillCreate = new Label(topLevel, SWT.NONE);
             labelWarningWillCreate.setText("Note: package not found (will be created).");
@@ -321,11 +326,13 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
 
             btBrowsePackage.addSelectionListener(new SelectionListener() {
 
+                @Override
                 public void widgetSelected(SelectionEvent e) {
                     try {
                         PythonPackageSelectionDialog dialog = new PythonPackageSelectionDialog(getShell(), false);
                         dialog.setTitle("Package selection");
-                        dialog.setMessage("Select a package (or a source folder). You may also enter the\nname of a new package in the text bar on the previous page.");
+                        dialog.setMessage(
+                                "Select a package (or a source folder). You may also enter the\nname of a new package in the text bar on the previous page.");
                         dialog.open();
                         Object firstResult = dialog.getFirstResult();
                         if (firstResult instanceof SourceFolder) { //it is the default package
@@ -345,6 +352,7 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
 
                 }
 
+                @Override
                 public void widgetDefaultSelected(SelectionEvent e) {
                 }
 
@@ -401,7 +409,7 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
 
     /**
      * @param topLevel
-     * @return 
+     * @return
      */
     private boolean createSourceFolderSelect(Composite topLevel) {
         Label label;
@@ -414,6 +422,7 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
 
         btBrowseSourceFolder.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 try {
                     PythonPackageSelectionDialog dialog = new PythonPackageSelectionDialog(getShell(), true);
@@ -431,6 +440,7 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
 
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
 
@@ -487,6 +497,7 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
     private void createSourceListGroup(Composite parent) {
         existingSourceGroup = new PythonExistingSourceGroup(parent, getValidatedProject(), new ModifyListener() {
 
+            @Override
             public void modifyText(ModifyEvent e) {
                 sourceToLink = existingSourceGroup.getLinkTarget();
                 if (sourceToLink != null) {
@@ -541,9 +552,11 @@ public abstract class AbstractPythonWizardPage extends WizardPage implements Key
     }
 
     //listener interface
+    @Override
     public void keyPressed(KeyEvent e) {
     }
 
+    @Override
     public void keyReleased(KeyEvent e) {
         validatePage();
     }

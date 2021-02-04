@@ -33,15 +33,15 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.texteditor.IDocumentProvider;
 import org.eclipse.ui.texteditor.MarkerAnnotation;
+import org.python.pydev.core.IPySourceViewer;
+import org.python.pydev.core.autoedit.PyAutoIndentStrategy;
 import org.python.pydev.editor.PyEdit;
 import org.python.pydev.editor.actions.PyShiftLeft;
-import org.python.pydev.editor.autoedit.PyAutoIndentStrategy;
 import org.python.pydev.shared_ui.editor.BaseSourceViewer;
 import org.python.pydev.shared_ui.editor.ITextViewerExtensionAutoEditions;
-import org.python.pydev.shared_ui.proposals.ICompletionStyleToggleEnabler;
 
-public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICompletionStyleToggleEnabler,
-        ITextViewerExtensionAutoEditions {
+public class PySourceViewer extends BaseSourceViewer implements IAdaptable,
+        ITextViewerExtensionAutoEditions, IPySourceViewer {
 
     private WeakReference<PyEdit> projection;
 
@@ -59,14 +59,6 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
     }
 
     private boolean isInToggleCompletionStyle;
-
-    public void setInToggleCompletionStyle(boolean b) {
-        this.isInToggleCompletionStyle = b;
-    }
-
-    public boolean getIsInToggleCompletionStyle() {
-        return this.isInToggleCompletionStyle;
-    }
 
     public PyEdit getEdit() {
         return projection.get();
@@ -146,6 +138,7 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
 
                 private MarkerAnnotationAndPosition marker;
 
+                @Override
                 public boolean hasNext() {
                     while (annotationIterator.hasNext()) {
                         if (marker != null) {
@@ -167,6 +160,7 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
                     return false;
                 }
 
+                @Override
                 public MarkerAnnotationAndPosition next() {
                     hasNext();
 
@@ -175,6 +169,7 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
                     return m;
                 }
 
+                @Override
                 public void remove() {
                     throw new RuntimeException("not implemented");
                 }
@@ -182,14 +177,17 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
             };
         }
         return new Iterator<MarkerAnnotationAndPosition>() {
+            @Override
             public boolean hasNext() {
                 return false;
             }
 
+            @Override
             public MarkerAnnotationAndPosition next() {
                 return null;
             }
 
+            @Override
             public void remove() {
                 throw new RuntimeException("not implemented");
             }
@@ -265,10 +263,12 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
         super.customizeDocumentCommand(command);
     }
 
-    public Object getAdapter(Class adapter) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getAdapter(Class<T> adapter) {
         PyEdit pyEdit = projection.get();
         if (pyEdit != null) {
-            return pyEdit.getAdapter(adapter);
+            return (T) pyEdit.getAdapter(adapter);
         }
         return null;
     }

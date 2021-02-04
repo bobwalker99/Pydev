@@ -15,27 +15,30 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.jface.action.Action;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
+import org.eclipse.swt.SWT;
 import org.eclipse.ui.IEditorActionDelegate;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorReference;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.ITextEditor;
 import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.PyEdit;
 import org.python.pydev.shared_ui.EditorUtils;
 import org.python.pydev.shared_ui.actions.BaseAction;
+import org.python.pydev.utils.Messages;
+import org.python.pydev.utils.PyEditorMessages;
 
 /**
  * @author Fabio Zadrozny
- * 
+ *
  * Superclass of all our actions. Contains utility functions.
- * 
+ *
  * Subclasses should implement run(IAction action) method.
  */
 public abstract class PyAction extends BaseAction implements IEditorActionDelegate {
@@ -105,7 +108,7 @@ public abstract class PyAction extends BaseAction implements IEditorActionDelega
      * @param cursorOffset
      * @return position of the last character of the line (returned as an absolute
      *            offset)
-     * 
+     *
      * @throws BadLocationException
      */
     protected int getLastCharPosition(IDocument doc, int cursorOffset) throws BadLocationException {
@@ -130,72 +133,19 @@ public abstract class PyAction extends BaseAction implements IEditorActionDelega
         return (offset + i);
     }
 
-    /**
-     * Goes to first char of the line.
-     * @param doc
-     * @param cursorOffset
-     */
-    protected void gotoFirstChar(IDocument doc, int cursorOffset) {
-        try {
-            IRegion region = doc.getLineInformationOfOffset(cursorOffset);
-            int offset = region.getOffset();
-            setCaretPosition(offset);
-        } catch (BadLocationException e) {
-            beep(e);
-        }
-    }
-
-    /**
-     * Goes to the first visible char.
-     * @param doc
-     * @param cursorOffset
-     */
-    protected void gotoFirstVisibleChar(IDocument doc, int cursorOffset) {
-        try {
-            setCaretPosition(PySelection.getFirstCharPosition(doc, cursorOffset));
-        } catch (BadLocationException e) {
-            beep(e);
-        }
-    }
-
-    /**
-     * Goes to the first visible char.
-     * @param doc
-     * @param cursorOffset
-     */
-    protected boolean isAtFirstVisibleChar(IDocument doc, int cursorOffset) {
-        try {
-            return PySelection.getFirstCharPosition(doc, cursorOffset) == cursorOffset;
-        } catch (BadLocationException e) {
-            return false;
-        }
-    }
-
     //================================================================
-    // HELPER FOR DEBBUGING... 
+    // HELPER FOR DEBBUGING...
     //================================================================
 
-    /*
-     * Beep...humm... yeah....beep....ehehheheh
-     */
-    protected static void beep(Exception e) {
-        try {
-            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell().getDisplay().beep();
-        } catch (Throwable x) {
-            //ignore, workbench has still not been created
-        }
-        Log.log(e);
-    }
-
     /**
-     * 
+     *
      */
     public static String getLineWithoutComments(String sel) {
         return sel.replaceAll("#.*", "");
     }
 
     /**
-     * 
+     *
      */
     public static String getLineWithoutComments(PySelection ps) {
         return getLineWithoutComments(ps.getCursorLineContents());
@@ -217,6 +167,79 @@ public abstract class PyAction extends BaseAction implements IEditorActionDelega
 
         return c != '\n' && c != '\r' && c != ' ' && c != '.' && c != '(' && c != ')' && c != ',' && c != ']'
                 && c != '[' && c != '#' && c != '\'' && c != '"';
+    }
+
+    /**
+     * Maps the localized modifier name to a code in the same
+     * manner as #findModifier.
+     *
+     * @param modifierName the modifier name
+     * @return the SWT modifier bit, or <code>0</code> if no match was found
+     */
+    public static int findLocalizedModifier(String modifierName) {
+        if (modifierName == null) {
+            return 0;
+        }
+
+        if (modifierName.equalsIgnoreCase(Action.findModifierString(SWT.CTRL))) {
+            return SWT.CTRL;
+        }
+        if (modifierName.equalsIgnoreCase(Action.findModifierString(SWT.SHIFT))) {
+            return SWT.SHIFT;
+        }
+        if (modifierName.equalsIgnoreCase(Action.findModifierString(SWT.ALT))) {
+            return SWT.ALT;
+        }
+        if (modifierName.equalsIgnoreCase(Action.findModifierString(SWT.COMMAND))) {
+            return SWT.COMMAND;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Returns the modifier string for the given SWT modifier
+     * modifier bits.
+     *
+     * @param stateMask the SWT modifier bits
+     * @return the modifier string
+     */
+    public static String getModifierString(int stateMask) {
+        String modifierString = ""; //$NON-NLS-1$
+        if ((stateMask & SWT.CTRL) == SWT.CTRL) {
+            modifierString = appendModifierString(modifierString, SWT.CTRL);
+        }
+        if ((stateMask & SWT.ALT) == SWT.ALT) {
+            modifierString = appendModifierString(modifierString, SWT.ALT);
+        }
+        if ((stateMask & SWT.SHIFT) == SWT.SHIFT) {
+            modifierString = appendModifierString(modifierString, SWT.SHIFT);
+        }
+        if ((stateMask & SWT.COMMAND) == SWT.COMMAND) {
+            modifierString = appendModifierString(modifierString, SWT.COMMAND);
+        }
+
+        return modifierString;
+    }
+
+    /**
+     * Appends to modifier string of the given SWT modifier bit
+     * to the given modifierString.
+     *
+     * @param modifierString    the modifier string
+     * @param modifier          an int with SWT modifier bit
+     * @return the concatenated modifier string
+     */
+    private static String appendModifierString(String modifierString, int modifier) {
+        if (modifierString == null) {
+            modifierString = ""; //$NON-NLS-1$
+        }
+        String newModifierString = Action.findModifierString(modifier);
+        if (modifierString.length() == 0) {
+            return newModifierString;
+        }
+        return Messages.format(PyEditorMessages.EditorUtility_concatModifierStrings,
+                new String[] { modifierString, newModifierString });
     }
 
     /**
@@ -256,7 +279,7 @@ public abstract class PyAction extends BaseAction implements IEditorActionDelega
                     if (editorInput == null) {
                         continue;
                     }
-                    IFile file = (IFile) editorInput.getAdapter(IFile.class);
+                    IFile file = editorInput.getAdapter(IFile.class);
                     if (file != null) {
                         ret.add(file);
                     }

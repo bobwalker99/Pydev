@@ -6,6 +6,10 @@
  */
 package org.python.pydev.debug.newconsole;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.eclipse.swt.graphics.RGB;
 import org.python.pydev.shared_interactive_console.console.ui.ScriptConsole;
 
@@ -42,7 +46,7 @@ public final class PydevConsoleConstants {
     public static final String DEBUG_CONSOLE_TYPE = "org.python.pydev.debug.newconsole.PydevDebugConsole";
 
     public static final String INTERACTIVE_CONSOLE_VM_ARGS = "INTERACTIVE_CONSOLE_VM_ARGS";
-    public static final String DEFAULT_INTERACTIVE_CONSOLE_VM_ARGS = "-Xmx64m";
+    public static final String DEFAULT_INTERACTIVE_CONSOLE_VM_ARGS = "-Xmx512m";
 
     public static final String INTERACTIVE_CONSOLE_ENCODING = "INTERACTIVE_CONSOLE_ENCODING";
     public static final String DEFAULT_INTERACTIVE_CONSOLE_ENCODING = "UTF-8";
@@ -51,7 +55,7 @@ public final class PydevConsoleConstants {
     public static final String DEFAULT_INITIAL_INTERPRETER_CMDS = "import sys; print('%s %s' % (sys.executable or sys.platform, sys.version))\n";
 
     public static final String DJANGO_INTERPRETER_CMDS = "DJANGO_INTERPRETER_CMDS";
-    public static final String DEFAULT_DJANGO_INTERPRETER_CMDS = "import os; os.environ['DJANGO_SETTINGS_MODULE'] = '${DJANGO_SETTINGS_MODULE}'; import django\nif django.get_version() < '1.5':\n\tfrom django.core import management\n\timport ${DJANGO_SETTINGS_MODULE} as settings\n\tmanagement.setup_environ(settings)\nif django.get_version() >= '1.7':\n\tfrom django.core.wsgi import get_wsgi_application\n\tapplication = get_wsgi_application()\n";
+    public static final String DEFAULT_DJANGO_INTERPRETER_CMDS = "import os; os.environ['DJANGO_SETTINGS_MODULE'] = '${DJANGO_SETTINGS_MODULE}'; import django\nif django.VERSION <= (1, 5):\n\tfrom django.core import management\n\timport ${DJANGO_SETTINGS_MODULE} as settings\n\tmanagement.setup_environ(settings)\nelse:\n\tfrom django.core.wsgi import get_wsgi_application\n\tapplication = get_wsgi_application()\n";
 
     public static final String INTERACTIVE_CONSOLE_MAXIMUM_CONNECTION_ATTEMPTS = "INTERACTIVE_CONSOLE_MAXIMUM_CONNECTION_ATTEMPTS";
     public static final int DEFAULT_INTERACTIVE_CONSOLE_MAXIMUM_CONNECTION_ATTEMPTS = 50;
@@ -76,13 +80,37 @@ public final class PydevConsoleConstants {
     public static final String[][] ENTRIES_VALUES_INTERACTIVE_CONSOLE_ENABLE_GUI_ON_STARTUP = new String[][] {
             { "No GUI Enabled On Statup (none)", "none" },
             { "wxPython (wx)", "wx" },
-            { "PyQt (qt/qt4)", "qt4" },
+            { "PyQt (pyside/qt4)", "qt4" },
+            { "PyQt5 (qt5)", "qt5" },
             { "PyGTK (gtk)", "gtk" },
             { "PyGI (gtk3)", "gtk3" },
             { "Tkinter (tk)", "tk" },
             { "OS X (osx)", "osx" },
             { "OpenGL (glut)", "glut" },
             { "pyglet (pyglet)", "pyglet" } };
+
+    public static final String ACTIVE_EDITOR_INTERPRETER_REPRESENTATION = "active_editor";
+    public static final String PYTHON_INTERPRETER_REPRESENTATION = "python";
+    public static final String PYDEV_DEBUG_INTERPRETER_REPRESENTATION = "pydev_debug";
+    public static final String JYTHON_INTERPRETER_REPRESENTATION = "jython";
+    public static final String IRONPYTHON_INTERPRETER_REPRESENTATION = "ironpython";
+    public static final String INTERACTIVE_CONSOLE_DEFAULT_INTERPRETER = "INTERACTIVE_CONSOLE_DEFAULT_INTERPRETER";
+    public static final String DEFAULT_INTERACTIVE_CONSOLE_DEFAULT_INTERPRETER = "";
+    public static final String[][] ENTRIES_VALUES_INTERACTIVE_CONSOLE_DEFAULT_INTERPRETER = new String[][] {
+            { "Always ask for console type", DEFAULT_INTERACTIVE_CONSOLE_DEFAULT_INTERPRETER },
+            { "Console for currently active editor", ACTIVE_EDITOR_INTERPRETER_REPRESENTATION },
+            { "Python Console", PYTHON_INTERPRETER_REPRESENTATION },
+            { "Pydev Debug Console", PYDEV_DEBUG_INTERPRETER_REPRESENTATION },
+            { "Jython Console", JYTHON_INTERPRETER_REPRESENTATION },
+            { "IronPython Console", IRONPYTHON_INTERPRETER_REPRESENTATION }
+    };
+    public static final Set<String> INTERACTIVE_CONSOLE_INTERPRETERS = new HashSet<String>(Arrays.asList(
+            DEFAULT_INTERACTIVE_CONSOLE_DEFAULT_INTERPRETER,
+            ACTIVE_EDITOR_INTERPRETER_REPRESENTATION,
+            PYTHON_INTERPRETER_REPRESENTATION,
+            PYDEV_DEBUG_INTERPRETER_REPRESENTATION,
+            JYTHON_INTERPRETER_REPRESENTATION,
+            IRONPYTHON_INTERPRETER_REPRESENTATION));
 
     public static final String INTERACTIVE_CONSOLE_UMD_ENABLED = "INTERACTIVE_CONSOLE_UMD_ENABLED";
     public static final boolean DEFAULT_INTERACTIVE_CONSOLE_UMD_ENABLED = true;

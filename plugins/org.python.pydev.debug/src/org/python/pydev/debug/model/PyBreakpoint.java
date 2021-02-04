@@ -23,16 +23,16 @@ import org.eclipse.debug.core.DebugException;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.model.LineBreakpoint;
 import org.eclipse.jface.text.IDocument;
+import org.python.pydev.ast.codecompletion.revisited.modules.AbstractModule;
+import org.python.pydev.ast.codecompletion.revisited.modules.SourceModule;
+import org.python.pydev.ast.interpreter_managers.InterpreterManagersAPI;
 import org.python.pydev.core.FileUtilsFileBuffer;
 import org.python.pydev.core.ICodeCompletionASTManager;
 import org.python.pydev.core.IModule;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.editor.codecompletion.revisited.modules.AbstractModule;
-import org.python.pydev.editor.codecompletion.revisited.modules.SourceModule;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.visitors.NodeUtils;
-import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.structure.Tuple;
@@ -84,6 +84,7 @@ public class PyBreakpoint extends LineBreakpoint {
         }
     }
 
+    @Override
     public String getModelIdentifier() {
         return PyDebugModelPresentation.PY_DEBUG_MODEL_ID;
     }
@@ -136,7 +137,8 @@ public class PyBreakpoint extends LineBreakpoint {
             try {
                 String externalPath = (String) marker.getAttribute(PyBreakpoint.PY_BREAK_EXTERNAL_PATH_ID);
                 if (externalPath != null) {
-                    Tuple<IPythonNature, String> infoForFile = PydevPlugin.getInfoForFile(new File(externalPath));
+                    Tuple<IPythonNature, String> infoForFile = InterpreterManagersAPI
+                            .getInfoForFile(new File(externalPath));
                     if (infoForFile != null) {
                         nature = infoForFile.o1;
                     }
@@ -188,7 +190,7 @@ public class PyBreakpoint extends LineBreakpoint {
     }
 
     public void setConditionEnabled(boolean conditionEnabled) throws CoreException {
-        setAttributes(new String[] { CONDITION_ENABLED }, new Object[] { new Boolean(conditionEnabled) });
+        setAttributes(new String[] { CONDITION_ENABLED }, new Object[] { conditionEnabled });
     }
 
     public void setCondition(String condition) throws CoreException {
@@ -271,7 +273,7 @@ public class PyBreakpoint extends LineBreakpoint {
                     //the ast manager is actually restored (so, modName is None, and we have little alternative
                     //but making a parse to get the function name)
                     IDocument doc = getDocument();
-                    sourceModule = AbstractModule.createModuleFromDoc("", null, doc, nature, true);
+                    sourceModule = AbstractModule.createModuleFromDoc("", file, doc, nature, true);
                 }
 
                 int lineToUse = getLineNumber() - 1;

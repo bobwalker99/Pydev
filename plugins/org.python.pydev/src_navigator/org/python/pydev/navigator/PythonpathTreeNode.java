@@ -13,15 +13,15 @@ import java.util.List;
 import java.util.zip.ZipFile;
 
 import org.eclipse.core.runtime.IAdaptable;
-import org.eclipse.swt.graphics.Image;
+import org.python.pydev.ast.codecompletion.revisited.PythonPathHelper;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
+import org.python.pydev.core.preferences.FileTypesPreferences;
 import org.python.pydev.navigator.elements.ISortedElement;
-import org.python.pydev.plugin.PydevPlugin;
+import org.python.pydev.shared_core.image.IImageCache;
+import org.python.pydev.shared_core.image.IImageHandle;
+import org.python.pydev.shared_core.image.UIConstants;
 import org.python.pydev.shared_core.structure.TreeNode;
-import org.python.pydev.shared_ui.ImageCache;
-import org.python.pydev.shared_ui.UIConstants;
-import org.python.pydev.ui.filetypes.FileTypesPreferencesPage;
+import org.python.pydev.shared_ui.SharedUiPlugin;
 
 /**
  * This class represents nodes in the tree that are below the interpreter pythonpath information
@@ -30,7 +30,7 @@ import org.python.pydev.ui.filetypes.FileTypesPreferencesPage;
  * It sets packages with a package icon and python files with a python icon (other files/folders
  * have default icons)
  */
-public class PythonpathTreeNode extends TreeNode<LabelAndImage>implements ISortedElement, IAdaptable {
+public class PythonpathTreeNode extends TreeNode<LabelAndImage> implements ISortedElement, IAdaptable {
 
     private static final File[] EMPTY_FILES = new File[0];
 
@@ -64,15 +64,16 @@ public class PythonpathTreeNode extends TreeNode<LabelAndImage>implements ISorte
         this(parent, file, null, false);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public Object getAdapter(Class adapter) {
+    public <T> T getAdapter(Class<T> adapter) {
         if (adapter == URI.class) {
-            return file.toURI();
+            return (T) file.toURI();
         }
         return null;
     }
 
-    public PythonpathTreeNode(TreeNode<LabelAndImage> parent, File file, Image icon, boolean isPythonpathRoot) {
+    public PythonpathTreeNode(TreeNode<LabelAndImage> parent, File file, IImageHandle icon, boolean isPythonpathRoot) {
         super(parent, null); //data will be set later
         try {
             this.file = file;
@@ -87,19 +88,15 @@ public class PythonpathTreeNode extends TreeNode<LabelAndImage>implements ISorte
                     isPackage = true;
 
                 } else if (parent instanceof PythonpathTreeNode && ((PythonpathTreeNode) parent).isPackage) {
-                    for (File file2 : dirFiles) {
-                        if (PythonPathHelper.isValidInitFile(file2.getName())) {
-                            isPackage = true;
-                            break;
-                        }
-                    }
+                    // Python 3.6 onwards no longer requires having an __init__.py to be a package.
+                    isPackage = true;
 
                 }
             }
 
             //Update the icon if it wasn't received.
             if (icon == null) {
-                ImageCache imageCache = PydevPlugin.getImageCache();
+                IImageCache imageCache = SharedUiPlugin.getImageCache();
                 if (isDir) {
                     if (isPackage) {
                         icon = imageCache.get(UIConstants.FOLDER_PACKAGE_ICON);
@@ -133,7 +130,7 @@ public class PythonpathTreeNode extends TreeNode<LabelAndImage>implements ISorte
     }
 
     private boolean isZipFile() {
-        return file.isFile() && FileTypesPreferencesPage.isValidZipFile(file.getName());
+        return file.isFile() && FileTypesPreferences.isValidZipFile(file.getName());
     }
 
     @Override
@@ -141,6 +138,7 @@ public class PythonpathTreeNode extends TreeNode<LabelAndImage>implements ISorte
         return (isDir && dirFiles != null && dirFiles.length > 0) || (!isDir && isZipFile());
     }
 
+    @Override
     public int getRank() {
         return isDir ? ISortedElement.RANK_PYTHON_FOLDER : ISortedElement.RANK_PYTHON_FILE;
     }

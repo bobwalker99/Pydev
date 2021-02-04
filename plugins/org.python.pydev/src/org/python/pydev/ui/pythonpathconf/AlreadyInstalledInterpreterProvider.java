@@ -11,6 +11,9 @@
 ******************************************************************************/
 package org.python.pydev.ui.pythonpathconf;
 
+import org.python.pydev.ast.interpreter_managers.IInterpreterProvider;
+import org.python.pydev.ast.interpreter_managers.IInterpreterProviderFactory;
+
 /**
  * Abstract IInterpreterProvider that represents an already installed
  * InterpreterProvider.
@@ -19,10 +22,12 @@ package org.python.pydev.ui.pythonpathconf;
  * IInterpreterProvider that are not installable.
  */
 public abstract class AlreadyInstalledInterpreterProvider implements IInterpreterProvider {
+    @Override
     public boolean isInstalled() {
         return true;
     }
 
+    @Override
     public void runInstall() {
         // Nothing to do
     }
@@ -31,7 +36,7 @@ public abstract class AlreadyInstalledInterpreterProvider implements IInterprete
      * Create a new array of already installed providers.
      *
      * Convenience method that creates an array that can be returned from
-     * {@link IInterpreterProviderFactory#getInterpreterProviders(org.python.pydev.ui.pythonpathconf.IInterpreterProviderFactory.InterpreterType)}
+     * {@link IInterpreterProviderFactory#getInterpreterProviders(org.python.pydev.ast.interpreter_managers.IInterpreterProviderFactory.InterpreterType)}
      *
      * @param name
      *            Name of the Interpreter, see
@@ -49,7 +54,7 @@ public abstract class AlreadyInstalledInterpreterProvider implements IInterprete
      * Create a new array of already installed providers.
      *
      * Convenience method that creates an array that can be returned from
-     * {@link IInterpreterProviderFactory#getInterpreterProviders(org.python.pydev.ui.pythonpathconf.IInterpreterProviderFactory.InterpreterType)}
+     * {@link IInterpreterProviderFactory#getInterpreterProviders(org.python.pydev.ast.interpreter_managers.IInterpreterProviderFactory.InterpreterType)}
      *
      * @param name
      *            Name of the Interpreter, see
@@ -66,10 +71,12 @@ public abstract class AlreadyInstalledInterpreterProvider implements IInterprete
 
             providers[i] = new AlreadyInstalledInterpreterProvider() {
 
+                @Override
                 public String getExecutableOrJar() {
                     return executableOrJar;
                 }
 
+                @Override
                 public String getName() {
                     return name;
                 }

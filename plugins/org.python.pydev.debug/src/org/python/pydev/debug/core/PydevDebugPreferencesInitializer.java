@@ -23,6 +23,9 @@ public class PydevDebugPreferencesInitializer extends AbstractPreferenceInitiali
     public static final String IGNORE_EXCEPTIONS_THROWN_IN_LINES_WITH_IGNORE_EXCEPTION = "IGNORE_EXCEPTIONS_THROWN_IN_LINES_WITH_IGNORE_EXCEPTION";
     public static final boolean DEFAULT_IGNORE_EXCEPTIONS_THROWN_IN_LINES_WITH_IGNORE_EXCEPTION = true;
 
+    public static final String SKIP_CAUGHT_EXCEPTIONS_IN_LIBRARIES = "SKIP_CAUGHT_EXCEPTIONS_IN_LIBRARIES";
+    public static final boolean DEFAULT_SKIP_CAUGHT_EXCEPTIONS_IN_LIBRARIES = true;
+
     public static final String SKIP_CAUGHT_EXCEPTIONS_IN_SAME_FUNCTION = "SKIP_CAUGHT_EXCEPTIONS_IN_SAME_FUNCTION";
     public static final boolean DEFAULT_SKIP_CAUGHT_EXCEPTIONS_IN_SAME_FUNCTION = false;
 
@@ -34,7 +37,7 @@ public class PydevDebugPreferencesInitializer extends AbstractPreferenceInitiali
 
     @Override
     public void initializeDefaultPreferences() {
-        Preferences node = new DefaultScope().getNode("org.python.pydev.debug");
+        Preferences node = DefaultScope.INSTANCE.getNode("org.python.pydev.debug");
 
         //py unit view
         node.putBoolean(PyUnitView.PYUNIT_VIEW_SHOW_ONLY_ERRORS, PyUnitView.PYUNIT_VIEW_DEFAULT_SHOW_ONLY_ERRORS);
@@ -46,6 +49,7 @@ public class PydevDebugPreferencesInitializer extends AbstractPreferenceInitiali
         //debug prefs
         node.putBoolean(HIDE_PYDEVD_THREADS, DEFAULT_HIDE_PYDEVD_THREADS);
         node.putBoolean(SKIP_CAUGHT_EXCEPTIONS_IN_SAME_FUNCTION, DEFAULT_SKIP_CAUGHT_EXCEPTIONS_IN_SAME_FUNCTION);
+        node.putBoolean(SKIP_CAUGHT_EXCEPTIONS_IN_LIBRARIES, DEFAULT_SKIP_CAUGHT_EXCEPTIONS_IN_LIBRARIES);
         node.putBoolean(IGNORE_EXCEPTIONS_THROWN_IN_LINES_WITH_IGNORE_EXCEPTION,
                 DEFAULT_IGNORE_EXCEPTIONS_THROWN_IN_LINES_WITH_IGNORE_EXCEPTION);
 

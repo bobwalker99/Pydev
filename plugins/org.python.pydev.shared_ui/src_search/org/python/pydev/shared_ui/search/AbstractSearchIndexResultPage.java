@@ -72,11 +72,11 @@ import org.eclipse.ui.views.navigator.NavigatorDragAdapter;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.log.Log;
 import org.python.pydev.shared_core.structure.TreeNode;
-import org.python.pydev.shared_core.structure.TreeNodeContentProvider;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.shared_ui.dialogs.DialogHelpers;
 import org.python.pydev.shared_ui.search.replace.ReplaceAction;
 import org.python.pydev.shared_ui.swt.StyledLink.MultiStyledLink;
+import org.python.pydev.shared_ui.tree.TreeNodeContentProvider;
 
 public abstract class AbstractSearchIndexResultPage extends AbstractTextSearchViewPage {
 
@@ -223,6 +223,7 @@ public abstract class AbstractSearchIndexResultPage extends AbstractTextSearchVi
 
     protected static final String[] SHOW_IN_TARGETS = new String[] { IPageLayout.ID_RES_NAV };
     protected static final IShowInTargetList SHOW_IN_TARGET_LIST = new IShowInTargetList() {
+        @Override
         public String[] getShowInTargetIds() {
             return SHOW_IN_TARGETS;
         }
@@ -458,6 +459,7 @@ public abstract class AbstractSearchIndexResultPage extends AbstractTextSearchVi
                 }
 
                 return new IShowInSource() {
+                    @Override
                     public ShowInContext getShowInContext() {
                         return new ShowInContext(null, new StructuredSelection(new ArrayList<>(newSelection)));
                     }

@@ -35,13 +35,13 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Widget;
+import org.python.pydev.ast.location.FindWorkspaceFiles;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.docutils.StringSubstitution;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.core.Constants;
 import org.python.pydev.debug.ui.launching.FileOrResource;
 import org.python.pydev.debug.ui.launching.LaunchConfigurationCreator;
-import org.python.pydev.editorinput.PySourceLocatorBase;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.ui.dialogs.PythonModulePickerDialog;
@@ -60,6 +60,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
     /* (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#createControl(org.eclipse.swt.widgets.Composite)
      */
+    @Override
     public void createControl(Composite parent) {
         Font font = parent.getFont();
 
@@ -78,6 +79,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
         fMainModuleText.setLayoutData(gd);
         fMainModuleText.setFont(font);
         fMainModuleText.addModifyListener(new ModifyListener() {
+            @Override
             public void modifyText(ModifyEvent evt) {
                 updateLaunchConfigurationDialog();
             }
@@ -143,6 +145,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
         // Create a ModifyListener, used to listen for project modifications in the ProjectBlock. 
         // This assumes that the Project is in a Text control...
         fProjectModifyListener = new ModifyListener() {
+            @Override
             public void modifyText(ModifyEvent e) {
                 Widget widget = e.widget;
                 if (widget instanceof Text) {
@@ -169,6 +172,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
      * 
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#getName()
      */
+    @Override
     public String getName() {
         return "Main module";
     }
@@ -178,6 +182,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
      * 
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#initializeFrom(org.eclipse.debug.core.ILaunchConfiguration)
      */
+    @Override
     public void initializeFrom(ILaunchConfiguration configuration) {
 
         // Initialize the location field
@@ -211,6 +216,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#performApply(org.eclipse.debug.core.ILaunchConfigurationWorkingCopy)
      */
+    @Override
     public void performApply(ILaunchConfigurationWorkingCopy configuration) {
         String value = fMainModuleText.getText().trim();
         setAttribute(configuration, Constants.ATTR_LOCATION, value);
@@ -221,6 +227,7 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
      * (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#setDefaults(org.eclipse.debug.core.ILaunchConfigurationWorkingCopy)
      */
+    @Override
     public void setDefaults(ILaunchConfigurationWorkingCopy configuration) {
         //no defaults to set
     }
@@ -255,12 +262,12 @@ public class MainModuleBlock extends AbstractLaunchConfigurationTab {
                     //may have multiple files selected for the run for unittest and code-coverage
                     for (String loc : StringUtils.splitAndRemoveEmptyTrimmed(path, '|')) {
                         String onepath = stringSubstitution.performStringSubstitution(loc, false);
-                        IFile f = new PySourceLocatorBase().getFileForLocation(Path.fromOSString(onepath), project);
+                        IFile f = FindWorkspaceFiles.getFileForLocation(Path.fromOSString(onepath), project);
                         if (f != null) {
                             resourceList.add(f);
                             continue;
                         }
-                        IContainer container = new PySourceLocatorBase().getContainerForLocation(
+                        IContainer container = FindWorkspaceFiles.getContainerForLocation(
                                 Path.fromOSString(onepath),
                                 project);
                         if (container != null) {

@@ -13,15 +13,16 @@ package org.python.pydev.editor.correctionassist.heuristics;
 
 import java.util.List;
 
-import junit.framework.TestCase;
-
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
-import org.eclipse.jface.text.TextSelection;
-import org.eclipse.jface.text.contentassist.ICompletionProposal;
 import org.python.pydev.codingstd.ICodingStd;
 import org.python.pydev.core.docutils.PySelection;
+import org.python.pydev.core.proposals.CompletionProposalFactory;
 import org.python.pydev.editor.actions.PyAction;
+import org.python.pydev.editor.codecompletion.proposals.DefaultCompletionProposalFactory;
+import org.python.pydev.shared_core.code_completion.ICompletionProposalHandle;
+
+import junit.framework.TestCase;
 
 /**
  * @author Fabio Zadrozny
@@ -30,6 +31,7 @@ public class AssistAssignTest extends TestCase {
 
     static class NonCamelCodingStd implements ICodingStd {
 
+        @Override
         public boolean localsAndAttrsCamelcase() {
             return false;
         }
@@ -38,6 +40,7 @@ public class AssistAssignTest extends TestCase {
 
     static class CamelCodingStd implements ICodingStd {
 
+        @Override
         public boolean localsAndAttrsCamelcase() {
             return true;
         }
@@ -62,16 +65,20 @@ public class AssistAssignTest extends TestCase {
     /*
      * @see TestCase#setUp()
      */
+    @Override
     protected void setUp() throws Exception {
         super.setUp();
         assist = new AssistAssign(new CamelCodingStd());
+        CompletionProposalFactory.set(new DefaultCompletionProposalFactory());
     }
 
     /*
      * @see TestCase#tearDown()
      */
+    @Override
     protected void tearDown() throws Exception {
         super.tearDown();
+        CompletionProposalFactory.set(null);
     }
 
     public void testSimple() throws BadLocationException {
@@ -81,11 +88,11 @@ public class AssistAssignTest extends TestCase {
 
         Document doc = new Document(d);
 
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
 
     }
@@ -97,11 +104,11 @@ public class AssistAssignTest extends TestCase {
 
         Document doc = new Document(d);
 
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (newMethod)", props);
     }
@@ -113,11 +120,11 @@ public class AssistAssignTest extends TestCase {
 
         Document doc = new Document(d);
 
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (newMethod)", props);
     }
@@ -129,7 +136,7 @@ public class AssistAssignTest extends TestCase {
 
         Document doc = new Document(d);
 
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(false, assist.isValid(ps, sel, null, d.length()));
@@ -144,11 +151,11 @@ public class AssistAssignTest extends TestCase {
 
         Document doc = new Document(d);
 
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (new_method)", props);
     }
@@ -161,14 +168,14 @@ public class AssistAssignTest extends TestCase {
 
         Document doc = new Document(d);
 
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
-        ICompletionProposal prop0 = assertContains("Assign to local (new_method)", props);
-        ICompletionProposal prop1 = assertContains("Assign to field (self._new_method)", props);
+        ICompletionProposalHandle prop0 = assertContains("Assign to local (new_method)", props);
+        ICompletionProposalHandle prop1 = assertContains("Assign to field (self._new_method)", props);
 
         prop0.apply(doc);
 
@@ -194,11 +201,11 @@ public class AssistAssignTest extends TestCase {
 
         Document doc = new Document(d);
 
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (foo)", props);
     }
@@ -210,11 +217,11 @@ public class AssistAssignTest extends TestCase {
 
         Document doc = new Document(d);
 
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (result)", props);
     }
@@ -226,7 +233,7 @@ public class AssistAssignTest extends TestCase {
 
         Document doc = new Document(d);
 
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(false, assist.isValid(ps, sel, null, d.length()));
@@ -239,11 +246,11 @@ public class AssistAssignTest extends TestCase {
 
         Document doc = new Document(d);
 
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (allUppercase)", props);
     }
@@ -256,11 +263,11 @@ public class AssistAssignTest extends TestCase {
                 "   IKVMClass";
 
         Document doc = new Document(d);
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (ikvmclass)", props);
     }
@@ -273,11 +280,11 @@ public class AssistAssignTest extends TestCase {
                 "   IKVMClassBBBar";
 
         Document doc = new Document(d);
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (ikvmclass_bbbar)", props);
     }
@@ -290,11 +297,11 @@ public class AssistAssignTest extends TestCase {
                 "   my.call().NewCall()";
 
         Document doc = new Document(d);
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (new_call)", props);
     }
@@ -306,11 +313,11 @@ public class AssistAssignTest extends TestCase {
                 "CustomReportDocument(self.GetDataDirectory(),'custom_report_test')";
 
         Document doc = new Document(d);
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (custom_report_document)", props);
     }
@@ -322,11 +329,11 @@ public class AssistAssignTest extends TestCase {
                 "_callMe()";
 
         Document doc = new Document(d);
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (call_me)", props);
     }
@@ -338,11 +345,11 @@ public class AssistAssignTest extends TestCase {
                 "My20Provider()";
 
         Document doc = new Document(d);
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (my_20_provider)", props);
     }
@@ -354,19 +361,19 @@ public class AssistAssignTest extends TestCase {
                 "_GetMyFoo()";
 
         Document doc = new Document(d);
-        PySelection ps = new PySelection(doc, new TextSelection(doc, d.length(), 0));
+        PySelection ps = new PySelection(doc, d.length());
         String sel = PyAction.getLineWithoutComments(ps);
 
         assertEquals(true, assist.isValid(ps, sel, null, d.length()));
-        List<ICompletionProposal> props = assist.getProps(ps, null, null, null, null, d.length());
+        List<ICompletionProposalHandle> props = assist.getProps(ps, null, null, null, null, d.length());
         assertEquals(2, props.size());
         assertContains("Assign to local (my_foo)", props);
     }
 
-    private ICompletionProposal assertContains(String string, List<ICompletionProposal> props) {
+    private ICompletionProposalHandle assertContains(String string, List<ICompletionProposalHandle> props) {
         StringBuffer buffer = new StringBuffer("Available: \n");
 
-        for (ICompletionProposal proposal : props) {
+        for (ICompletionProposalHandle proposal : props) {
             if (DEBUG) {
                 System.out.println(proposal.getDisplayString());
             }

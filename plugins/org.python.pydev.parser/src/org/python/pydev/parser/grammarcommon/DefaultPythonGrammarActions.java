@@ -14,6 +14,7 @@ package org.python.pydev.parser.grammarcommon;
 import java.util.Iterator;
 import java.util.List;
 
+import org.python.pydev.core.log.Log;
 import org.python.pydev.parser.jython.FastCharStream;
 import org.python.pydev.parser.jython.ISpecialStr;
 import org.python.pydev.parser.jython.Node;
@@ -24,6 +25,7 @@ import org.python.pydev.parser.jython.Token;
 import org.python.pydev.parser.jython.ast.Call;
 import org.python.pydev.parser.jython.ast.ImportFrom;
 import org.python.pydev.parser.jython.ast.Num;
+import org.python.pydev.parser.jython.ast.Starred;
 import org.python.pydev.parser.jython.ast.Str;
 import org.python.pydev.parser.jython.ast.commentType;
 import org.python.pydev.parser.jython.ast.decoratorsType;
@@ -35,15 +37,17 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
     private SimpleNode lastNodeWithSpecial;
     private SimpleNode prev;
 
-    /*default*/DefaultPythonGrammarActions(AbstractPythonGrammar grammar) {
+    /*default*/ DefaultPythonGrammarActions(AbstractPythonGrammar grammar) {
         this.grammar = grammar;
     }
 
+    @Override
     public void markDecoratorWithCall() {
         decoratorsType d = (decoratorsType) this.prev;
         d.isCall = true;
     }
 
+    @Override
     public ISpecialStr convertStringToSpecialStr(Object o) throws ParseException {
         if (o instanceof ISpecialStr) {
             return (ISpecialStr) o;
@@ -70,10 +74,12 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
         return e;
     }
 
+    @Override
     public void setImportFromLevel(int level) {
         ((ImportFrom) grammar.getJJTree().peekNode()).level = level;
     }
 
+    @Override
     public final ISpecialStr createSpecialStr(String token) throws ParseException {
         return createSpecialStr(token, AbstractPythonGrammar.DEFAULT_SEARCH_ON_LAST);
     }
@@ -82,6 +88,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
      * This is where we do a lookahead to see if we find some token and if we do find it, but not on the correct
      * position, we skip some tokens to go to it.
      */
+    @Override
     public final ISpecialStr createSpecialStr(String token, boolean searchOnLast) throws ParseException {
         return createSpecialStr(token, searchOnLast, true);
     }
@@ -90,6 +97,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
      * This is where we do a lookahead to see if we find some token and if we do find it, but not on the correct
      * position, we skip some tokens to go to it.
      */
+    @Override
     public ISpecialStr createSpecialStr(String token, boolean searchOnLast, boolean throwException)
             throws ParseException {
         final Token currentToken = grammar.getCurrentToken();
@@ -117,7 +125,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
         }
 
         if (foundToken != null) {
-            if (foundAtPos <= 2 //found at correct position. 
+            if (foundAtPos <= 2 //found at correct position.
                     || searchOnLast //we already matched it... right now we're just adding it to the stack!
             ) {
                 return foundToken.asSpecialStr();
@@ -169,11 +177,13 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
      * Adds a special token to the current token that's in the top of the stack (the peeked token)
      * Considers that the token at the stack is a Call and adds it to its function.
      */
+    @Override
     public void addToPeekCallFunc(Object t, boolean after) {
         Call n = (Call) grammar.getJJTree().peekNode();
         addSpecial(n.func, t, after);
     }
 
+    @Override
     public void addSpecialTokenToLastOpened(Object o) throws ParseException {
         o = convertStringToSpecialStr(o);
         if (o != null) {
@@ -191,6 +201,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
     /**
      * Adds a special token to the current token that's in the top of the stack (the peeked token)
      */
+    @Override
     public final void addToPeek(Object t, boolean after) throws ParseException {
         addToPeek(t, after, null);
     }
@@ -199,6 +210,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
      * Adds a special token to the current token that's in the top of the stack (the peeked token)
      * @return the peeked node.
      */
+    @Override
     @SuppressWarnings("rawtypes")
     public SimpleNode addToPeek(Object t, boolean after, Class class_) throws ParseException {
         SimpleNode peeked = grammar.getJJTree().peekNode();
@@ -209,6 +221,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
     /**
      * Adds a special token to the current token that's in the top of the stack (the peeked token)
      */
+    @Override
     @SuppressWarnings("rawtypes")
     public void addToPeek(SimpleNode peeked, Object t, boolean after, Class class_) throws ParseException {
         if (class_ != null) {
@@ -227,10 +240,11 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
 
     /**
      * Closes a node scope
-     * 
+     *
      * @param n the node that should have its scope closed.
-     * @throws ParseException 
+     * @throws ParseException
      */
+    @Override
     public void jjtreeCloseNodeScope(Node n) throws ParseException {
         SimpleNode peeked = grammar.getJJTree().peekNode();
         List<Object> specialTokens = grammar.getTokenSourceSpecialTokensList();
@@ -317,6 +331,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
         node.addSpecial(special, after);
     }
 
+    @Override
     public void addSpecialToken(Object o, int strategy) throws ParseException {
         ISpecialStr t = convertStringToSpecialStr(o);
         if (t != null) {
@@ -324,6 +339,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
         }
     }
 
+    @Override
     public void addSpecialToken(Object o) throws ParseException {
         if (!(o instanceof ISpecialStr)) {
             o = convertStringToSpecialStr(o);
@@ -333,6 +349,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
                 .add(new Object[] { o, AbstractPythonGrammar.STRATEGY_ADD_AFTER_PREV });
     }
 
+    @Override
     public void findTokenAndAdd(String token) throws ParseException {
         ISpecialStr s = createSpecialStr(token, AbstractPythonGrammar.DEFAULT_SEARCH_ON_LAST, true);
         grammar.getTokenSourceSpecialTokensList()
@@ -344,16 +361,19 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
      * @param radix the radix in which it was found (octal=8, decimal=10, hex=16)
      * @param token this is the image of the object (the exact way it was found in the file)
      * @param numberToFill the Num object that should be set given the other parameters
-     * @throws ParseException 
+     * @throws ParseException
      */
+    @Override
     public void makeInt(Token t, int radix, Token token, Num numberToFill) throws ParseException {
         makeInt(t.image, radix, token, numberToFill);
     }
 
+    @Override
     public void makeIntSub2(Token t, int radix, Token token, Num numberToFill) throws ParseException {
         makeInt(t.image.substring(2, t.image.length()), radix, token, numberToFill);
     }
 
+    @Override
     public void makeIntSub2CheckingOct(Token t, int radix, Token token, Num numberToFill) throws ParseException {
         String s = t.image;
         if (s.length() >= 2) {
@@ -366,6 +386,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
     }
 
     private void makeInt(String s, int radix, Token token, Num numberToFill) throws ParseException {
+        s = s.replace("_", "");
         numberToFill.num = token.image;
 
         if (s.endsWith("L") || s.endsWith("l")) {
@@ -401,8 +422,9 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
         numberToFill.type = Num.Int;
     }
 
+    @Override
     public void makeFloat(Token t, Num numberToFill) throws ParseException {
-        String s = t.image;
+        String s = t.image.replace("_", "");
         numberToFill.num = s;
         try {
             numberToFill.n = Float.valueOf(s);
@@ -416,8 +438,9 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
         grammar.addAndReport(new ParseException("Unable to parse number: " + t.image, t), e.getMessage());
     }
 
+    @Override
     public void makeComplex(Token t, Num numberToFill) throws ParseException {
-        String s = t.image;
+        String s = t.image.replace("_", "");
         String compNumber = s.substring(0, s.length() - 1);
         numberToFill.num = s;
         try {
@@ -430,13 +453,14 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
 
     /**
      * Fills the string properly according to the representation found.
-     * 
+     *
      * 0 = the string
      * 1 = boolean indicating unicode
      * 2 = boolean indicating raw
      * 3 = style
      * 4 = boolean indicating binary
      */
+    @Override
     public void makeString(Token t, int quotes, Str strToFill) {
         String s = t.image;
         //System.out.println("enter: "+s);
@@ -444,23 +468,37 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
         int start = 0;
         boolean ustring = false;
         boolean bstring = false;
+        boolean fstring = false;
         if (quoteChar == 'u' || quoteChar == 'U') {
             ustring = true;
             start++;
         } else if (quoteChar == 'b' || quoteChar == 'B') {
             bstring = true;
             start++;
+        } else if (quoteChar == 'f' || quoteChar == 'F') {
+            fstring = true;
+            start++;
         }
         quoteChar = s.charAt(start);
         if (quoteChar == 'r' || quoteChar == 'R') {
-            //raw string (does not decode slashes)
+            if (start == 0) {
+                char quoteCharAux = s.charAt(1);
+                if (quoteCharAux == 'f' || quoteCharAux == 'F') {
+                    fstring = true;
+                    start++;
+                } else if (quoteCharAux == 'b' || quoteCharAux == 'B') {
+                    bstring = true;
+                    start++;
+                }
+            }
             String str = s.substring(quotes + start + 1, s.length() - quotes);
-            //System.out.println("out: "+str);
+            //System.out.println("out: " + str);
             strToFill.type = getType(s.charAt(start + 1), quotes);
             strToFill.s = str;
             strToFill.unicode = ustring;
             strToFill.raw = true;
             strToFill.binary = bstring;
+            strToFill.fstring = fstring;
 
         } else {
             int n = s.length() - quotes;
@@ -473,6 +511,7 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
             strToFill.unicode = ustring;
             strToFill.raw = false;
             strToFill.binary = bstring;
+            strToFill.fstring = fstring;
         }
     }
 
@@ -489,7 +528,35 @@ public final class DefaultPythonGrammarActions implements IPythonGrammarActions 
         throw new RuntimeException("Unable to determine type. Char: " + c + " quotes:" + quotes);
     }
 
+    @Override
     public void addSpecialToPrev(Object special, boolean after) {
         this.prev.addSpecial(special, after);
+    }
+
+    IntStack starExpr;
+
+    @Override
+    public void popStarExpr() {
+        if (starExpr == null || starExpr.sp == 0) {
+            Log.log("Scope for star expr not properly set.");
+        }
+        starExpr.pop();
+    }
+
+    @Override
+    public void pushStarExpr(int ctx) {
+        if (starExpr == null) {
+            starExpr = new IntStack();
+        }
+        starExpr.push(ctx);
+    }
+
+    @Override
+    public int getStarExprScope() {
+        if (starExpr == null || starExpr.sp == 0) {
+            Log.log("Scope for star expr not properly set.");
+            return Starred.Load;
+        }
+        return starExpr.peek();
     }
 }

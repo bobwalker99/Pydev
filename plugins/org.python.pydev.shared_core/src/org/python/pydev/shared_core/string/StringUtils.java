@@ -12,8 +12,7 @@
 ******************************************************************************/
 package org.python.pydev.shared_core.string;
 
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
+import java.io.BufferedReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigInteger;
@@ -22,8 +21,10 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Collectors;
 
 import javax.swing.text.Document;
 import javax.swing.text.EditorKit;
@@ -63,6 +65,7 @@ public final class StringUtils {
             this.len = string.length();
         }
 
+        @Override
         public boolean hasNext() {
             if (!calculatedNext) {
                 calculatedNext = true;
@@ -101,6 +104,7 @@ public final class StringUtils {
             return false;
         }
 
+        @Override
         public String next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
@@ -111,6 +115,7 @@ public final class StringUtils {
             return n;
         }
 
+        @Override
         public void remove() {
             throw new UnsupportedOperationException();
         }
@@ -130,6 +135,7 @@ public final class StringUtils {
     public static Iterable<String> iterLines(final String string) {
         return new Iterable<String>() {
 
+            @Override
             public Iterator<String> iterator() {
                 return new IterLines(string);
             }
@@ -248,10 +254,7 @@ public final class StringUtils {
      * but start at the passed initial location in the splitted array.
      */
     public static String join(String delimiter, String[] splitted, int startAtSegment, int endAtSegment) {
-        String[] s = new String[endAtSegment - startAtSegment];
-        for (int i = startAtSegment, j = 0; i < splitted.length && i < endAtSegment; i++, j++) {
-            s[j] = splitted[i];
-        }
+        String[] s = Arrays.copyOfRange(splitted, startAtSegment, Math.min(splitted.length, endAtSegment));
         return StringUtils.join(delimiter, s);
     }
 
@@ -425,7 +428,7 @@ public final class StringUtils {
                 return obj;
             }
             try {
-                byte[] bytes = str.getBytes("UTF-8");
+                byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
                 MessageDigest md = MessageDigest.getInstance("MD5");
                 //MAX_RADIX because we'll generate the shortest string possible... (while still
                 //using only numbers 0-9 and letters a-z)
@@ -542,6 +545,41 @@ public final class StringUtils {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Splits keeping empty partitions.
+     *
+     * Notes:
+     * If ending with the char to split, adds an empty partition to the end.
+     *
+     * I.e.:
+     * aaa|   will give "aaa", ""
+     */
+    public static List<String> splitKeepEmpty(String string, char toSplit) {
+        int len = string.length();
+        if (len == 0) {
+            return new ArrayList<>(0);
+        }
+        ArrayList<String> ret = new ArrayList<String>();
+
+        int last = -1;
+
+        char c = 0;
+
+        for (int i = 0; i < len; i++) {
+            c = string.charAt(i);
+            if (c == toSplit) {
+                ret.add(string.substring(last + 1, i));
+                last = i;
+            }
+        }
+        if (c != toSplit) {
+            ret.add(string.substring(last + 1, len));
+        } else {
+            ret.add("");
+        }
+        return ret;
     }
 
     /**
@@ -940,13 +978,23 @@ public final class StringUtils {
         return count;
     }
 
-    private static Charset latin1Charset;
-
-    private static Charset getLatin1Charset() {
-        if (latin1Charset == null) {
-            latin1Charset = Charset.forName("iso8859-1");
+    public static int count(String name, String str) {
+        final int strLen = str.length();
+        if (strLen == 0) {
+            return 0;
         }
-        return latin1Charset;
+        int count = 0;
+        final int len = name.length();
+        int i = name.indexOf(str);
+        while (i != -1) {
+            count++;
+            if (i + strLen < len) {
+                i = name.indexOf(str, i + str.length());
+                continue;
+            }
+            break;
+        }
+        return count;
     }
 
     /**
@@ -962,7 +1010,14 @@ public final class StringUtils {
         if (len > buffer.length) {
             len = buffer.length;
         }
-        String s = new String(buffer, 0, len, getLatin1Charset()); //Decode as latin1
+        String s = new String(buffer, 0, len, StandardCharsets.ISO_8859_1); //Decode as latin1
+        return isValidTextString(s);
+    }
+
+    /**
+     * @return true if this is not a string containing binary contents.
+     */
+    public static boolean isValidTextString(String s) {
         int maxLen = s.length();
         for (int i = 0; i < maxLen; i++) {
             char c = s.charAt(i);
@@ -1386,6 +1441,18 @@ public final class StringUtils {
     }
 
     /**
+     * Splits some string given some char in 2 parts (basename, ext)
+     */
+    public static Tuple<String, String> splitExt(String fullRep) {
+        int i = fullRep.lastIndexOf(".");
+        if (i != -1) {
+            return new Tuple<String, String>(fullRep.substring(0, i), fullRep.substring(i + 1));
+        } else {
+            return new Tuple<String, String>(fullRep, "");
+        }
+    }
+
+    /**
      * Splits some string given some char in 2 parts. If the separator is not found,
      * everything is put in the 1st part.
      */
@@ -1597,7 +1664,7 @@ public final class StringUtils {
     public static String safeDecodeByteArray(byte[] b, String baseCharset) {
         try {
             if (baseCharset == null) {
-                baseCharset = "ISO-8859-1";
+                return new String(b, StandardCharsets.ISO_8859_1);
             }
             return new String(b, baseCharset);
         } catch (Exception e) {
@@ -1614,46 +1681,6 @@ public final class StringUtils {
                 return new String("Unable to decode bytearray from Python.");
             }
         }
-    }
-
-    /**
-     * Decodes some string that was encoded as base64
-     */
-    public static byte[] decodeBase64(String persisted) {
-        return Base64Coder.decode(persisted.toCharArray());
-    }
-
-    /**
-     * @param o the object we want as a string
-     * @return the string representing the object as base64
-     */
-    public static String getObjAsStr(Object o) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try {
-            ObjectOutputStream stream = new ObjectOutputStream(out);
-            stream.writeObject(o);
-            stream.close();
-        } catch (Exception e) {
-            Log.log(e);
-            throw new RuntimeException(e);
-        }
-
-        return new String(encodeBase64(out));
-    }
-
-    /**
-     * @return the contents of the passed ByteArrayOutputStream as a byte[] encoded with base64.
-     */
-    public static char[] encodeBase64(ByteArrayOutputStream out) {
-        byte[] byteArray = out.toByteArray();
-        return encodeBase64(byteArray);
-    }
-
-    /**
-     * @return the contents of the passed byteArray[] as a byte[] encoded with base64.
-     */
-    public static char[] encodeBase64(byte[] byteArray) {
-        return Base64Coder.encode(byteArray);
     }
 
     public static boolean containsWhitespace(final String name) {
@@ -1776,6 +1803,19 @@ public final class StringUtils {
             }
         }
         return onlyWildCardsInPart;
+    }
+
+    public static String readAll(Reader reader) {
+        BufferedReader bufferedReader = new BufferedReader(reader);
+        //java8 idiom to read all lines.
+        return bufferedReader.lines().collect(Collectors.joining());
+    }
+
+    public static String truncateIfNeeded(String s, int len) {
+        if (s.length() <= len) {
+            return s;
+        }
+        return s.substring(0, len - 3) + "...";
     }
 
 }

@@ -11,6 +11,7 @@ package org.python.pydev.shared_interactive_console.console.ui;
 
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
+import org.python.pydev.core.interactive_console.IScriptConsoleViewer;
 import org.python.pydev.shared_core.log.Log;
 import org.python.pydev.shared_interactive_console.console.IScriptConsoleShell;
 
@@ -22,6 +23,7 @@ public class DefaultScriptConsoleTextHover extends AbstractScriptConsoleTextHove
         this.interpreterShell = interpreterShell;
     }
 
+    @Override
     protected String getHoverInfoImpl(IScriptConsoleViewer viewer, IRegion hoverRegion) {
         try {
             IDocument document = viewer.getDocument();

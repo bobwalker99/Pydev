@@ -15,12 +15,12 @@
 *     Fabio Zadrozny <fabiofz@gmail.com>  - initial implementation
 *     Camilo Bernal <cabernal@redhat.com> - ongoing maintenance
 ******************************************************************************/
-/* 
+/*
  * Copyright (C) 2006, 2007  Dennis Hunziker, Ueli Kistler
  * Copyright (C) 2007  Reto Schuettel, Robin Stocker
  *
  * IFS Institute for Software, HSR Rapperswil, Switzerland
- * 
+ *
  */
 
 package org.python.pydev.refactoring.codegenerator.generateproperties.edit;
@@ -41,7 +41,7 @@ import org.python.pydev.refactoring.core.edit.AbstractInsertEdit;
 
 /**
  * Creates the property:
- * 
+ *
  * <pre>
  *    attribute = property(get_attribute, set_attribute, del_attribute, "attribute's docstring")
  * </pre>
@@ -74,7 +74,7 @@ public class PropertyEdit extends AbstractInsertEdit {
         exprType[] target = new exprType[] { new Name(propertyName, Name.Store, false) };
         Call property = createPropertyCall();
 
-        return new Assign(target, property);
+        return new Assign(target, property, null);
     }
 
     private Call createPropertyCall() {
@@ -90,7 +90,8 @@ public class PropertyEdit extends AbstractInsertEdit {
         addArgument(args, state.isSetter(), "set");
         addArgument(args, state.isDelete(), "del");
         if (state.isDocstring()) {
-            args.add(new Str(propertyName + "'s docstring", str_typeType.SingleDouble, false, false, false));
+            args.add(new Str(propertyName + "'s docstring", str_typeType.SingleDouble, false, false, false, false,
+                    null));
         } else {
             args.add(NONE);
         }

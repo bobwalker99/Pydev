@@ -8,27 +8,30 @@ package org.python.pydev.debug.ui;
 
 import java.util.List;
 
-import org.eclipse.core.runtime.Preferences;
 import org.eclipse.jface.dialogs.IInputValidator;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IntegerFieldEditor;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
-import org.python.pydev.editor.preferences.PydevEditorPrefs;
+import org.eclipse.ui.preferences.IWorkbenchPreferenceContainer;
 import org.python.pydev.editorinput.PySourceLocatorPrefs;
 import org.python.pydev.plugin.PydevPlugin;
+import org.python.pydev.plugin.preferences.PyDevEditorPreferences;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_ui.field_editors.ComboFieldEditor;
+import org.python.pydev.shared_ui.field_editors.LinkFieldEditor;
 
 /**
  * Preferences for the locations that should be translated -- used when the debugger is not able
  * to find some path aa the client, so, the user is asked for the location and the answer is
  * kept in the preferences in the format:
- * 
+ *
  * path asked, new path -- means that a request for the "path asked" should return the "new path"
  * path asked, DONTASK -- means that if some request for that file was asked it should silently ignore it
  */
@@ -42,6 +45,7 @@ public class SourceLocatorPrefsPage extends FieldEditorPreferencePage implements
         setPreferenceStore(PydevPlugin.getDefault().getPreferenceStore());
     }
 
+    @Override
     public void init(IWorkbench workbench) {
     }
 
@@ -57,13 +61,33 @@ public class SourceLocatorPrefsPage extends FieldEditorPreferencePage implements
     @Override
     protected void createFieldEditors() {
         Composite p = getFieldEditorParent();
+
+        LinkFieldEditor linkEditor = new LinkFieldEditor("UNUSED",
+                "These preferences are used solely for mapping a path which arrives in the IDE.\n" +
+                        "For by-directional client <-> debugger translations please use the settings at: <a>Path Mappings</a>",
+                p,
+                new SelectionListener() {
+
+                    @Override
+                    public void widgetSelected(SelectionEvent e) {
+                        String id = "org.python.pydev.editor.preferences.PyTabPreferencesPage";
+                        IWorkbenchPreferenceContainer workbenchPreferenceContainer = ((IWorkbenchPreferenceContainer) getContainer());
+                        workbenchPreferenceContainer.openPage(id, null);
+                    }
+
+                    @Override
+                    public void widgetDefaultSelected(SelectionEvent e) {
+                    }
+                });
+        addField(linkEditor);
+
         addField(new ComboFieldEditor(PySourceLocatorPrefs.ON_SOURCE_NOT_FOUND,
                 "Action when source is not directly found:", ENTRIES_AND_VALUES, p));
 
         addField(new IntegerFieldEditor(PySourceLocatorPrefs.FILE_CONTENTS_TIMEOUT,
                 "Timeout to get file contents (millis):", p));
 
-        addField(new TableEditor(PydevEditorPrefs.SOURCE_LOCATION_PATHS, "Translation paths to use:", p) {
+        addField(new TableEditor(PyDevEditorPreferences.SOURCE_LOCATION_PATHS, "Translation paths to use:", p) {
 
             @Override
             protected String createTable(List<String[]> items) {
@@ -75,6 +99,7 @@ public class SourceLocatorPrefsPage extends FieldEditorPreferencePage implements
                 InputDialog d = new InputDialog(getShell(), "New entry",
                         "Add the entry in the format path_to_replace,new_path or path,DONTASK.", "",
                         new IInputValidator() {
+                            @Override
                             public String isValid(String newText) {
                                 String[] splitted = StringUtils.splitAndRemoveEmptyTrimmed(newText, ',').toArray(
                                         new String[0]);
@@ -105,12 +130,6 @@ public class SourceLocatorPrefsPage extends FieldEditorPreferencePage implements
                 layoutData.heightHint = 300;
             }
         });
-    }
-
-    /**
-     * Sets default preference values
-     */
-    protected void initializeDefaultPreferences(Preferences prefs) {
     }
 
 }

@@ -15,7 +15,7 @@ import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.part.ViewPart;
-import org.python.pydev.plugin.preferences.PydevPrefs;
+import org.python.pydev.plugin.PyDevUiPrefs;
 import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_core.callbacks.CallbackWithListeners;
 import org.python.pydev.shared_core.callbacks.ICallbackWithListeners;
@@ -29,9 +29,9 @@ public abstract class ViewPartWithOrientation extends ViewPart implements IPrope
     protected ViewPartWithOrientation() {
         String orientationPreferencesKey = getOrientationPreferencesKey();
         if (!SharedCorePlugin.inTestMode()) {
-            IPreferenceStore preferenceStore = PydevPrefs.getPreferenceStore();
+            IPreferenceStore preferenceStore = PyDevUiPrefs.getPreferenceStore();
             orientationPreference = preferenceStore.getInt(orientationPreferencesKey);
-            PydevPrefs.getPreferenceStore().addPropertyChangeListener(this);
+            PyDevUiPrefs.getPreferenceStore().addPropertyChangeListener(this);
         }
     }
 
@@ -49,6 +49,7 @@ public abstract class ViewPartWithOrientation extends ViewPart implements IPrope
     @SuppressWarnings("rawtypes")
     public final ICallbackWithListeners onControlDisposed = new CallbackWithListeners();
 
+    @Override
     public void createPartControl(Composite parent) {
         fParent = parent;
         addResizeListener(parent);
@@ -89,9 +90,11 @@ public abstract class ViewPartWithOrientation extends ViewPart implements IPrope
 
     private void addResizeListener(Composite parent) {
         parent.addControlListener(new ControlListener() {
+            @Override
             public void controlMoved(ControlEvent e) {
             }
 
+            @Override
             public void controlResized(ControlEvent e) {
                 updateOrientation();
             }
@@ -102,13 +105,14 @@ public abstract class ViewPartWithOrientation extends ViewPart implements IPrope
 
     @Override
     public void dispose() {
-        PydevPrefs.getPreferenceStore().removePropertyChangeListener(this);
+        PyDevUiPrefs.getPreferenceStore().removePropertyChangeListener(this);
         super.dispose();
     }
 
     /* (non-Javadoc)
      * @see org.eclipse.jface.util.IPropertyChangeListener#propertyChange(org.eclipse.jface.util.PropertyChangeEvent)
      */
+    @Override
     public void propertyChange(PropertyChangeEvent event) {
         if (event.getProperty().equals(this.getOrientationPreferencesKey())) {
             orientationPreference = (Integer) event.getNewValue();

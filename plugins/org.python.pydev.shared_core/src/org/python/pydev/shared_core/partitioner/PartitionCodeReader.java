@@ -13,6 +13,7 @@ package org.python.pydev.shared_core.partitioner;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.core.runtime.Assert;
@@ -22,9 +23,7 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentPartitionerExtension2;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.TypedPosition;
-import org.eclipse.jface.text.rules.ICharacterScanner;
 import org.python.pydev.shared_core.log.Log;
-import org.python.pydev.shared_core.utils.ArrayUtils;
 
 /**
  * A reader that'll only read based on a given partition type.
@@ -141,10 +140,10 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
             }
         }
 
-        Position[] ret = list.toArray(new Position[list.size()]);
         if (!fForward) {
-            ArrayUtils.reverse(ret);
+            Collections.reverse(list);
         }
+        Position[] ret = list.toArray(new Position[list.size()]);
         return ret;
     }
 
@@ -200,6 +199,7 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
     /*
      * @see SingleCharReader#read()
      */
+    @Override
     public int read() {
         try {
             return fForward ? readForwards() : readBackwards();
@@ -208,6 +208,7 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
         }
     }
 
+    @Override
     public char[][] getLegalLineDelimiters() {
         if (fDelimiters == null) {
             String[] delimiters = fDocument.getLegalLineDelimiters();
@@ -219,6 +220,7 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
         return fDelimiters;
     }
 
+    @Override
     public int getColumn() {
         try {
             final int offset = getOffset();
@@ -231,6 +233,7 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
         return -1;
     }
 
+    @Override
     public void unread() {
         if (fForward) {
             if (fCurrentPosition == null) { //unread EOF
@@ -337,10 +340,12 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
         return EOF;
     }
 
+    @Override
     public int getMark() {
         return fOffset;
     }
 
+    @Override
     public void setMark(int offset) {
         if (fForward) {
             fCurrentPosition = null;

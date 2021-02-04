@@ -39,8 +39,14 @@ public abstract class AbstractRewriterTestCase extends AbstractIOTestCase {
     protected void runRewriter() throws Throwable {
         setTestGenerated(Rewriter.reparsed(data.source, new AdapterPrefs("\n", new IGrammarVersionProvider() {
 
+            @Override
             public int getGrammarVersion() throws MisconfigurationException {
                 return IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_2_7;
+            }
+
+            @Override
+            public AdditionalGrammarVersionsToCheck getAdditionalGrammarVersions() throws MisconfigurationException {
+                return null;
             }
         })));
     }

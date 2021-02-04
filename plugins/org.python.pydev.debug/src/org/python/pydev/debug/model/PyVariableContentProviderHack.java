@@ -14,12 +14,13 @@ import org.eclipse.debug.internal.ui.viewers.model.provisional.IViewerUpdate;
 
 /**
  * This class was created to bypass bug: https://bugs.eclipse.org/bugs/show_bug.cgi?id=238878
- * 
+ *
  * It should be removed when it's actually fixed.
  * @author Fabio
  */
 public class PyVariableContentProviderHack extends VariableContentProvider {
 
+    @Override
     protected boolean hasChildren(Object element, IPresentationContext context, IViewerUpdate monitor)
             throws CoreException {
         if (element instanceof IWatchExpression) {
@@ -29,6 +30,10 @@ public class PyVariableContentProviderHack extends VariableContentProvider {
         if (element instanceof PyVariableCollection) {
             PyVariableCollection pyVariableCollection = (PyVariableCollection) element;
             return pyVariableCollection.hasVariables();
+        }
+        if (element instanceof PyVariableGroup) {
+            PyVariableGroup pyVariableGroup = (PyVariableGroup) element;
+            return pyVariableGroup.hasVariables();
         }
         return super.hasChildren(element, context, monitor);
     }
@@ -42,6 +47,10 @@ public class PyVariableContentProviderHack extends VariableContentProvider {
         if (parent instanceof PyVariableCollection) {
             PyVariableCollection pyVariableCollection = (PyVariableCollection) parent;
             return pyVariableCollection.getVariables();
+        }
+        if (parent instanceof PyVariableGroup) {
+            PyVariableGroup pyVariableGroup = (PyVariableGroup) parent;
+            return pyVariableGroup.getVariables();
         }
         return super.getAllChildren(parent, context);
     }

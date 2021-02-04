@@ -9,12 +9,13 @@
  */
 package org.python.pydev.ui;
 
-import junit.framework.TestCase;
-
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
+import org.python.pydev.core.CorePlugin;
 import org.python.pydev.core.TestDependent;
 import org.python.pydev.plugin.PydevPlugin;
+
+import junit.framework.TestCase;
 
 public class SWTTest extends TestCase {
 
@@ -32,9 +33,11 @@ public class SWTTest extends TestCase {
     /*
      * @see TestCase#setUp()
      */
+    @Override
     protected void setUp() throws Exception {
         super.setUp();
         PydevPlugin.setBundleInfo(new BundleInfoStub());
+        CorePlugin.setBundleInfo(new BundleInfoStub());
         try {
             if (TestDependent.HAS_SWT_ON_PATH) {
                 display = createDisplay();
@@ -56,9 +59,11 @@ public class SWTTest extends TestCase {
     /*
      * @see TestCase#tearDown()
      */
+    @Override
     protected void tearDown() throws Exception {
         super.tearDown();
         PydevPlugin.setBundleInfo(null);
+        CorePlugin.setBundleInfo(null);
     }
 
     /**
@@ -66,8 +71,9 @@ public class SWTTest extends TestCase {
      */
     protected void goToManual(Display display) {
         while (!shell.isDisposed()) {
-            if (!display.readAndDispatch())
+            if (!display.readAndDispatch()) {
                 display.sleep();
+            }
         }
         System.out.println("finishing...");
         display.dispose();

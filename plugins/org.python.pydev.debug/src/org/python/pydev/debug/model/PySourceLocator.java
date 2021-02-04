@@ -17,19 +17,20 @@ import org.eclipse.debug.core.model.ISourceLocator;
 import org.eclipse.debug.core.model.IStackFrame;
 import org.eclipse.debug.ui.ISourcePresentation;
 import org.eclipse.ui.IEditorInput;
+import org.python.pydev.ast.codecompletion.revisited.PythonPathHelper;
 import org.python.pydev.editor.PyEdit;
-import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
 import org.python.pydev.editorinput.PySourceLocatorBase;
 import org.python.pydev.shared_ui.EditorUtils;
 
 /**
  * Locates source files from stack elements
- * 
+ *
  */
 public class PySourceLocator implements ISourceLocator, ISourcePresentation {
 
     private PySourceLocatorBase locatorBase = new PySourceLocatorBase();
 
+    @Override
     public Object getSourceElement(IStackFrame stackFrame) {
         return stackFrame;
     }
@@ -37,6 +38,7 @@ public class PySourceLocator implements ISourceLocator, ISourcePresentation {
     private IProject lastProject = null;
 
     // Returns the file
+    @Override
     public IEditorInput getEditorInput(Object element) {
         IEditorInput edInput = null;
         if (element instanceof PyStackFrame) {
@@ -49,7 +51,7 @@ public class PySourceLocator implements ISourceLocator, ISourcePresentation {
                 lastProject = ((PyDebugTarget) target).project;
             }
 
-            if (path != null && !path.toString().startsWith("<")) {
+            if (path != null) {
                 edInput = locatorBase.createEditorInput(path, true, pyStackFrame, lastProject);
             }
 
@@ -57,6 +59,7 @@ public class PySourceLocator implements ISourceLocator, ISourcePresentation {
         return edInput;
     }
 
+    @Override
     public String getEditorId(IEditorInput input, Object element) {
         String name = input.getName();
         if (PythonPathHelper.isValidSourceFile(name)) {

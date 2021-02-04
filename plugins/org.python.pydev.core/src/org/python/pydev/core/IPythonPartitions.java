@@ -6,6 +6,10 @@
  */
 package org.python.pydev.core;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.eclipse.jface.text.IDocument;
 
 public interface IPythonPartitions {
@@ -31,6 +35,12 @@ public interface IPythonPartitions {
     public final static String PY_MULTILINE_BYTES_OR_UNICODE1 = "__python_multiline_bytes_or_unicode1";//'''
     public final static String PY_MULTILINE_BYTES_OR_UNICODE2 = "__python_multiline_bytes_or_unicode2";//"""
 
+    public final static String PY_SINGLELINE_FSTRING1 = "__python_singleline_fstring1";//'
+    public final static String PY_SINGLELINE_FSTRING2 = "__python_singleline_fstring2";//"
+
+    public final static String PY_MULTILINE_FSTRING1 = "__python_multiline_fstring1";//'''
+    public final static String PY_MULTILINE_FSTRING2 = "__python_multiline_fstring2";//"""
+
     public final static String PY_BACKQUOTES = "__python_backquotes";
     public final static String PY_DEFAULT = IDocument.DEFAULT_CONTENT_TYPE;
 
@@ -52,8 +62,20 @@ public interface IPythonPartitions {
             PY_MULTILINE_BYTES_OR_UNICODE1,
             PY_MULTILINE_BYTES_OR_UNICODE2,
 
+            PY_SINGLELINE_FSTRING1,
+            PY_SINGLELINE_FSTRING2,
+            PY_MULTILINE_FSTRING1,
+            PY_MULTILINE_FSTRING2,
+
             PY_BACKQUOTES
     };
     public static final String PYTHON_PARTITION_TYPE = "__PYTHON_PARTITION_TYPE";
+    public final static Set<String> NON_DEFAULT_TYPES_AS_SET = new HashSet<>(Arrays.asList(types));
+
+    public final static Set<String> F_STRING_PARTITIONS = new HashSet<String>(Arrays.asList(
+            PY_MULTILINE_FSTRING1,
+            PY_MULTILINE_FSTRING2,
+            PY_SINGLELINE_FSTRING1,
+            PY_SINGLELINE_FSTRING2));
 
 }

@@ -13,14 +13,13 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.contentassist.IContextInformation;
 import org.eclipse.jface.text.templates.TemplateProposal;
-import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.PyEdit;
 import org.python.pydev.refactoring.core.base.RefactoringInfo;
-
+import org.python.pydev.shared_core.image.IImageHandle;
 
 /**
  * This is the proposal that goes outside. It only creates the proposal that'll actually do something later, as
@@ -33,7 +32,7 @@ public final class TddRefactorCompletion extends AbstractTddRefactorCompletion {
     private AbstractPyCreateAction pyCreateAction;
     private PySelection ps;
 
-    TddRefactorCompletion(String replacementString, Image image, String displayString,
+    TddRefactorCompletion(String replacementString, IImageHandle image, String displayString,
             IContextInformation contextInformation, String additionalProposalInfo, int priority, PyEdit edit,
             int locationStrategy, List<String> parametersAfterCall, AbstractPyCreateAction pyCreateAction,
             PySelection ps) {
@@ -65,6 +64,7 @@ public final class TddRefactorCompletion extends AbstractTddRefactorCompletion {
         return null;
     }
 
+    @Override
     public void apply(ITextViewer viewer, char trigger, int stateMask, int offset) {
         if (edit != null) {
             //We have to reparse to make sure that we'll have an accurate AST.
@@ -91,12 +91,15 @@ public final class TddRefactorCompletion extends AbstractTddRefactorCompletion {
         return executed;
     }
 
+    @Override
     public void selected(ITextViewer viewer, boolean smartToggle) {
     }
 
+    @Override
     public void unselected(ITextViewer viewer) {
     }
 
+    @Override
     public boolean validate(IDocument document, int offset, DocumentEvent event) {
         return false;
     }

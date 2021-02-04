@@ -19,15 +19,15 @@ import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
+import org.python.pydev.core.preferences.PydevPrefs;
 import org.python.pydev.plugin.PydevPlugin;
-import org.python.pydev.plugin.preferences.PydevPrefs;
 
 /**
  * @author Fabio Zadrozny
  */
 public class PyTodoPrefPage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
-    public static final String DEFAULT_PY_TODO_TAGS = "TODO: FIXME:";
+    public static final String DEFAULT_PY_TODO_TAGS = "TODO: FIXME: XXX:";
     public static final String PY_TODO_TAGS = "PY_TODO_TAGS";
 
     public PyTodoPrefPage() {
@@ -39,6 +39,7 @@ public class PyTodoPrefPage extends FieldEditorPreferencePage implements IWorkbe
     /* (non-Javadoc)
      * @see org.eclipse.jface.preference.FieldEditorPreferencePage#createFieldEditors()
      */
+    @Override
     protected void createFieldEditors() {
         Composite p = getFieldEditorParent();
         addField(new StringFieldEditor(PY_TODO_TAGS, "Todo tags (separated by spaces)", p));
@@ -47,12 +48,13 @@ public class PyTodoPrefPage extends FieldEditorPreferencePage implements IWorkbe
     /* (non-Javadoc)
      * @see org.eclipse.ui.IWorkbenchPreferencePage#init(org.eclipse.ui.IWorkbench)
      */
+    @Override
     public void init(IWorkbench workbench) {
 
     }
 
     public static List<String> getTodoTags() {
-        String string = PydevPrefs.getPreferences().getString(PY_TODO_TAGS);
+        String string = PydevPrefs.getEclipsePreferences().get(PY_TODO_TAGS, DEFAULT_PY_TODO_TAGS);
         String[] strings = string.split(" ");
         ArrayList<String> list = new ArrayList<String>();
         for (int i = 0; i < strings.length; i++) {

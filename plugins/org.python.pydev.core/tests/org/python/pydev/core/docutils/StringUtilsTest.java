@@ -14,11 +14,11 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import junit.framework.TestCase;
-
 import org.python.pydev.shared_core.string.FastStringBuffer;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
+
+import junit.framework.TestCase;
 
 public class StringUtilsTest extends TestCase {
 
@@ -488,6 +488,68 @@ public class StringUtilsTest extends TestCase {
         assertTrue(Arrays.equals(new String[] {}, split));
     }
 
+    public void testSplitKeepEmpty() throws Exception {
+        String[] split = StringUtils.splitKeepEmpty("a||", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "a", "", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("|", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("|aa", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "", "aa" }, split));
+
+        split = StringUtils.splitKeepEmpty("aaa|", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "aaa", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("aaa|bb", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "aaa", "bb" }, split));
+
+        split = StringUtils.splitKeepEmpty("aaa", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "aaa" }, split));
+
+        split = StringUtils.splitKeepEmpty("||", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "", "", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("a||", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "a", "", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("|a|", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "", "a", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("||a", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "", "", "a" }, split));
+
+        split = StringUtils.splitKeepEmpty("a|b|", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "a", "b", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("|a|b", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "", "a", "b" }, split));
+
+        split = StringUtils.splitKeepEmpty("b||a", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "b", "", "a" }, split));
+
+        split = StringUtils.splitKeepEmpty("|   |", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "", "   ", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("aaa||", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "aaa", "", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("|aaa|", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "", "aaa", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("||aaa", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "", "", "aaa" }, split));
+
+        split = StringUtils.splitKeepEmpty("aaa|bbb|", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "aaa", "bbb", "" }, split));
+
+        split = StringUtils.splitKeepEmpty("|aaa|bbb", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "", "aaa", "bbb" }, split));
+
+        split = StringUtils.splitKeepEmpty("bbb||aaa", '|').toArray(new String[0]);
+        assertTrue(Arrays.equals(new String[] { "bbb", "", "aaa" }, split));
+    }
+
     public void testSplit() throws Exception {
         String[] split = StringUtils.split("aaa bb  ", ' ').toArray(new String[0]);
         assertTrue(Arrays.equals(new String[] { "aaa", "bb" }, split));
@@ -792,5 +854,29 @@ public class StringUtilsTest extends TestCase {
     public void testValidString4() throws Exception {
         String s = "a";
         assertEquals(StringUtils.isValidTextString(s.getBytes(), 4), true);
+    }
+
+    public void testStrCount() {
+        assertEquals(StringUtils.count("aaa", "a"), 3);
+    }
+
+    public void testStrCount2() {
+        assertEquals(StringUtils.count("abc", "bc"), 1);
+    }
+
+    public void testStrCount3() {
+        assertEquals(StringUtils.count("ab", "ab"), 1);
+    }
+
+    public void testStrCount4() {
+        assertEquals(StringUtils.count("ab", ""), 0);
+    }
+
+    public void testStrCount5() {
+        assertEquals(StringUtils.count("ab", "c"), 0);
+    }
+
+    public void testStrCount6() {
+        assertEquals(StringUtils.count("ab", " "), 0);
     }
 }

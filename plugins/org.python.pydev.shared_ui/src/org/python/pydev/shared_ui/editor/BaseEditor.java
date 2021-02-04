@@ -31,6 +31,8 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.action.IAction;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IOverviewRuler;
@@ -38,6 +40,7 @@ import org.eclipse.jface.text.source.ISharedTextColors;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
@@ -47,6 +50,7 @@ import org.eclipse.ui.editors.text.TextEditor;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 import org.eclipse.ui.texteditor.AnnotationPreference;
 import org.eclipse.ui.texteditor.IDocumentProvider;
+import org.eclipse.ui.texteditor.ITextEditorActionDefinitionIds;
 import org.python.pydev.overview_ruler.MinimapOverviewRuler;
 import org.python.pydev.overview_ruler.MinimapOverviewRulerPreferencesPage;
 import org.python.pydev.shared_core.editor.IBaseEditor;
@@ -61,6 +65,8 @@ import org.python.pydev.shared_core.string.TextSelectionUtils;
 import org.python.pydev.shared_core.structure.OrderedSet;
 import org.python.pydev.shared_core.utils.Reflection;
 import org.python.pydev.shared_ui.outline.IOutlineModel;
+import org.python.pydev.shared_ui.word_boundaries.SubWordActions;
+import org.python.pydev.shared_ui.word_boundaries.SubWordActions.ISubWordEditorWrapper;
 
 public abstract class BaseEditor extends TextEditor implements IBaseEditor {
 
@@ -92,6 +98,7 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
             field.set(this, new ISelectionChangedListener() {
 
                 private Runnable fRunnable = new Runnable() {
+                    @Override
                     public void run() {
                         ISourceViewer sourceViewer = BaseEditor.this.getSourceViewer();
                         // check whether editor has not been disposed yet
@@ -103,22 +110,18 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
 
                 private Display fDisplay;
 
-                public void selectionChanged(SelectionChangedEvent event)
-                {
+                @Override
+                public void selectionChanged(SelectionChangedEvent event) {
                     Display current = Display.getCurrent();
-                    if (current != null)
-                    {
+                    if (current != null) {
                         // Don't execute asynchronously if we're in a thread that has a display.
                         // Fix for: https://bugs.eclipse.org/bugs/show_bug.cgi?id=368354 (the rationale
                         // is that the actions were not being enabled because they were previously
                         // updated in an async call).
                         // but just patching getSelectionChangedListener() properly.
                         fRunnable.run();
-                    }
-                    else
-                    {
-                        if (fDisplay == null)
-                        {
+                    } else {
+                        if (fDisplay == null) {
                             fDisplay = getSite().getShell().getDisplay();
                         }
                         fDisplay.asyncExec(fRunnable);
@@ -225,6 +228,7 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
      */
     public Map<String, Object> cache = new HashMap<String, Object>();
 
+    @Override
     public Map<String, Object> getCache() {
         return cache;
     }
@@ -234,6 +238,7 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
     /**
      * @return true if the editor passed as a parameter has the same input as this editor.
      */
+    @Override
     public boolean hasSameInput(IBaseEditor edit) {
         IEditorInput thisInput = this.getEditorInput();
         IEditorInput otherInput = (IEditorInput) edit.getEditorInput();
@@ -245,8 +250,8 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
             return true;
         }
 
-        IResource r1 = (IResource) thisInput.getAdapter(IResource.class);
-        IResource r2 = (IResource) otherInput.getAdapter(IResource.class);
+        IResource r1 = thisInput.getAdapter(IResource.class);
+        IResource r2 = otherInput.getAdapter(IResource.class);
         if (r1 == null || r2 == null) {
             return false;
         }
@@ -286,11 +291,84 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
         textWidget.addMouseListener(cursorListener);
         textWidget.addKeyListener(cursorListener);
 
+        IAction action;
+
+        SubWordActions subWordActions = new SubWordActions(new ISubWordEditorWrapper() {
+
+            @Override
+            public int widgetOffset2ModelOffset(ISourceViewer viewer, int caretOffset) {
+                return BaseEditor.widgetOffset2ModelOffset(viewer, caretOffset);
+            }
+
+            @Override
+            public boolean validateEditorInputState() {
+                return BaseEditor.this.validateEditorInputState();
+            }
+
+            @Override
+            public boolean isBlockSelectionModeEnabled() {
+                return BaseEditor.this.isBlockSelectionModeEnabled();
+            }
+
+            @Override
+            public IPreferenceStore getPreferenceStore() {
+                return BaseEditor.this.getPreferenceStore();
+            }
+
+            @Override
+            public boolean isEditorInputModifiable() {
+                return BaseEditor.this.isEditorInputModifiable();
+            }
+
+            @Override
+            public int modelOffset2WidgetOffset(ISourceViewer viewer, int position) {
+                return BaseEditor.modelOffset2WidgetOffset(viewer, position);
+            }
+
+            @Override
+            public ISourceViewer getSourceViewer() {
+                return BaseEditor.this.getSourceViewer();
+            }
+        });
+
+        action = subWordActions.new NavigatePreviousSubWordAction();
+        action.setActionDefinitionId(ITextEditorActionDefinitionIds.WORD_PREVIOUS);
+        setAction(ITextEditorActionDefinitionIds.WORD_PREVIOUS, action);
+        textWidget.setKeyBinding(SWT.CTRL | SWT.ARROW_LEFT, SWT.NULL);
+
+        action = subWordActions.new NavigateNextSubWordAction();
+        action.setActionDefinitionId(ITextEditorActionDefinitionIds.WORD_NEXT);
+        setAction(ITextEditorActionDefinitionIds.WORD_NEXT, action);
+        textWidget.setKeyBinding(SWT.CTRL | SWT.ARROW_RIGHT, SWT.NULL);
+
+        action = subWordActions.new SelectPreviousSubWordAction();
+        action.setActionDefinitionId(ITextEditorActionDefinitionIds.SELECT_WORD_PREVIOUS);
+        setAction(ITextEditorActionDefinitionIds.SELECT_WORD_PREVIOUS, action);
+        textWidget.setKeyBinding(SWT.CTRL | SWT.SHIFT | SWT.ARROW_LEFT, SWT.NULL);
+
+        action = subWordActions.new SelectNextSubWordAction();
+        action.setActionDefinitionId(ITextEditorActionDefinitionIds.SELECT_WORD_NEXT);
+        setAction(ITextEditorActionDefinitionIds.SELECT_WORD_NEXT, action);
+        textWidget.setKeyBinding(SWT.CTRL | SWT.SHIFT | SWT.ARROW_RIGHT, SWT.NULL);
+
+        action = subWordActions.new DeletePreviousSubWordAction();
+        action.setActionDefinitionId(ITextEditorActionDefinitionIds.DELETE_PREVIOUS_WORD);
+        setAction(ITextEditorActionDefinitionIds.DELETE_PREVIOUS_WORD, action);
+        textWidget.setKeyBinding(SWT.CTRL | SWT.BS, SWT.NULL);
+        markAsStateDependentAction(ITextEditorActionDefinitionIds.DELETE_PREVIOUS_WORD, true);
+
+        action = subWordActions.new DeleteNextSubWordAction();
+        action.setActionDefinitionId(ITextEditorActionDefinitionIds.DELETE_NEXT_WORD);
+        setAction(ITextEditorActionDefinitionIds.DELETE_NEXT_WORD, action);
+        textWidget.setKeyBinding(SWT.CTRL | SWT.DEL, SWT.NULL);
+        markAsStateDependentAction(ITextEditorActionDefinitionIds.DELETE_NEXT_WORD, true);
+
     }
 
     /**
      * @return the document that is binded to this editor (may be null)
      */
+    @Override
     public IDocument getDocument() {
         IDocumentProvider documentProvider = getDocumentProvider();
         if (documentProvider != null) {
@@ -306,11 +384,11 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
         IEditorInput editorInput = this.getEditorInput();
         if (editorInput instanceof IAdaptable) {
             IAdaptable adaptable = editorInput;
-            IFile file = (IFile) adaptable.getAdapter(IFile.class);
+            IFile file = adaptable.getAdapter(IFile.class);
             if (file != null) {
                 return file.getProject();
             }
-            IResource resource = (IResource) adaptable.getAdapter(IResource.class);
+            IResource resource = adaptable.getAdapter(IResource.class);
             if (resource != null) {
                 return resource.getProject();
             }
@@ -343,7 +421,7 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
     public IFile getIFile() {
         try {
             IEditorInput editorInput = this.getEditorInput();
-            return (IFile) editorInput.getAdapter(IFile.class);
+            return editorInput.getAdapter(IFile.class);
         } catch (Exception e) {
             Log.log(e); //Shouldn't really happen, but if it does, let's not fail!
             return null;
@@ -356,7 +434,7 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
     public File getEditorFile() {
         File f = null;
         IEditorInput editorInput = this.getEditorInput();
-        IFile file = (IFile) editorInput.getAdapter(IFile.class);
+        IFile file = editorInput.getAdapter(IFile.class);
         if (file != null) {
             IPath location = file.getLocation();
             if (location != null) {
@@ -390,6 +468,7 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
     protected final List<IModelListener> modelListeners = new ArrayList<IModelListener>();
 
     /** stock listener implementation */
+    @Override
     public void addModelListener(IModelListener listener) {
         Assert.isNotNull(listener);
         if (!modelListeners.contains(listener)) {
@@ -398,6 +477,7 @@ public abstract class BaseEditor extends TextEditor implements IBaseEditor {
     }
 
     /** stock listener implementation */
+    @Override
     public void removeModelListener(IModelListener listener) {
         Assert.isNotNull(listener);
         modelListeners.remove(listener);

@@ -8,8 +8,6 @@ package org.python.pydev.parser.fastparser;
 
 import java.io.File;
 
-import junit.framework.TestCase;
-
 import org.eclipse.jface.text.Document;
 import org.python.pydev.core.IGrammarVersionProvider;
 import org.python.pydev.parser.PyParser;
@@ -24,11 +22,14 @@ import org.python.pydev.parser.visitors.NodeUtils;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.string.FastStringBuffer;
 
+import junit.framework.TestCase;
+
 public class FastDefinitionsParserTest extends TestCase {
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        FastDefinitionsParser.throwErrorOnWarnings = true;
     }
 
     @Override
@@ -122,18 +123,18 @@ public class FastDefinitionsParserTest extends TestCase {
                     break;
                 case PARSE_GENERATION_FULL_PARSE:
                     PyParser.reparseDocumentInternal(new Document(fileContents), true,
-                            IGrammarVersionProvider.LATEST_GRAMMAR_VERSION);
+                            IGrammarVersionProvider.LATEST_GRAMMAR_PY2_VERSION);
                     break;
                 case PARSE_GENERATION_SYNTAX_PARSE:
                     PyParser.reparseDocumentInternal(new Document(fileContents), false,
-                            IGrammarVersionProvider.LATEST_GRAMMAR_VERSION);
+                            IGrammarVersionProvider.LATEST_GRAMMAR_PY2_VERSION);
                     break;
                 case PARSE_GENERATION_ONLY_LOAD:
                     //do nothing!
                     break;
             }
 
-        } catch (Exception e) {
+        } catch (Throwable e) {
             System.out.println("Error parsing:" + f);
             e.printStackTrace();
         }
@@ -161,14 +162,31 @@ public class FastDefinitionsParserTest extends TestCase {
                 +
                 "");
         assertEquals(1, m.body.length);
+        assertEquals(1, m.beginLine);
+
         ClassDef classDef = ((ClassDef) m.body[0]);
         assertEquals("Bar", ((NameTok) classDef.name).id);
+        assertEquals(1, classDef.beginLine);
+        assertEquals(1, classDef.beginColumn);
+
+        assertEquals(1, classDef.name.beginLine);
+        assertEquals(7, classDef.name.beginColumn);
+
         assertEquals(1, classDef.body.length);
+
         Assign assign = (Assign) classDef.body[0];
         assertEquals(2, assign.targets.length);
+        assertEquals(2, assign.beginLine);
+        assertEquals(5, assign.beginColumn);
+
         Name name = (Name) assign.targets[0];
+        assertEquals(2, name.beginLine);
+        assertEquals(5, name.beginColumn);
         assertEquals("ATTRIBUTE1", name.id);
+
         name = (Name) assign.targets[1];
+        assertEquals(2, name.beginLine);
+        assertEquals(18, name.beginColumn);
         assertEquals("ATTRIBUTE2", name.id);
     }
 
@@ -180,7 +198,7 @@ public class FastDefinitionsParserTest extends TestCase {
         assertEquals(1, m.body.length);
         ClassDef classDef = ((ClassDef) m.body[0]);
         assertEquals("Bar", ((NameTok) classDef.name).id);
-        assertEquals(0, classDef.body.length); //no attribute
+        assertNull(classDef.body); //no attribute
     }
 
     public void testAttributes3() {
@@ -202,8 +220,7 @@ public class FastDefinitionsParserTest extends TestCase {
 
     public void testAttributes4() {
         Module m = (Module) FastDefinitionsParser.parse("class Bar:\n" +
-                "    def m1(self):\n"
-                +
+                "    def m1(self):\n" +
                 "        self.ATTRIBUTE = 10\n" + //local scope: get it because of self.
                 "\n" +
                 "");
@@ -213,14 +230,28 @@ public class FastDefinitionsParserTest extends TestCase {
         assertEquals(1, classDef.body.length); //method
 
         FunctionDef funcDef = (FunctionDef) classDef.body[0];
-        assertEquals("m1", ((NameTok) funcDef.name).id);
+        assertEquals(2, funcDef.beginLine);
+        assertEquals(5, funcDef.beginColumn);
 
-        assertNull(funcDef.body[1]);
+        NameTok nameTok = (NameTok) funcDef.name;
+        assertEquals("m1", nameTok.id);
+        assertEquals(2, nameTok.beginLine);
+        assertEquals(9, nameTok.beginColumn);
+
+        assertEquals(1, funcDef.body.length);
         Assign assign = (Assign) funcDef.body[0];
         assertEquals(1, assign.targets.length);
+        assertEquals(3, assign.beginLine);
+        assertEquals(9, assign.beginColumn);
+
         Attribute attribute = (Attribute) assign.targets[0];
-        NameTok attr = (NameTok) attribute.attr;
-        assertEquals("ATTRIBUTE", attr.id.toString());
+        assertEquals(3, attribute.beginLine);
+        assertEquals(9, attribute.beginColumn);
+
+        NameTok name = (NameTok) attribute.attr;
+        assertEquals("ATTRIBUTE", name.id.toString());
+        assertEquals(3, name.beginLine);
+        assertEquals(9, name.beginColumn);
     }
 
     public void testAttributes5() {
@@ -247,7 +278,7 @@ public class FastDefinitionsParserTest extends TestCase {
             NameTok attr = (NameTok) attribute.attr;
             assertEquals("ATTRIBUTE" + i, attr.id.toString());
         }
-        assertNull(funcDef.body[3]);
+        assertEquals(3, funcDef.body.length);
     }
 
     public void testAttributes6() {
@@ -275,7 +306,7 @@ public class FastDefinitionsParserTest extends TestCase {
         assertEquals(1, m.body.length);
         ClassDef classDef = ((ClassDef) m.body[0]);
         assertEquals("Bar", ((NameTok) classDef.name).id);
-        assertEquals(0, classDef.body.length); //method
+        assertNull(classDef.body); //method
 
     }
 
@@ -302,6 +333,15 @@ public class FastDefinitionsParserTest extends TestCase {
 
     public void testGlobalAttributes() {
         Module m = (Module) FastDefinitionsParser.parse("GLOBAL_ATTRIBUTE = 10\n" +
+                "\n" +
+                "");
+        assertEquals(1, m.body.length);
+        Assign assign = ((Assign) m.body[0]);
+        assertEquals("GLOBAL_ATTRIBUTE", ((Name) assign.targets[0]).id);
+    }
+
+    public void testTypedGlobalAttributes() {
+        Module m = (Module) FastDefinitionsParser.parse("GLOBAL_ATTRIBUTE: int = 10\n" +
                 "\n" +
                 "");
         assertEquals(1, m.body.length);
@@ -1170,14 +1210,12 @@ public class FastDefinitionsParserTest extends TestCase {
         Module m = (Module) FastDefinitionsParser.parse("class Bar(object):\n" +
                 "    def ra(\n" +
                 "\n" +
-                "\n"
-                +
+                "\n" +
                 "    )\n" +
                 "    a = (\n" +
                 "        a = 10\n" +
                 "    )\n" +
-                "    def m2(self):pass\n"
-                +
+                "    def m2(self):pass\n" +
                 "        #def m3(self):pass\n" +
                 "        'string'\n");
         assertEquals(1, m.body.length);
@@ -1303,7 +1341,7 @@ public class FastDefinitionsParserTest extends TestCase {
 
     public void testDefinitionsParser10() {
         Module m = (Module) FastDefinitionsParser.parse("" //empty
-                );
+        );
         assertEquals(0, m.body.length);
     }
 
@@ -1451,6 +1489,154 @@ public class FastDefinitionsParserTest extends TestCase {
                 "" //empty
         );
         assertEquals(0, m.body.length);
+    }
+
+    public void testDefinitionsParser20() {
+        Module m = (Module) FastDefinitionsParser.parse(
+                "def methodempty():\n" +
+                        "    pass\n" +
+                        "\n" +
+                        "if a:\n" +
+                        "    def method():\n" +
+                        "        a = 10\n" +
+                        "else:\n" +
+                        "    def method2():\n" +
+                        "        bar = 10\n" +
+                        "");
+        assertEquals(3, m.body.length);
+        FunctionDef d = (FunctionDef) m.body[1];
+        assertEquals("method", NodeUtils.getRepresentationString(d.name));
+        assertNull(d.body);
+
+        d = (FunctionDef) m.body[2];
+        assertEquals("method2", NodeUtils.getRepresentationString(d.name));
+        assertNull(d.body);
+
+    }
+
+    public void testDefinitionsParser21() {
+        Module m = (Module) FastDefinitionsParser.parse(
+                "class F:\n" +
+                        "    def methodempty(self):\n" +
+                        "        pass\n" +
+                        "    if a:\n" +
+                        "        def method(self):\n" +
+                        "            a = 10\n" +
+                        "    else:\n" +
+                        "        def method2(self):\n" +
+                        "            bar = 10\n" +
+                        "");
+        assertEquals(1, m.body.length);
+        ClassDef c = (ClassDef) m.body[0];
+        assertEquals(3, c.body.length);
+        FunctionDef d = (FunctionDef) c.body[1];
+        assertEquals("method", NodeUtils.getRepresentationString(d.name));
+        assertNull(d.body);
+
+        d = (FunctionDef) c.body[2];
+        assertEquals("method2", NodeUtils.getRepresentationString(d.name));
+        assertNull(d.body);
+
+    }
+
+    public void testAsyncDefinitions() {
+        Module m = (Module) FastDefinitionsParser.parse("async \t def \t method():\n    pass");
+        assertEquals(1, m.body.length);
+        FunctionDef d = (FunctionDef) m.body[0];
+        assertEquals("method", NodeUtils.getRepresentationString(d.name));
+    }
+
+    public void testAssign() throws Exception {
+        Module m = (Module) FastDefinitionsParser.parse(""
+                + "def method(f): # 10 bytes\n" +
+                "    if expon == himant == lomant == 0:\n" +
+                "        f = 0.0\n" +
+                "    return sign * f\n" +
+                "");
+        assertEquals(1, m.body.length);
+        FunctionDef d = (FunctionDef) m.body[0];
+        assertEquals("method", NodeUtils.getRepresentationString(d.name));
+        assertNull(d.body);
+    }
+
+    public void testAssign2() {
+        Module m = (Module) FastDefinitionsParser.parse(""
+                + "\ndef test_simple(): \n" +
+                "    cell = \"foo\"\n" +
+                "\n" +
+                "def test_function():\n" +
+                "    cell = \"foo(a=5, b='10')\"\n" +
+                "    expected = 'foo'\n" +
+                "\n" +
+                "def test_multiline():\n" +
+                "    cell = '\\n'.join([\n" +
+                "        'a = 5',\n" +
+                "        'b = hello(\"string\", there)'\n" +
+                "    ])\n" +
+                "");
+        assertEquals(3, m.body.length);
+        assertEquals("test_simple", NodeUtils.getRepresentationString(((FunctionDef) m.body[0]).name));
+        assertEquals("test_function", NodeUtils.getRepresentationString(((FunctionDef) m.body[1]).name));
+        assertEquals("test_multiline", NodeUtils.getRepresentationString(((FunctionDef) m.body[2]).name));
+    }
+
+    public void testAssign3() {
+        Module m = (Module) FastDefinitionsParser.parse(""
+                + "\ndef test_simple() : cell = \"foo\"\n" +
+                "\n" +
+                "def test_function():\n" +
+                "    cell = \"foo(a=5, b='10')\"\n" +
+                "    expected = 'foo'\n" +
+                "\n" +
+                "def test_multiline():\n" +
+                "    cell = '\\n'.join([\n" +
+                "        'a = 5',\n" +
+                "        'b = hello(\"string\", there)'\n" +
+                "    ])\n" +
+                "");
+        assertEquals(3, m.body.length);
+        assertEquals("test_simple", NodeUtils.getRepresentationString(((FunctionDef) m.body[0]).name));
+        assertEquals("test_function", NodeUtils.getRepresentationString(((FunctionDef) m.body[1]).name));
+        assertEquals("test_multiline", NodeUtils.getRepresentationString(((FunctionDef) m.body[2]).name));
+    }
+
+    public void testAssign4() {
+        Module m = (Module) FastDefinitionsParser.parse(""
+                + "\ndef test_simple() -> call('something') :\r\n"
+                + "    cell = \"foo\"\n" +
+                "\n" +
+                "def test_function():\n" +
+                "    cell = \"foo(a=5, b='10')\"\n" +
+                "    expected = 'foo'\n" +
+                "\n" +
+                "def test_multiline():\n" +
+                "    cell = '\\n'.join([\n" +
+                "        'a = 5',\n" +
+                "        'b = hello(\"string\", there)'\n" +
+                "    ])\n" +
+                "");
+        assertEquals(3, m.body.length);
+        assertEquals("test_simple", NodeUtils.getRepresentationString(((FunctionDef) m.body[0]).name));
+        assertEquals("test_function", NodeUtils.getRepresentationString(((FunctionDef) m.body[1]).name));
+        assertEquals("test_multiline", NodeUtils.getRepresentationString(((FunctionDef) m.body[2]).name));
+    }
+
+    /**
+     * A tab must be counted as 8 spaces!
+     */
+    public void testMixSpacesAndTabs() {
+        Module m = (Module) FastDefinitionsParser.parse("" +
+                "def method():\n" +
+                "\n" +
+                "\tfor remainder in match_1.remainders:\n" +
+                "\t    a_2 = remainder.a\n" +
+                "            c_2 = remainder.c\n" +
+                "            match = a\n" +
+                "            if not match.isError():\n" +
+                "                return Match()\n" +
+                "        return Error(\"\")");
+        assertEquals(1, m.body.length);
+        assertEquals("method", NodeUtils.getRepresentationString(((FunctionDef) m.body[0]).name));
     }
 
 }

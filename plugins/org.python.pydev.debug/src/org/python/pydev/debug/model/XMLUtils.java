@@ -15,8 +15,14 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -32,8 +38,13 @@ import org.python.pydev.debug.core.PydevDebugPlugin;
 import org.python.pydev.debug.newconsole.EvaluateDebugConsoleExpression;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXNotRecognizedException;
+import org.xml.sax.SAXNotSupportedException;
 import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -44,9 +55,19 @@ import org.xml.sax.helpers.DefaultHandler;
  */
 public class XMLUtils {
 
-    static SAXParserFactory parserFactory = SAXParserFactory.newInstance();
+    public static final SAXParserFactory parserFactory = SAXParserFactory.newInstance();
+    static {
+        try {
+            parserFactory.setFeature("http://xml.org/sax/features/namespaces", false);
+            parserFactory.setFeature("http://xml.org/sax/features/validation", false);
+            parserFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
+            parserFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        } catch (SAXNotRecognizedException | SAXNotSupportedException | ParserConfigurationException e) {
+            Log.log(e);
+        }
+    }
 
-    static SAXParser getSAXParser() throws CoreException {
+    public static SAXParser getSAXParser() throws CoreException {
         SAXParser parser = null;
         try {
             synchronized (parserFactory) {
@@ -71,6 +92,18 @@ public class XMLUtils {
         return null;
     }
 
+    private static String decodeIgnoreError(String value) {
+        try {
+            if (value != null) {
+                // this may fail beyond the scope of UTF-8 not found (= serious problem); for example, value is invalid.
+                return URLDecoder.decode(value, "UTF-8");
+            }
+        } catch (Exception e) {
+            Log.log(e);
+        }
+        return value;
+    }
+
     /**
      * SAX parser for thread info
      * <xml><thread name="name" id="id"/><xml>
@@ -85,9 +118,10 @@ public class XMLUtils {
         }
 
         @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
             if (qName.equals("thread")) {
-                String name = attributes.getValue("name");
+                String name = unescape(attributes.getValue("name"));
                 String id = attributes.getValue("id");
                 name = decode(name);
                 threads.add(new PyThread(target, name, id));
@@ -120,30 +154,75 @@ public class XMLUtils {
      */
     static PyVariable createVariable(AbstractDebugTarget target, IVariableLocator locator, Attributes attributes) {
         PyVariable var;
-        String name = attributes.getValue("name");
+        String name = decodeIgnoreError(attributes.getValue("name"));
         String type = attributes.getValue("type");
-        String value = attributes.getValue("value");
-        try {
-            if (value != null) {
-                value = URLDecoder.decode(value, "UTF-8");
-            }
-        } catch (Exception e) {
-            Log.log(e);
-        }
-        try {
-            if (name != null) {
-                name = URLDecoder.decode(name, "UTF-8");
-            }
-        } catch (Exception e) {
-            Log.log(e);
-        }
+        String qualifier = decodeIgnoreError(attributes.getValue("qualifier"));
+        String value = decodeIgnoreError(attributes.getValue("value"));
         String isContainer = attributes.getValue("isContainer");
+        String scope = attributes.getValue("scope");
         if ("True".equals(isContainer)) {
-            var = new PyVariableCollection(target, name, type, value, locator);
+            var = new PyVariableCollection(target, name, type, value, locator, scope);
         } else {
-            var = new PyVariable(target, name, type, value, locator);
+            var = new PyVariable(target, name, type, value, locator, scope);
         }
+        var.setQualifier(qualifier);
+        String isRetVal = attributes.getValue("isRetVal");
+        if ("True".equals(isRetVal)) {
+            var.setIsReturnValue(true);
+        }
+        String isIPythonHidden = attributes.getValue("isIPythonHidden");
+        if ("True".equals(isIPythonHidden)) {
+            var.setIsIPythonHidden(true);
+        }
+        String isErrorOnEval = attributes.getValue("isErrorOnEval");
+        if ("True".equals(isErrorOnEval)) {
+            var.setIsErrorOnEval(true);
+        }
+
         return var;
+    }
+
+    private static final Map<String, String> ESCAPE = new HashMap<String, String>();
+    static {
+        ESCAPE.put("&amp;", "&");
+        ESCAPE.put("&apos;", "'");
+        ESCAPE.put("&quot;", "\"");
+        ESCAPE.put("&lt;", "<");
+        ESCAPE.put("&gt;", ">");
+    }
+
+    private static String unescape(final String text) {
+        // Note: doesn't escape everything, just a few common constructs.
+        if (text == null) {
+            return "";
+        }
+        FastStringBuffer result = new FastStringBuffer(text.length());
+        final int textLen = text.length();
+
+        int i = 0;
+        while (i < textLen) {
+            char c = text.charAt(i);
+            if (c != '&') {
+                result.append(c);
+                i++;
+            } else {
+                Set<Entry<String, String>> entrySet = ESCAPE.entrySet();
+                boolean found = false;
+                for (Entry<String, String> entry : entrySet) {
+                    if (text.startsWith(entry.getKey(), i)) {
+                        result.append(entry.getValue());
+                        i += entry.getKey().length();
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    result.append(c);
+                    i++;
+                }
+            }
+        }
+        return result.toString();
     }
 
     /**
@@ -172,12 +251,14 @@ public class XMLUtils {
         }
 
         private void startFrame(Attributes attributes) {
-            String name = attributes.getValue("name");
+            String name = unescape(attributes.getValue("name"));
             String id = attributes.getValue("id");
             String file = attributes.getValue("file");
+
             try {
                 if (file != null) {
                     file = URLDecoder.decode(file, "UTF-8");
+                    file = unescape(file);
                     File tempFile = new File(file);
                     if (tempFile.exists()) {
                         file = FileUtils.getFileAbsolutePath(tempFile);
@@ -189,7 +270,8 @@ public class XMLUtils {
 
             String line = attributes.getValue("line");
             IPath filePath = new Path(file);
-            // Try to recycle old stack objects
+            // Try to recycle old stack objects (this is needed so that in a step over we
+            // reuse the same frame and keep the expanded state of the frame).
             currentFrame = thread.findStackFrameByID(id);
             if (currentFrame == null) {
                 currentFrame = new PyStackFrame(thread, id, name, filePath, Integer.parseInt(line), target);
@@ -197,6 +279,8 @@ public class XMLUtils {
                 currentFrame.setName(name);
                 currentFrame.setPath(filePath);
                 currentFrame.setLine(Integer.parseInt(line));
+                // If we found it, reuse it and make sure that new variables will be asked when requested.
+                currentFrame.forceGetNewVariables();
             }
             stack.add(currentFrame);
         }
@@ -207,16 +291,17 @@ public class XMLUtils {
          * Assign local variables to stack frame
          */
         @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
             /*
              <xml>
                <thread id="id"/>
                     <frame id="id" name="functionName " file="file" line="line">
-
+            
                         @deprecated: variables are no longer returned in this request (they are
                         gotten later in asynchronously to speed up the debugger).
                         <var scope="local" name="self" type="ObjectType" value="<DeepThread>"/>
-
+            
                     </frame>*
              */
             if (qName.equals("thread")) {
@@ -253,7 +338,7 @@ public class XMLUtils {
      * @return an array of [thread_id, stopReason, IStackFrame[]]
      */
     public static StoppedStack XMLToStack(AbstractDebugTarget target, String payload) throws CoreException {
-        IStackFrame[] stack;
+        IStackFrame[] stack = new IStackFrame[0];
         StoppedStack retVal;
         try {
             SAXParser parser = getSAXParser();
@@ -343,7 +428,8 @@ public class XMLUtils {
         }
 
         @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
             // <var name="self" type="ObjectType" value="<DeepThread>"/>
             // create a local variable, and add it to locals
             if (qName.equals("var")) {
@@ -394,7 +480,8 @@ public class XMLUtils {
         }
 
         @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
             // <var name="self" type="ObjectType" value="<DeepThread>"/>
             // create a local variable, and add it to locals
             if (qName.equals("for")) {
@@ -482,7 +569,8 @@ public class XMLUtils {
         }
 
         @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
             // <comp p0="%s" p1="%s" p2="%s" p3="%s"/>
             if (qName.equals("comp")) {
 
@@ -504,9 +592,11 @@ public class XMLUtils {
         } catch (CoreException e) {
             throw e;
         } catch (SAXException e) {
-            throw new CoreException(PydevDebugPlugin.makeStatus(IStatus.ERROR, "Unexpected XML error", e));
+            throw new CoreException(
+                    PydevDebugPlugin.makeStatus(IStatus.ERROR, "Unexpected XML error. Payload:\n" + payload, e));
         } catch (IOException e) {
-            throw new CoreException(PydevDebugPlugin.makeStatus(IStatus.ERROR, "Unexpected XML error", e));
+            throw new CoreException(
+                    PydevDebugPlugin.makeStatus(IStatus.ERROR, "Unexpected XML error. Payload:\n" + payload, e));
         }
 
     }
@@ -687,7 +777,7 @@ public class XMLUtils {
         try {
             SAXParser parser = getSAXParser();
             ExceptionStackTraceXMLInfo info = new ExceptionStackTraceXMLInfo(target);
-            parser.parse(new ByteArrayInputStream(payload.getBytes("utf-8")), info);
+            parser.parse(new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)), info);
             exceptionStackTraceList = info.exceptionStackTraceList;
         } catch (SAXException e) {
             throw new CoreException(PydevDebugPlugin.makeStatus(IStatus.ERROR, "Unexpected XML error", e));
@@ -695,5 +785,30 @@ public class XMLUtils {
             throw new CoreException(PydevDebugPlugin.makeStatus(IStatus.ERROR, "Unexpected XML error", e));
         }
         return exceptionStackTraceList;
+    }
+
+    public static Element createBinaryElement(Document document, String elementName, String contents) {
+        Element element = document.createElement(elementName);
+        if (StringUtils.isValidTextString(contents)) {
+            element.appendChild(document.createCDATASection(contents));
+        } else {
+            element.setAttribute("encoding", "base64");
+            element.appendChild(document.createCDATASection(
+                    Base64.getEncoder()
+                            .encodeToString(contents.getBytes(StandardCharsets.ISO_8859_1))));
+
+        }
+        return element;
+    }
+
+    public static String decodeFromEncoding(String captured, String encoding) {
+        if (captured == null) {
+            return "";
+        }
+        if ("base64".equals(encoding)) {
+            return new String(Base64.getDecoder().decode(captured.getBytes(StandardCharsets.ISO_8859_1)),
+                    StandardCharsets.ISO_8859_1);
+        }
+        return captured;
     }
 }

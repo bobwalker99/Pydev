@@ -13,6 +13,10 @@ package org.python.pydev.parser.jython;
 
 public final class Token {
 
+    public Token() {
+
+    }
+
     /**
      * An integer that describes the kind of this token.  This numbering
      * system is determined by JavaCCParser, and a table of these numbers is
@@ -67,6 +71,7 @@ public final class Token {
     /**
      * Returns the image.
      */
+    @Override
     public final String toString() {
         return image;
     }

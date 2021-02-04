@@ -45,11 +45,12 @@ import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
@@ -59,27 +60,36 @@ import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.swt.widgets.Widget;
+import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.dialogs.ListDialog;
+import org.eclipse.ui.dialogs.SelectionDialog;
 import org.python.copiedfromeclipsesrc.PythonListEditor;
+import org.python.pydev.ast.interpreter_managers.IInterpreterProviderFactory;
+import org.python.pydev.ast.interpreter_managers.InterpreterInfo;
 import org.python.pydev.core.IInterpreterInfo;
 import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.IInterpreterManagerListener;
 import org.python.pydev.core.PropertiesHelper;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.jython.IPythonInterpreter;
+import org.python.pydev.core.preferences.FileTypesPreferences;
 import org.python.pydev.jython.JythonPlugin;
-import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.shared_core.callbacks.ICallback;
+import org.python.pydev.shared_core.image.IImageCache;
+import org.python.pydev.shared_core.image.IImageHandle;
+import org.python.pydev.shared_core.image.UIConstants;
+import org.python.pydev.shared_core.jython.IPythonInterpreter;
+import org.python.pydev.shared_core.progress.CancelException;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.shared_ui.ImageCache;
-import org.python.pydev.shared_ui.UIConstants;
+import org.python.pydev.shared_ui.SharedUiPlugin;
 import org.python.pydev.shared_ui.utils.AsynchronousProgressMonitorDialog;
 import org.python.pydev.shared_ui.utils.RunInUiThread;
 import org.python.pydev.tree.EnabledTreeDragReorder;
 import org.python.pydev.ui.TabVariables;
 import org.python.pydev.ui.dialogs.InterpreterInputDialog;
 import org.python.pydev.ui.dialogs.PyDialogHelpers;
-import org.python.pydev.ui.filetypes.FileTypesPreferencesPage;
 
 /**
  * Field editor for a list of python interpreter with executable verifier.
@@ -112,9 +122,9 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
     /**
      * Images
      */
-    private Image imageSystemLibRoot;
-    private Image imageSystemLib;
-    private Image environmentImage;
+    private IImageHandle imageSystemLibRoot;
+    private IImageHandle imageSystemLib;
+    private IImageHandle environmentImage;
 
     private Composite boxSystem;
 
@@ -128,14 +138,16 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
 
     private Map<String, IInterpreterInfo> nameToInfo = new HashMap<String, IInterpreterInfo>();
 
+    private PackageTab packageTab = new PackageTab(this);
+
     public Map<String, IInterpreterInfo> getNameToInfo() {
         return nameToInfo;
     }
 
-    private Set<String> exeOrJarOfInterpretersToRestore = new HashSet<String>();
-    private Set<String> exeOrJarOfInterpretersWithBuiltinsChanged = new HashSet<String>();
-    private Set<String> exeOrJarOfInterpretersWithPredefinedChanged = new HashSet<String>();
-    private Set<String> exeOrJarOfInterpretersWithStringSubstitutionChanged = new HashSet<String>();
+    private final Set<String> exeOrJarOfInterpretersToRestore = new HashSet<String>();
+    private final Set<String> exeOrJarOfInterpretersWithBuiltinsChanged = new HashSet<String>();
+    private final Set<String> exeOrJarOfInterpretersWithPredefinedChanged = new HashSet<String>();
+    private final Set<String> exeOrJarOfInterpretersWithStringSubstitutionChanged = new HashSet<String>();
 
     private void clearInfos() {
         nameToInfo.clear();
@@ -207,13 +219,18 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
         }
 
         if (USE_ICONS) {
-            ImageCache imageCache = PydevPlugin.getImageCache();
+            IImageCache imageCache = SharedUiPlugin.getImageCache();
             imageSystemLibRoot = imageCache.get(UIConstants.LIB_SYSTEM_ROOT);
             imageSystemLib = imageCache.get(UIConstants.LIB_SYSTEM);
             environmentImage = imageCache.get(UIConstants.ENVIRONMENT_ICON);
         }
         createControl(parent);
         updateTree();
+    }
+
+    @Override
+    protected IInterpreterManager getInterpreterManager() {
+        return interpreterManager;
     }
 
     /**
@@ -225,10 +242,12 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
         treeWithInterpreters = getListControl(parent);
         treeWithInterpreters.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 updateTree();
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
                 updateTree();
             }
@@ -237,9 +256,11 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
 
         treeWithInterpreters.addKeyListener(new KeyListener() {
 
+            @Override
             public void keyReleased(KeyEvent e) {
             }
 
+            @Override
             public void keyPressed(KeyEvent e) {
                 if (e.keyCode == SWT.F2) {
                     renameSelection();
@@ -249,12 +270,15 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
 
         treeWithInterpreters.addMouseListener(new MouseListener() {
 
+            @Override
             public void mouseUp(MouseEvent e) {
             }
 
+            @Override
             public void mouseDown(MouseEvent e) {
             }
 
+            @Override
             public void mouseDoubleClick(MouseEvent e) {
                 renameSelection();
             }
@@ -269,6 +293,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
             final String initialName = getNameFromTreeItem(curr);
             InputDialog d = new InputDialog(this.getShell(), "New name",
                     "Please specify the new name of the interpreter.", initialName, new IInputValidator() {
+                        @Override
                         public String isValid(String newText) {
                             if (newText == null || newText.trim().equals("")) {
                                 return "Please specify a non-empty name.";
@@ -306,11 +331,12 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
             treeWithLibs = new Tree(parent, SWT.BORDER | SWT.MULTI);
             treeWithLibs.setFont(parent.getFont());
             treeWithLibs.addDisposeListener(new DisposeListener() {
+                @Override
                 public void widgetDisposed(DisposeEvent event) {
                     treeWithLibs = null;
                 }
             });
-            EnabledTreeDragReorder.enableDrag(treeWithLibs, false, new ICallback<Object, Object>() {
+            EnabledTreeDragReorder.enableDrag(treeWithLibs, false, false, new ICallback<Object, Object>() {
 
                 @Override
                 public Object call(Object arg) {
@@ -362,6 +388,8 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
 
     private AbstractListWithNewRemoveControl predefinedCompletions;
 
+    private String defaultProjectLocation;
+
     /**
      * @see org.eclipse.jface.preference.ListEditor#doFillIntoGrid(org.eclipse.swt.widgets.Composite, int)
      */
@@ -377,6 +405,14 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
         gd.grabExcessVerticalSpace = true;
         gd.horizontalSpan = numColumns;
         tabFolder.setLayoutData(gd);
+
+        try {
+            if (this.getShowPackageTab()) {
+                packageTab.createPackageControlTab(tabFolder, exeOrJarOfInterpretersToRestore, interpreterManager);
+            }
+        } catch (Exception e1) {
+            Log.log(e1); // Not really expected, just new code, so, let's protect until it matures.
+        }
 
         createTreeLibsControlTab();
 
@@ -404,6 +440,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
             protected String getInput() {
                 IInputValidator validator = new IInputValidator() {
 
+                    @Override
                     public String isValid(String newText) {
                         for (char c : newText.toCharArray()) {
                             if (!Character.isJavaIdentifierPart(c) && c != ' ' && c != ',' && c != '.') {
@@ -518,6 +555,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
 
                         IInputValidator validator = new IInputValidator() {
 
+                            @Override
                             public String isValid(String newText) {
                                 if (newText.length() == 0) {
                                     return "Number not provided.";
@@ -536,7 +574,8 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
                                 "Please specify the number of tokens to consider a module from the .api file\n\n"
                                         + "i.e.: if there's a PyQt4.QtCore.QObject and PyQt4.QtCore is a module and QtObject "
                                         + "is the first class, the number of tokens to consider a module would be 2 (one for "
-                                        + "PyQt4 and another for QtCore).", "", validator);
+                                        + "PyQt4 and another for QtCore).",
+                                "", validator);
 
                         int retCode = d.open();
                         final ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -548,6 +587,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
                             try {
                                 IRunnableWithProgress operation = new IRunnableWithProgress() {
 
+                                    @Override
                                     public void run(final IProgressMonitor monitor) throws InvocationTargetException,
                                             InterruptedException {
                                         monitor.beginTask("Restoring PYTHONPATH", IProgressMonitor.UNKNOWN);
@@ -602,6 +642,8 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
 
     }
 
+    protected abstract boolean getShowPackageTab();
+
     /**
      * Creates tab to show the string substitution variables.
      */
@@ -617,7 +659,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
         Composite parent;
         TabItem tabItem = new TabItem(tabFolder, SWT.None);
         tabItem.setText("Environment");
-        tabItem.setImage(environmentImage);
+        tabItem.setImage(ImageCache.asImage(environmentImage));
 
         Composite composite = new Composite(tabFolder, SWT.None);
         parent = composite;
@@ -651,7 +693,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
         GridData gd;
         TabItem tabItem = new TabItem(tabFolder, SWT.None);
         tabItem.setText("Libraries");
-        tabItem.setImage(imageSystemLibRoot);
+        tabItem.setImage(ImageCache.asImage(imageSystemLibRoot));
 
         Composite composite = new Composite(tabFolder, SWT.None);
         parent = composite;
@@ -707,6 +749,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
             }
             removeBtSystemFolder = createBt(boxSystem, "ListEditor.remove", getSelectionListenerSystem());//$NON-NLS-1$
             boxSystem.addDisposeListener(new DisposeListener() {
+                @Override
                 public void widgetDisposed(DisposeEvent event) {
                     addBtSystemJar = null;
                     addBtSystemFolder = null;
@@ -759,12 +802,12 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
                             switch (AbstractInterpreterEditor.this.interpreterManager.getInterpreterType()) {
 
                                 case IInterpreterManager.INTERPRETER_TYPE_JYTHON:
-                                    dialog.setFilterExtensions(FileTypesPreferencesPage
+                                    dialog.setFilterExtensions(FileTypesPreferences
                                             .getWildcardJythonValidZipFiles());
                                     break;
 
                                 default:
-                                    dialog.setFilterExtensions(FileTypesPreferencesPage
+                                    dialog.setFilterExtensions(FileTypesPreferences
                                             .getWildcardPythonValidZipFiles());
                             }
 
@@ -809,17 +852,29 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
      * @param listenerToAdd
      * @return Button
      */
-    /*default*/Button createBt(Composite parent, String key, SelectionListener listenerToAdd) {
+    /*default*/public static Button createBt(Composite parent, String key, SelectionListener listenerToAdd) {
         Button button = new Button(parent, SWT.PUSH);
         button.setText(JFaceResources.getString(key));
         button.setFont(parent.getFont());
         GridData data = new GridData(GridData.FILL_HORIZONTAL);
         //        data.heightHint = convertVerticalDLUsToPixels(button, IDialogConstants.BUTTON_HEIGHT);
-        int widthHint = convertHorizontalDLUsToPixels(button, IDialogConstants.BUTTON_WIDTH);
+        int widthHint = convertHorizontalDLUsToPixelsStatic(button, IDialogConstants.BUTTON_WIDTH);
         data.widthHint = Math.max(widthHint, button.computeSize(SWT.DEFAULT, SWT.DEFAULT, true).x);
         button.setLayoutData(data);
         button.addSelectionListener(listenerToAdd);
         return button;
+    }
+
+    private static int convertHorizontalDLUsToPixelsStatic(Control control, int dlus) {
+        // Copy of super.convertHorizontalDLUsToPixels (but made static).
+        GC gc = new GC(control);
+        gc.setFont(control.getFont());
+        int averageWidth = gc.getFontMetrics().getAverageCharWidth();
+        gc.dispose();
+
+        double horizontalDialogUnitSize = averageWidth * 0.25;
+
+        return (int) Math.round(dlus * horizontalDialogUnitSize);
     }
 
     /**
@@ -879,7 +934,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
         if (name != null) {
             TreeItem item = new TreeItem(treeWithLibs, SWT.NONE);
             item.setText("System libs");
-            item.setImage(imageSystemLibRoot);
+            item.setImage(ImageCache.asImage(imageSystemLibRoot));
 
             InterpreterInfo info = (InterpreterInfo) this.nameToInfo.get(name);
             if (info == null) {
@@ -888,7 +943,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
                 for (Iterator<String> iter = info.libs.iterator(); iter.hasNext();) {
                     TreeItem subItem = new TreeItem(item, SWT.NONE);
                     subItem.setText(iter.next());
-                    subItem.setImage(imageSystemLib);
+                    subItem.setImage(ImageCache.asImage(imageSystemLib));
                     subItem.setData(EnabledTreeDragReorder.DRAG_IMAGE_DATA_KEY, UIConstants.LIB_SYSTEM);
                 }
                 item.setExpanded(true);
@@ -896,6 +951,9 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
                 this.forcedBuiltins.update(info);
                 this.predefinedCompletions.update(info);
                 workingCopy.setInfo(info);
+            }
+            if (this.getShowPackageTab()) {
+                packageTab.setInfo(info);
             }
 
             environmentTab.initializeFrom(workingCopy);
@@ -920,30 +978,46 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
      */
     public abstract IInterpreterProviderFactory.InterpreterType getInterpreterType();
 
+    public void setDefaultProjectLocation(String defaultProjectLocation) {
+        this.defaultProjectLocation = defaultProjectLocation;
+    }
+
     @Override
-    protected Tuple<String, String> getNewInputObject(int configType) {
+    protected NameAndExecutable getNewInputObject(int configType) {
         CharArrayWriter charWriter = new CharArrayWriter();
         PrintWriter logger = new PrintWriter(charWriter);
         try {
             ObtainInterpreterInfoOperation operation = null;
-            if (configType != InterpreterConfigHelpers.CONFIG_MANUAL) {
+            if (configType == InterpreterConfigHelpers.CONFIG_PIPENV) {
+                IInterpreterInfo[] interpreterInfos = getExesList();
+                operation = InterpreterConfigHelpers.createPipenvInterpreter(interpreterInfos, getShell(), logger,
+                        nameToInfo,
+                        defaultProjectLocation, interpreterManager);
+            } else if (configType == InterpreterConfigHelpers.CONFIG_AUTO
+                    || configType == InterpreterConfigHelpers.CONFIG_ADV_AUTO) {
                 //Auto-config
                 AutoConfigMaker a = new AutoConfigMaker(getInterpreterType(),
                         configType == InterpreterConfigHelpers.CONFIG_ADV_AUTO, logger,
                         nameToInfo);
                 operation = a.autoConfigSearch();
+            } else if (configType == InterpreterConfigHelpers.CONFIG_CONDA) {
+                NameAndExecutable interpreterNameAndExecutable = PyDialogHelpers
+                        .openCondaInterpreterSelection(getShell());
+                if (interpreterNameAndExecutable != null && interpreterNameAndExecutable.o2 != null) {
+                    operation = InterpreterConfigHelpers.tryInterpreter(
+                            interpreterNameAndExecutable, interpreterManager,
+                            false, true, logger, this.getShell());
+                }
             } else {
                 //Manual config
                 logger.println("Information about process of adding new interpreter:");
-                Tuple<String, String> interpreterNameAndExecutable = newConfig(logger);
+                NameAndExecutable interpreterNameAndExecutable = newConfig(logger);
                 if (interpreterNameAndExecutable == null) {
                     return null;
                 }
-                interpreterNameAndExecutable.o1 = InterpreterConfigHelpers.getUniqueInterpreterName(
-                        interpreterNameAndExecutable.o1, nameToInfo);
-                boolean foundError = InterpreterConfigHelpers.checkInterpreterNameAndExecutable(
-                        interpreterNameAndExecutable, logger, "Error getting info on interpreter",
-                        nameToInfo, this.getShell());
+                boolean foundError = InterpreterConfigHelpers.canAddNameAndExecutable(logger,
+                        interpreterNameAndExecutable, nameToInfo,
+                        getShell());
 
                 if (foundError) {
                     return null;
@@ -964,7 +1038,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
                 this.nameToInfo.put(newName, operation.result.makeCopy());
                 exeOrJarOfInterpretersToRestore.add(operation.result.executableOrJar);
 
-                return new Tuple<String, String>(operation.result.getName(),
+                return new NameAndExecutable(operation.result.getName(),
                         operation.result.executableOrJar);
             }
 
@@ -981,23 +1055,19 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
         return null;
     }
 
-    private Tuple<String, String> newConfig(PrintWriter logger) {
+    private NameAndExecutable newConfig(PrintWriter logger) {
         InterpreterInputDialog dialog = new InterpreterInputDialog(getShell(), "Select interpreter",
                 "Enter the name and executable of your interpreter", this);
 
         logger.println("- Opening dialog to request executable (or jar).");
+        dialog.setAutoPressBrowse(true);
         int result = dialog.open();
 
         if (result == Window.OK) {
-            return dialog.getKeyAndValueEntered();
+            Tuple<String, String> tup = dialog.getKeyAndValueEntered();
+            return new NameAndExecutable(tup.o1, tup.o2);
         }
         return null;
-
-    }
-
-    public static final class CancelException extends Exception {
-
-        private static final long serialVersionUID = 1L;
 
     }
 
@@ -1028,6 +1098,7 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
     /**
      * Called after infos are set (changed) in the interpreter manager.
      */
+    @Override
     public void afterSetInfos(IInterpreterManager manager, IInterpreterInfo[] interpreterInfos) {
         synchronized (expectedSetLock) {
             if (expectedSetInfos == 0) {
@@ -1079,4 +1150,57 @@ public abstract class AbstractInterpreterEditor extends PythonListEditor impleme
         }
     }
 
+    public void restoreInterpreterInfos(boolean editorChanged,
+            Shell shell, IInterpreterManager iInterpreterManager) {
+        final Set<String> interpreterNamesToRestore = this.getInterpreterExeOrJarToRestoreAndClear();
+        final IInterpreterInfo[] exesList = this.getExesList();
+
+        if (!editorChanged && interpreterNamesToRestore.size() == 0) {
+            IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+            SelectionDialog listDialog = AbstractInterpreterPreferencesPage.createChooseIntepreterInfoDialog(
+                    workbenchWindow, exesList,
+                    "Select interpreters to be restored", true);
+
+            int open = listDialog.open();
+            if (open != ListDialog.OK) {
+                return;
+            }
+            Object[] result = listDialog.getResult();
+            if (result == null || result.length == 0) {
+                return;
+
+            }
+            for (Object o : result) {
+                interpreterNamesToRestore.add(((IInterpreterInfo) o).getExecutableOrJar());
+            }
+
+        }
+
+        //this is the default interpreter
+        ProgressMonitorDialog monitorDialog = new AsynchronousProgressMonitorDialog(shell);
+        monitorDialog.setBlockOnOpen(false);
+
+        try {
+            IRunnableWithProgress operation = new IRunnableWithProgress() {
+
+                @Override
+                public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
+                    monitor.beginTask("Restoring PYTHONPATH", IProgressMonitor.UNKNOWN);
+                    try {
+                        pushExpectedSetInfos();
+                        //clear all but the ones that appear
+                        iInterpreterManager.setInfos(exesList, interpreterNamesToRestore, monitor);
+                    } finally {
+                        popExpectedSetInfos();
+                        monitor.done();
+                    }
+                }
+            };
+
+            monitorDialog.run(true, true, operation);
+
+        } catch (Exception e) {
+            Log.log(e);
+        }
+    }
 }

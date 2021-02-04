@@ -9,6 +9,8 @@ package com.python.pydev.analysis;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.python.pydev.ast.analysis.IAnalysisPreferences;
+
 public abstract class AbstractAnalysisPreferences implements IAnalysisPreferences {
 
     private static final Map<Integer, String> typeToIgnoreMessage = new HashMap<Integer, String>();
@@ -31,6 +33,7 @@ public abstract class AbstractAnalysisPreferences implements IAnalysisPreference
         typeToIgnoreMessage.put(TYPE_ARGUMENTS_MISATCH, MSG_TO_IGNORE_TYPE_ARGUMENTS_MISATCH);
     }
 
+    @Override
     public String getRequiredMessageToIgnore(int type) {
         return typeToIgnoreMessage.get(type);
     }

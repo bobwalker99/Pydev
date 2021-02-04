@@ -28,6 +28,8 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.wizard.IWizardPage;
+import org.python.pydev.ast.runners.UniversalRunner;
+import org.python.pydev.ast.runners.UniversalRunner.AbstractRunner;
 import org.python.pydev.core.FileUtilsFileBuffer;
 import org.python.pydev.core.ICodeCompletionASTManager;
 import org.python.pydev.core.log.Log;
@@ -38,8 +40,6 @@ import org.python.pydev.django.ui.wizards.project.DjangoSettingsPage.DjangoSetti
 import org.python.pydev.plugin.PyStructureConfigHelpers;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
-import org.python.pydev.runners.UniversalRunner;
-import org.python.pydev.runners.UniversalRunner.AbstractRunner;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.callbacks.ICallback0;
 import org.python.pydev.shared_core.io.FileUtils;
@@ -67,6 +67,7 @@ public class DjangoProjectWizard extends PythonProjectWizard {
     public DjangoProjectWizard() {
         super();
         settingsPage = createDjangoSettingsPage(new ICallback0<IWizardNewProjectNameAndLocationPage>() {
+            @Override
             public IWizardNewProjectNameAndLocationPage call() {
                 return projectPage;
             }
@@ -107,6 +108,7 @@ public class DjangoProjectWizard extends PythonProjectWizard {
 
         ICallback<Map<String, String>, IProject> getVariableSubstitutionCallback = new ICallback<Map<String, String>, IProject>() {
 
+            @Override
             public Map<String, String> call(IProject projectHandle) {
                 Map<String, String> variableSubstitution = new HashMap<String, String>();
                 String manageLocation;
@@ -183,6 +185,7 @@ public class DjangoProjectWizard extends PythonProjectWizard {
             if (output.o2.indexOf("ImportError: no module named django") != -1) {
                 RunInUiThread.async(new Runnable() {
 
+                    @Override
                     public void run() {
                         MessageDialog.openError(EditorUtils.getShell(), "Unable to create project.",
                                 "Unable to create project because the selected interpreter does not have django.");

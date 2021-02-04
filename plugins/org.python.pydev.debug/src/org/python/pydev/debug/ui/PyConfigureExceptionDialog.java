@@ -17,6 +17,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.debug.internal.ui.DebugUIPlugin;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.viewers.CheckStateChangedEvent;
 import org.eclipse.jface.viewers.CheckboxTableViewer;
 import org.eclipse.jface.viewers.ICheckStateListener;
@@ -45,7 +46,7 @@ import org.eclipse.ui.internal.WorkbenchMessages;
 import org.python.pydev.debug.model.PyExceptionBreakPointManager;
 import org.python.pydev.debug.ui.actions.PyExceptionListProvider;
 import org.python.pydev.plugin.PydevPlugin;
-import org.python.pydev.plugin.preferences.AbstractPydevPrefs;
+import org.python.pydev.plugin.preferences.PyDevEditorPreferences;
 import org.python.pydev.shared_core.string.StringMatcher;
 
 public class PyConfigureExceptionDialog extends SelectionDialog {
@@ -75,20 +76,26 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
     private final static int SIZING_SELECTION_WIDGET_WIDTH = 300;
 
     // enable/disable breaking on the caught
-    private Button uncaughtExceptionCheck;
+    private Button caughtExceptionCheck;
     private boolean handleCaughtExceptions;
 
-    private Button caughtExceptionCheck;
+    private Button uncaughtExceptionCheck;
     private boolean handleUncaughtExceptions;
+
+    private Button userUncaughtExceptionCheck;
+    private boolean handleUserUncaughtExceptions;
 
     private Button stopOnExceptionsHandledInSameContextCheck;
     private boolean stopOnExceptionsHandledInSameContext;
+
+    private Button skipCaughtExceptionsInLibrariesCheck;
+    private boolean skipCaughtExceptionsInLibraries;
 
     private Button ignoreExceptionsThrownInLinesWithIgnoreExceptionCheck;
     private boolean ignoreExceptionsThrownInLinesWithIgnoreException;
 
     private Button breakOnDjangoTemplateExceptionsCheck;
-    private boolean handleBreakOnDjangoTemplateExceptions;
+    private Button breakOnJinja2TemplateExceptionsCheck;
 
     protected static String SELECT_ALL_TITLE = WorkbenchMessages.SelectionDialog_selectLabel;
     protected static String DESELECT_ALL_TITLE = WorkbenchMessages.SelectionDialog_deselectLabel;
@@ -108,7 +115,7 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
     }
 
     /**
-     * 
+     *
      * @param composite
      *            the parent composite
      * @return the message label
@@ -128,7 +135,7 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
 
     /**
      * Add the selection and deselection buttons to the dialog.
-     * 
+     *
      * @param composite
      *            org.eclipse.swt.widgets.Composite
      */
@@ -147,7 +154,7 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
 
     /**
      * Creates a Select All button and its respective listener.
-     * 
+     *
      * @param buttonComposite
      */
     private void createSelectAll(Composite buttonComposite) {
@@ -164,7 +171,7 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
 
     /**
      * Creates a DeSelect All button and its respective listener.
-     * 
+     *
      * @param buttonComposite
      */
     private void createDeselectAll(Composite buttonComposite) {
@@ -224,6 +231,7 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
         });
 
         getCheckBoxTableViewer().addCheckStateListener(new ICheckStateListener() {
+            @Override
             public void checkStateChanged(CheckStateChangedEvent event) {
                 if (event.getChecked()) {
                     addToSelectedElements(event.getElement());
@@ -241,7 +249,7 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
 
     /**
      * @param composite
-     * 
+     *
      *            Create a new text box and a button, which allows user to add
      *            custom exception. Attach a listener to the AddException Button
      */
@@ -265,7 +273,7 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
 
     /**
      * Add the new exception in the content pane
-     * 
+     *
      */
     private void addCustomException() {
         String customException = addNewExceptionField.getText().trim();
@@ -294,13 +302,17 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
     }
 
     /**
-     * Creates options related to dealing with exceptions. 
+     * Creates options related to dealing with exceptions.
      */
     private void createDealingWithExceptionsOptions(Composite composite) {
         PyExceptionBreakPointManager instance = PyExceptionBreakPointManager.getInstance();
         uncaughtExceptionCheck = new Button(composite, SWT.CHECK);
         uncaughtExceptionCheck.setText("Suspend on uncaught exceptions");
         uncaughtExceptionCheck.setSelection(instance.getBreakOnUncaughtExceptions());
+
+        userUncaughtExceptionCheck = new Button(composite, SWT.CHECK);
+        userUncaughtExceptionCheck.setText("Suspend on user uncaught exceptions");
+        userUncaughtExceptionCheck.setSelection(instance.getBreakOnUserUncaughtExceptions());
 
         caughtExceptionCheck = new Button(composite, SWT.CHECK);
         caughtExceptionCheck.setText("Suspend on caught exceptions *");
@@ -309,6 +321,10 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
         stopOnExceptionsHandledInSameContextCheck = new Button(composite, SWT.CHECK);
         stopOnExceptionsHandledInSameContextCheck.setText("    Skip exceptions caught in same function");
         stopOnExceptionsHandledInSameContextCheck.setSelection(instance.getSkipCaughtExceptionsInSameFunction());
+
+        skipCaughtExceptionsInLibrariesCheck = new Button(composite, SWT.CHECK);
+        skipCaughtExceptionsInLibrariesCheck.setText("    Skip exceptions caught in libraries");
+        skipCaughtExceptionsInLibrariesCheck.setSelection(instance.getSkipCaughtExceptionsInLibraries());
 
         ignoreExceptionsThrownInLinesWithIgnoreExceptionCheck = new Button(composite, SWT.CHECK);
         ignoreExceptionsThrownInLinesWithIgnoreExceptionCheck
@@ -334,14 +350,20 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
         label.setText("* Will make debugging ~ 2x slower");
 
         breakOnDjangoTemplateExceptionsCheck = new Button(composite, SWT.CHECK);
-        breakOnDjangoTemplateExceptionsCheck.setText("Suspend on django template render exceptions");
+        breakOnDjangoTemplateExceptionsCheck.setText("Suspend on Django template render exceptions");
         breakOnDjangoTemplateExceptionsCheck.setSelection(PydevPlugin.getDefault().getPreferenceStore()
-                .getBoolean(AbstractPydevPrefs.TRACE_DJANGO_TEMPLATE_RENDER_EXCEPTIONS));
+                .getBoolean(PyDevEditorPreferences.TRACE_DJANGO_TEMPLATE_RENDER_EXCEPTIONS));
+
+        breakOnJinja2TemplateExceptionsCheck = new Button(composite, SWT.CHECK);
+        breakOnJinja2TemplateExceptionsCheck.setText("Suspend on Jinja2 template render exceptions");
+        breakOnJinja2TemplateExceptionsCheck.setSelection(PydevPlugin.getDefault().getPreferenceStore()
+                .getBoolean(PyDevEditorPreferences.TRACE_JINJA2_TEMPLATE_RENDER_EXCEPTIONS));
     }
 
     private void updateStates() {
         boolean enable = caughtExceptionCheck.getSelection();
         stopOnExceptionsHandledInSameContextCheck.setEnabled(enable);
+        skipCaughtExceptionsInLibrariesCheck.setEnabled(enable);
         ignoreExceptionsThrownInLinesWithIgnoreExceptionCheck.setEnabled(enable);
     }
 
@@ -412,15 +434,26 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
         //Save whether to break debugger or not on caught / uncaught exceptions
         handleCaughtExceptions = caughtExceptionCheck.getSelection();
         handleUncaughtExceptions = uncaughtExceptionCheck.getSelection();
+        handleUserUncaughtExceptions = userUncaughtExceptionCheck.getSelection();
         stopOnExceptionsHandledInSameContext = stopOnExceptionsHandledInSameContextCheck.getSelection();
+        skipCaughtExceptionsInLibraries = skipCaughtExceptionsInLibrariesCheck.getSelection();
         ignoreExceptionsThrownInLinesWithIgnoreException = ignoreExceptionsThrownInLinesWithIgnoreExceptionCheck
                 .getSelection();
 
-        PydevPlugin.getDefault().getPreferenceStore().setValue(
-                AbstractPydevPrefs.TRACE_DJANGO_TEMPLATE_RENDER_EXCEPTIONS,
+        IPreferenceStore preferenceStore = PydevPlugin.getDefault().getPreferenceStore();
+        preferenceStore.setValue(
+                PyDevEditorPreferences.TRACE_DJANGO_TEMPLATE_RENDER_EXCEPTIONS,
                 breakOnDjangoTemplateExceptionsCheck.getSelection());
 
+        preferenceStore.setValue(
+                PyDevEditorPreferences.TRACE_JINJA2_TEMPLATE_RENDER_EXCEPTIONS,
+                breakOnJinja2TemplateExceptionsCheck.getSelection());
+
         super.okPressed();
+    }
+
+    public boolean getResultHandleUserUncaughtExceptions() {
+        return this.handleUserUncaughtExceptions;
     }
 
     public boolean getResultHandleUncaughtExceptions() {
@@ -435,13 +468,17 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
         return this.stopOnExceptionsHandledInSameContext;
     }
 
+    public boolean getResultSkipCaughtExceptionsInLibraries() {
+        return this.skipCaughtExceptionsInLibraries;
+    }
+
     public boolean getResultIgnoreExceptionsThrownInLinesWithIgnoreException() {
         return this.ignoreExceptionsThrownInLinesWithIgnoreException;
     }
 
     /**
      * Returns the viewer used to show the list.
-     * 
+     *
      * @return the viewer, or <code>null</code> if not yet created
      */
     protected CheckboxTableViewer getViewer() {
@@ -451,7 +488,7 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
     /**
      * Returns the viewer cast to the correct instance. Possibly
      * <code>null</code> if the viewer has not been created yet.
-     * 
+     *
      * @return the viewer cast to CheckboxTableViewer
      */
     protected CheckboxTableViewer getCheckBoxTableViewer() {
@@ -464,6 +501,7 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
     private void initContent() {
         listViewer.setInput(inputElement);
         Listener listener = new Listener() {
+            @Override
             public void handleEvent(Event e) {
                 if (updateInThread) {
                     if (filterJob != null) {
@@ -496,10 +534,10 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
 
     /**
      * setSelectedElementChecked
-     * 
+     *
      * Visually checks the elements in the selectedElements list after the
      * refresh, which is triggered on applying / removing filter
-     * 
+     *
      */
     private void setSelectedElementChecked() {
         if (selectedElements != null) {
@@ -546,6 +584,7 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
                 Display display = Display.getDefault();
                 display.asyncExec(new Runnable() {
 
+                    @Override
                     public void run() {
                         if (!monitor.isCanceled() && filterPatternField != null && !filterPatternField.isDisposed()) {
                             doFilterUpdate(monitor);
@@ -587,4 +626,5 @@ public class PyConfigureExceptionDialog extends SelectionDialog {
             return false;
         }
     }
+
 }

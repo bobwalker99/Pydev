@@ -335,6 +335,23 @@ public final class FastStringBuffer implements CharSequence {
         return this;
     }
 
+    public FastStringBuffer append(String chars, int offset, int len) {
+        int newCount = count + len;
+        if (newCount > value.length) {
+            //was: resizeForMinimum(newCount);
+            int newCapacity = (value.length + 1) * 2;
+            if (newCount > newCapacity) {
+                newCapacity = newCount;
+            }
+            char newValue[] = new char[newCapacity];
+            System.arraycopy(value, 0, newValue, 0, count);
+            value = newValue;
+        }
+        System.arraycopy(chars, offset, value, count, len);
+        count = newCount;
+        return this;
+    }
+
     /**
      * Reverses the contents on this buffer
      */
@@ -359,6 +376,7 @@ public final class FastStringBuffer implements CharSequence {
     /**
      * @return the length of this buffer
      */
+    @Override
     public int length() {
         return this.count;
     }
@@ -413,6 +431,7 @@ public final class FastStringBuffer implements CharSequence {
     /**
      * @return the char given at a specific position of the buffer (no bounds check)
      */
+    @Override
     public char charAt(int i) {
         return this.value[i];
     }
@@ -597,6 +616,20 @@ public final class FastStringBuffer implements CharSequence {
         return this;
     }
 
+    /**
+     * Replaces all the occurrences of a string in this buffer for another string and returns the
+     * altered version.
+     */
+    public FastStringBuffer replaceAll(char replace, char with) {
+        for (int i = 0; i < this.count; i++) {
+            if (this.value[i] == replace) {
+                this.value[i] = with;
+            }
+        }
+
+        return this;
+    }
+
     public FastStringBuffer replaceFirst(String replace, String with) {
         int replaceLen = replace.length();
 
@@ -697,17 +730,21 @@ public final class FastStringBuffer implements CharSequence {
             i = fastStringBuffer.length();
         }
 
+        @Override
         public Iterator<Character> iterator() {
             return new Iterator<Character>() {
 
+                @Override
                 public boolean hasNext() {
                     return i > 0;
                 }
 
+                @Override
                 public Character next() {
                     return fastStringBuffer.value[--i];
                 }
 
+                @Override
                 public void remove() {
                     throw new RuntimeException("Not implemented");
                 }
@@ -719,12 +756,38 @@ public final class FastStringBuffer implements CharSequence {
         return new BackwardCharIterator(this);
     }
 
-    public void rightTrim() {
+    public FastStringBuffer rightTrim() {
         char c;
-        //while !isEmpty && lastChar == ' ' || \t.
+        while (this.count > 0 && ((c = this.value[this.count - 1]) == ' ' || Character.isWhitespace(c))) {
+            this.count--;
+        }
+        return this;
+    }
+
+    public FastStringBuffer rightTrimWhitespacesAndTabs() {
+        char c;
         while (this.count > 0 && ((c = this.value[this.count - 1]) == ' ' || c == '\t')) {
             this.count--;
         }
+        return this;
+    }
+
+    public FastStringBuffer leftTrim() {
+        char c;
+        int i = 0;
+        while (i < this.count) {
+            c = this.value[i];
+            if (c == ' ' || Character.isWhitespace(c)) {
+                i++;
+            } else {
+                break;
+            }
+        }
+        if (i > 0) {
+            System.arraycopy(value, i, value, 0, count - i);
+            count -= i;
+        }
+        return this;
     }
 
     public char deleteFirst() {
@@ -864,7 +927,8 @@ public final class FastStringBuffer implements CharSequence {
         int i;
         //skip whitespaces in the end
         for (i = this.count - 1; i >= 0; i--) {
-            if (!Character.isWhitespace(this.value[i])) {
+            char c = this.value[i];
+            if (!Character.isWhitespace(c) || c == '\n' || c == '\r') {
                 break;
             }
         }
@@ -933,10 +997,12 @@ public final class FastStringBuffer implements CharSequence {
             this.fEnd = end;
         }
 
+        @Override
         public int length() {
             return fEnd - fStart;
         }
 
+        @Override
         public char charAt(int index) {
             if (index < 0 || index >= fEnd - fStart) {
                 throw new IndexOutOfBoundsException();
@@ -944,6 +1010,7 @@ public final class FastStringBuffer implements CharSequence {
             return value[fStart + index];
         }
 
+        @Override
         public CharSequence subSequence(int start, int end) {
             return new BufCharSequence(value, fStart + start, fStart + end);
         }
@@ -954,8 +1021,13 @@ public final class FastStringBuffer implements CharSequence {
         }
     }
 
+    @Override
     public CharSequence subSequence(int start, int end) {
         return new BufCharSequence(this.value, start, end);
+    }
+
+    public FastStringBuffer trim() {
+        return leftTrim().rightTrim();
     }
 
 }

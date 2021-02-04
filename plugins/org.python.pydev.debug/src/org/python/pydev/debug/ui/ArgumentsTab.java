@@ -24,13 +24,14 @@ import org.python.pydev.debug.core.PydevDebugPlugin;
 import org.python.pydev.debug.ui.blocks.ProgramArgumentsBlock;
 import org.python.pydev.debug.ui.blocks.VMArgumentsBlock;
 import org.python.pydev.debug.ui.blocks.WorkingDirectoryBlock;
+import org.python.pydev.shared_ui.ImageCache;
 
 /**
  * The main Python debug setup tab.
- * 
+ *
  * This tab contains:
  * <ul>
- *   <li>The program arguments block</li> 
+ *   <li>The program arguments block</li>
  *   <li>The VM Arguments block</li>
  *   <li>The Working directory block</li>
  * </ul>
@@ -63,6 +64,7 @@ public class ArgumentsTab extends AbstractLaunchConfigurationTab {
     /* (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#createControl(Composite)
      */
+    @Override
     public void createControl(Composite parent) {
         Composite comp = new Composite(parent, SWT.NONE);
         setControl(comp);
@@ -77,6 +79,7 @@ public class ArgumentsTab extends AbstractLaunchConfigurationTab {
     /* (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#isValid(org.eclipse.debug.core.ILaunchConfiguration)
      */
+    @Override
     public boolean isValid(ILaunchConfiguration launchConfig) {
         setErrorMessage(null);
         setMessage(null);
@@ -99,6 +102,7 @@ public class ArgumentsTab extends AbstractLaunchConfigurationTab {
     /* (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#getName()
      */
+    @Override
     public String getName() {
         return "Arguments";
     }
@@ -106,20 +110,23 @@ public class ArgumentsTab extends AbstractLaunchConfigurationTab {
     /* (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#getImage()
      */
+    @Override
     public Image getImage() {
-        return PydevDebugPlugin.getImageCache().get(Constants.ARGUMENTS_ICON);
+        return ImageCache.asImage(PydevDebugPlugin.getImageCache().get(Constants.ARGUMENTS_ICON));
     }
 
     /* (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#setDefaults(org.eclipse.debug.core.ILaunchConfigurationWorkingCopy)
      */
+    @Override
     public void setDefaults(ILaunchConfigurationWorkingCopy arg0) {
-        // No defaults to set 
+        // No defaults to set
     }
 
     /* (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#initializeFrom(org.eclipse.debug.core.ILaunchConfiguration)
      */
+    @Override
     public void initializeFrom(ILaunchConfiguration configuration) {
         programArgumentsBlock.initializeFrom(configuration);
         vmArgumentsBlock.initializeFrom(configuration);
@@ -129,6 +136,7 @@ public class ArgumentsTab extends AbstractLaunchConfigurationTab {
     /* (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#performApply(org.eclipse.debug.core.ILaunchConfigurationWorkingCopy)
      */
+    @Override
     public void performApply(ILaunchConfigurationWorkingCopy configuration) {
         programArgumentsBlock.performApply(configuration);
         vmArgumentsBlock.performApply(configuration);
@@ -138,6 +146,7 @@ public class ArgumentsTab extends AbstractLaunchConfigurationTab {
     /* (non-Javadoc)
      * @see org.eclipse.debug.ui.ILaunchConfigurationTab#setLaunchConfigurationDialog(ILaunchConfigurationDialog)
      */
+    @Override
     public void setLaunchConfigurationDialog(ILaunchConfigurationDialog dialog) {
         super.setLaunchConfigurationDialog(dialog);
         programArgumentsBlock.setLaunchConfigurationDialog(dialog);

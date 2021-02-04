@@ -13,8 +13,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import junit.framework.TestCase;
-
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
@@ -32,11 +30,11 @@ import org.python.pydev.navigator.elements.PythonProjectSourceFolder;
 import org.python.pydev.navigator.elements.PythonSourceFolder;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.callbacks.ICallback;
+import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.resource_stubs.FileStub;
 import org.python.pydev.shared_core.resource_stubs.FolderStub;
-import org.python.pydev.shared_core.resource_stubs.ProjectStub;
-import org.python.pydev.shared_core.resource_stubs.WorkingSetStub;
-import org.python.pydev.shared_core.resource_stubs.WorkspaceRootStub;
+
+import junit.framework.TestCase;
 
 @SuppressWarnings("unchecked")
 public class PythonModelProviderTest extends TestCase {
@@ -74,7 +72,7 @@ public class PythonModelProviderTest extends TestCase {
 
     /**
      * Test if intercepting an add deep within the pythonpath structure will correctly return an object
-     * from the python model. 
+     * from the python model.
      */
     public void testInterceptAdd() throws Exception {
         PythonNature nature = createNature(TestDependent.TEST_PYSRC_NAVIGATOR_LOC + "projroot/source/python");
@@ -97,7 +95,7 @@ public class PythonModelProviderTest extends TestCase {
     }
 
     /**
-     * Test if intercepting an object that does not have a parent works. 
+     * Test if intercepting an object that does not have a parent works.
      */
     public void testInterceptRefresh() throws Exception {
         PythonNature nature = createNature(TestDependent.TEST_PYSRC_NAVIGATOR_LOC + "projroot/source/python");
@@ -244,7 +242,7 @@ public class PythonModelProviderTest extends TestCase {
                         hashSet.add(s);
                     } else {
                         IPath p = Path.fromOSString(s);
-                        Assert.isTrue(base.isPrefixOf(p), "Expected: " + base + " to be prefix of: " + p);
+                        Assert.isTrue(FileUtils.isPrefixOf(base, p), "Expected: " + base + " to be prefix of: " + p);
                         hashSet.add(p.makeRelativeTo(base).toString());
                     }
                 }
@@ -556,6 +554,7 @@ public class PythonModelProviderTest extends TestCase {
             final WorkingSetStub workingSetStub = new WorkingSetStub();
             PythonModelProvider.getWorkingSetsCallback = new ICallback<List<IWorkingSet>, IWorkspaceRoot>() {
 
+                @Override
                 public List<IWorkingSet> call(IWorkspaceRoot arg) {
                     ArrayList<IWorkingSet> ret = new ArrayList<IWorkingSet>();
                     ret.add(workingSetStub);

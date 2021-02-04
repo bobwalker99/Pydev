@@ -30,9 +30,10 @@ import org.eclipse.search.ui.text.Match;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.model.WorkbenchLabelProvider;
+import org.python.pydev.shared_core.image.UIConstants;
 import org.python.pydev.shared_core.structure.TreeNode;
+import org.python.pydev.shared_ui.ImageCache;
 import org.python.pydev.shared_ui.SharedUiPlugin;
-import org.python.pydev.shared_ui.UIConstants;
 
 /**
  * Copy from org.eclipse.search.internal.ui.text.FileLabelProvider
@@ -52,6 +53,7 @@ public class SearchIndexLabelProvider extends LabelProvider implements IStyledLa
         fPage = page;
         fLineMatchImage = SearchPluginImages.get(SearchPluginImages.IMG_OBJ_TEXT_SEARCH_LINE);
         fMatchComparator = new Comparator() {
+            @Override
             public int compare(Object o1, Object o2) {
                 return ((ICustomMatch) o1).getOriginalOffset() - ((ICustomMatch) o2).getOriginalOffset();
             }
@@ -105,7 +107,7 @@ public class SearchIndexLabelProvider extends LabelProvider implements IStyledLa
     private StyledString getLineElementLabel(ICustomLineElement lineElement) {
         int lineNumber = lineElement.getLine();
         String lineNumberString = MessageFormat.format("{0}:",
-                new Integer(lineNumber));
+                lineNumber);
 
         StyledString str = new StyledString(lineNumberString, StyledString.QUALIFIER_STYLER);
 
@@ -216,7 +218,7 @@ public class SearchIndexLabelProvider extends LabelProvider implements IStyledLa
             return coloredName;
         }
 
-        String countInfo = MessageFormat.format("({0} matches)", new Integer(matchCount));
+        String countInfo = MessageFormat.format("({0} matches)", matchCount);
         coloredName.append(' ').append(countInfo, StyledString.COUNTER_STYLER);
         return coloredName;
     }
@@ -234,7 +236,7 @@ public class SearchIndexLabelProvider extends LabelProvider implements IStyledLa
             return fLineMatchImage;
         }
         if (element instanceof ICustomModule) {
-            return SharedUiPlugin.getImageCache().get(UIConstants.PY_FILE_ICON);
+            return ImageCache.asImage(SharedUiPlugin.getImageCache().get(UIConstants.PY_FILE_ICON));
         }
         if (!(element instanceof IResource)) {
             return null;

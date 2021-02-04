@@ -28,6 +28,7 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.dialogs.PreferencesUtil;
+import org.python.pydev.ast.interpreter_managers.InterpreterManagersAPI;
 import org.python.pydev.core.IInterpreterInfo;
 import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.IPythonNature;
@@ -36,9 +37,9 @@ import org.python.pydev.core.NotConfiguredInterpreterException;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.model.PyStackFrame;
 import org.python.pydev.debug.model.PyStackFrameConsole;
+import org.python.pydev.debug.newconsole.PydevConsoleConstants;
 import org.python.pydev.debug.newconsole.prefs.InteractiveConsolePrefs;
 import org.python.pydev.editor.PyEdit;
-import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.structure.Tuple;
 
@@ -57,17 +58,19 @@ final class ChooseProcessTypeDialog extends Dialog {
 
     private Button checkboxIronpython;
 
-    private Button checkboxJythonEclipse;
-
     private PyEdit activeEditor;
 
     private IInterpreterManager interpreterManager;
+
+    private String interactiveConsoleInterpreterRep = null;
 
     private List<IPythonNature> natures = new ArrayList<IPythonNature>();
 
     private PyStackFrame selectedFrame;
 
     private Link link;
+
+    private Button checkboxSaveSelection;
 
     ChooseProcessTypeDialog(Shell shell, PyEdit activeEditor) {
         super(shell);
@@ -94,22 +97,17 @@ final class ChooseProcessTypeDialog extends Dialog {
         checkboxPython = new Button(area, SWT.RADIO);
         checkboxPython
                 .setToolTipText("Creates a Python console with the PYTHONPATH containing all the python projects in the workspace.");
-        configureButton(checkboxPython, "Python", PydevPlugin.getPythonInterpreterManager());
+        configureButton(checkboxPython, "Python", InterpreterManagersAPI.getPythonInterpreterManager());
 
         checkboxJython = new Button(area, SWT.RADIO);
         checkboxJython
                 .setToolTipText("Creates a Jython console with the PYTHONPATH containing all the python projects in the workspace.");
-        configureButton(checkboxJython, "Jython", PydevPlugin.getJythonInterpreterManager());
+        configureButton(checkboxJython, "Jython", InterpreterManagersAPI.getJythonInterpreterManager());
 
         checkboxIronpython = new Button(area, SWT.RADIO);
         checkboxIronpython
                 .setToolTipText("Creates an IronPython console with the PYTHONPATH containing all the python projects in the workspace.");
-        configureButton(checkboxIronpython, "IronPython", PydevPlugin.getIronpythonInterpreterManager());
-
-        checkboxJythonEclipse = new Button(area, SWT.RADIO);
-        checkboxJythonEclipse
-                .setToolTipText("Creates a Jython console using the running Eclipse environment (can potentially halt Eclipse depending on what's done).");
-        configureButton(checkboxJythonEclipse, "Jython using VM running Eclipse", new JythonEclipseInterpreterManager());
+        configureButton(checkboxIronpython, "IronPython", InterpreterManagersAPI.getIronpythonInterpreterManager());
 
         if (!debugButtonCreated) {
             createDebugButton(area);
@@ -120,16 +118,22 @@ final class ChooseProcessTypeDialog extends Dialog {
                 + "I.e.: send contents to console on creation,\n" + "connect to variables view, initial commands, etc.");
 
         link.addSelectionListener(new SelectionListener() {
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 PreferenceDialog dialog = PreferencesUtil.createPreferenceDialogOn(null,
                         InteractiveConsolePrefs.PREFERENCES_ID, null, null);
                 dialog.open();
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
         });
 
+        checkboxSaveSelection = new Button(area, SWT.CHECK);
+        checkboxSaveSelection.setToolTipText(
+                "When saving the selection from this dialog in the preferences, the selected action will be automatically applied. Later on it's possible to change the setting at the preferences under PyDev > Interactive Console");
+        checkboxSaveSelection.setText("Save selection in preferences?");
         return area;
     }
 
@@ -228,6 +232,34 @@ final class ChooseProcessTypeDialog extends Dialog {
         return null;
     }
 
+    public boolean setInteractiveConsoleInterpreterPref(String pref) {
+        Button compareButton = null;
+        switch (pref) {
+            case PydevConsoleConstants.ACTIVE_EDITOR_INTERPRETER_REPRESENTATION:
+                compareButton = checkboxForCurrentEditor;
+                break;
+            case PydevConsoleConstants.PYTHON_INTERPRETER_REPRESENTATION:
+                compareButton = checkboxPython;
+                break;
+            case PydevConsoleConstants.PYDEV_DEBUG_INTERPRETER_REPRESENTATION:
+                compareButton = checkboxPythonDebug;
+                break;
+            case PydevConsoleConstants.JYTHON_INTERPRETER_REPRESENTATION:
+                compareButton = checkboxJython;
+                break;
+            case PydevConsoleConstants.IRONPYTHON_INTERPRETER_REPRESENTATION:
+                compareButton = checkboxIronpython;
+                break;
+            default:
+                return false;
+        }
+        if (compareButton != null && compareButton.isEnabled()) {
+            compareButton.setSelection(true);
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Sets the internal pythonpath chosen.
      */
@@ -240,23 +272,29 @@ final class ChooseProcessTypeDialog extends Dialog {
             natures.add(nature);
             IInterpreterManager relatedInterpreterManager = nature.getRelatedInterpreterManager();
             this.interpreterManager = relatedInterpreterManager;
+            interactiveConsoleInterpreterRep = PydevConsoleConstants.ACTIVE_EDITOR_INTERPRETER_REPRESENTATION;
 
         } else if (checkboxPython.isEnabled() && checkboxPython.getSelection()) {
-            this.interpreterManager = PydevPlugin.getPythonInterpreterManager();
+            this.interpreterManager = InterpreterManagersAPI.getPythonInterpreterManager();
+            interactiveConsoleInterpreterRep = PydevConsoleConstants.PYTHON_INTERPRETER_REPRESENTATION;
 
         } else if (checkboxPythonDebug.isEnabled() && checkboxPythonDebug.getSelection()) {
             setSelectedFrame(getSuspendedFrame());
-            this.interpreterManager = PydevPlugin.getPythonInterpreterManager();
+            this.interpreterManager = InterpreterManagersAPI.getPythonInterpreterManager();
+            interactiveConsoleInterpreterRep = PydevConsoleConstants.PYDEV_DEBUG_INTERPRETER_REPRESENTATION;
 
         } else if (checkboxJython.isEnabled() && checkboxJython.getSelection()) {
-            this.interpreterManager = PydevPlugin.getJythonInterpreterManager();
-
-        } else if (checkboxJythonEclipse.isEnabled() && checkboxJythonEclipse.getSelection()) {
-            this.interpreterManager = new JythonEclipseInterpreterManager();
+            this.interpreterManager = InterpreterManagersAPI.getJythonInterpreterManager();
+            interactiveConsoleInterpreterRep = PydevConsoleConstants.JYTHON_INTERPRETER_REPRESENTATION;
 
         } else if (checkboxIronpython.isEnabled() && checkboxIronpython.getSelection()) {
-            this.interpreterManager = PydevPlugin.getIronpythonInterpreterManager();
+            this.interpreterManager = InterpreterManagersAPI.getIronpythonInterpreterManager();
+            interactiveConsoleInterpreterRep = PydevConsoleConstants.IRONPYTHON_INTERPRETER_REPRESENTATION;
 
+        }
+
+        if (checkboxSaveSelection.isEnabled() && checkboxSaveSelection.getSelection()) {
+            InteractiveConsolePrefs.setDefaultInteractiveConsole(interactiveConsoleInterpreterRep);
         }
 
         super.okPressed();
@@ -336,5 +374,9 @@ final class ChooseProcessTypeDialog extends Dialog {
      */
     public void setSelectedFrame(PyStackFrame selectedFrame) {
         this.selectedFrame = selectedFrame;
+    }
+
+    public String getSelectedInteractiveConsoleInterpreterRep() {
+        return this.interactiveConsoleInterpreterRep;
     }
 }

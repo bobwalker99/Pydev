@@ -8,9 +8,7 @@ package org.python.pydev.debug.model.remote;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.Socket;
-import java.net.URLDecoder;
 import java.util.Dictionary;
 import java.util.Hashtable;
 
@@ -19,14 +17,17 @@ import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.core.PydevDebugPlugin;
 import org.python.pydev.debug.model.AbstractDebugTarget;
 import org.python.pydev.debug.model.AbstractDebugTargetWithTransmission;
-
+import org.python.pydev.shared_core.callbacks.ICallback;
+import org.python.pydev.shared_core.io.HttpProtocolUtils;
+import org.python.pydev.shared_ui.utils.RunInUiThread;
+import org.python.pydev.ui.dialogs.PyDialogHelpers;
 
 /**
  * Reads and dispatches commands
  */
 public class DebuggerReader implements Runnable {
     /**
-     * can be specified to debug this class 
+     * can be specified to debug this class
      */
     private static final boolean DEBUG = false;
 
@@ -41,11 +42,6 @@ public class DebuggerReader implements Runnable {
     private volatile boolean done = false;
 
     /**
-     * Lock object for sleeping.
-     */
-    private Object lock = new Object();
-
-    /**
      * commands waiting for response. Their keys are the sequence ids
      */
     private Dictionary<Integer, AbstractDebuggerCommand> responseQueue = new Hashtable<Integer, AbstractDebuggerCommand>();
@@ -53,7 +49,7 @@ public class DebuggerReader implements Runnable {
     /**
      * we read from this
      */
-    private InputStreamReader in;
+    private InputStream in;
 
     /**
      * that's the debugger that made us... we have to finish it when we are done
@@ -62,17 +58,16 @@ public class DebuggerReader implements Runnable {
 
     /**
      * Create it
-     * 
+     *
      * @param s socket we are reading from
      * @param r the debugger associated
-     * 
+     *
      * @throws IOException
      */
     public DebuggerReader(Socket s, AbstractDebugTargetWithTransmission r) throws IOException {
         remote = (AbstractDebugTarget) r;
         socket = s;
-        InputStream sin = socket.getInputStream();
-        in = new InputStreamReader(sin);
+        in = socket.getInputStream();
     }
 
     /**
@@ -88,7 +83,7 @@ public class DebuggerReader implements Runnable {
     public void addToResponseQueue(AbstractDebuggerCommand cmd) {
         int sequence = cmd.getSequence();
         synchronized (responseQueue) {
-            responseQueue.put(new Integer(sequence), cmd);
+            responseQueue.put(sequence, cmd);
         }
     }
 
@@ -100,12 +95,12 @@ public class DebuggerReader implements Runnable {
             String[] cmdParsed = cmdLine.split("\t", 3);
             int cmdCode = Integer.parseInt(cmdParsed[0]);
             int seqCode = Integer.parseInt(cmdParsed[1]);
-            String payload = URLDecoder.decode(cmdParsed[2], "UTF-8");
+            String payload = cmdParsed[2];
 
             // is there a response waiting
             AbstractDebuggerCommand cmd;
             synchronized (responseQueue) {
-                cmd = (AbstractDebuggerCommand) responseQueue.remove(new Integer(seqCode));
+                cmd = responseQueue.remove(new Integer(seqCode));
             }
 
             if (cmd == null) {
@@ -126,21 +121,31 @@ public class DebuggerReader implements Runnable {
     /**
      * keep reading until we finish (that should happen when an exception is thrown, or if it is set as
      * done from outside)
-     * 
+     *
      * @see java.lang.Runnable#run()
      */
+    @Override
     public void run() {
+        HttpProtocolUtils httpProtocol = new HttpProtocolUtils();
+        ICallback<String, Object> onUnexpectedMessage = (unexpectedMessage) -> {
+            String msg = "It seems an old version of the PyDev Debugger is being used (please update the pydevd package being used).\n\nFound message:\n"
+                    + unexpectedMessage;
+            RunInUiThread.async(() -> {
+                PyDialogHelpers.openCritical("Error", msg);
+            });
+            Log.log(msg);
+            return null;
+        };
+
         while (!done) {
+            String contents;
             try {
-                String cmdLine = readLine();
-                if (DEBUG) {
-                    System.err.println("receive cmd: " + cmdLine);
-                }
-                if (cmdLine != null && cmdLine.trim().length() > 0) {
-                    processCommand(cmdLine);
-                }
-                synchronized (lock) {
-                    Thread.sleep(50);
+                if ((contents = httpProtocol.readContents(in, onUnexpectedMessage)) == null) {
+                    done = true;
+                } else {
+                    if (contents.length() > 0) {
+                        processCommand(contents.toString());
+                    }
                 }
             } catch (Exception e1) {
                 done = true;
@@ -161,22 +166,4 @@ public class DebuggerReader implements Runnable {
         }
     }
 
-    /**
-     * Implemented our own: with the BufferedReader, when the socket was closed, it still appeared stuck in the method.
-     * 
-     * @return a line that was read from the debugger.
-     * @throws IOException
-     */
-    private String readLine() throws IOException {
-        StringBuffer contents = new StringBuffer();
-        int i;
-        while ((i = in.read()) != -1) {
-            char c = (char) i;
-            if (c == '\n' || c == '\r') {
-                return contents.toString();
-            }
-            contents.append(c);
-        }
-        throw new IOException("Done");
-    }
 }

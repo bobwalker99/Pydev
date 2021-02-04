@@ -40,7 +40,7 @@ import org.python.pydev.debug.model.PyDebugModelPresentation;
 import org.python.pydev.debug.ui.IPyToggleBreakpointsTarget;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_ui.editor_input.EditorInputUtils;
-import org.python.pydev.shared_ui.utils.PyMarkerUtils;
+import org.python.pydev.shared_ui.utils.PyMarkerUIUtils;
 
 /**
  * Setting/removing breakpoints in the ruler
@@ -71,6 +71,7 @@ public class PyBreakpointRulerAction extends AbstractBreakpointRulerAction {
     /**
      * @see IUpdate#update()
      */
+    @Override
     public void update() {
         fMarkers = getMarkersFromCurrentFile(true);
         setText(fMarkers.isEmpty() ? fAddLabel : fRemoveLabel);
@@ -117,7 +118,7 @@ public class PyBreakpointRulerAction extends AbstractBreakpointRulerAction {
             } catch (Exception e) {
                 return; //ignore
             }
-            final IResource resource = PyMarkerUtils.getResourceForTextEditor(textEditor);
+            final IResource resource = PyMarkerUIUtils.getResourceForTextEditor(textEditor);
 
             // The map containing the marker attributes
             final Map<String, Object> map = new HashMap<String, Object>();
@@ -131,8 +132,8 @@ public class PyBreakpointRulerAction extends AbstractBreakpointRulerAction {
             }
 
             map.put(IMarker.MESSAGE, PYDEV_BREAKPOINT);
-            map.put(IMarker.LINE_NUMBER, new Integer(lineNumber));
-            map.put(IBreakpoint.ENABLED, new Boolean(true));
+            map.put(IMarker.LINE_NUMBER, lineNumber);
+            map.put(IBreakpoint.ENABLED, true);
             map.put(IBreakpoint.ID, PyDebugModelPresentation.PY_DEBUG_MODEL_ID);
             map.put(PyBreakpoint.PY_BREAK_TYPE, type);
             if (externalFileEditorInput != null) {
@@ -143,6 +144,7 @@ public class PyBreakpointRulerAction extends AbstractBreakpointRulerAction {
             }
 
             IWorkspaceRunnable runnable = new IWorkspaceRunnable() {
+                @Override
                 public void run(IProgressMonitor monitor) throws CoreException {
                     IMarker marker;
                     if (type.equals(PyBreakpoint.PY_BREAK_TYPE_DJANGO)) {

@@ -1,54 +1,43 @@
-PyDev 4.4.0 Released
+PyDev 8.1.0 Released
 
-Release Highlights:
+PyDev 8.1.0 Release Highlights
 -------------------------------
 
-* Improved PyDev Package Explorer to give more information when all elements are filtered.
+* **Interactive Console**
+	* The selection for which console to open may be saved. (**#PyDev-1112**)
+	* When the **current editor** option is selected, the related interpreter is no longer asked. (**#PyDev-1112**)
 
-* Code completion improvements: when parameter is typed in the docstring, assigning it to an instance gives proper code-completion results whe accessing the instance.
+* **Debugger** (updated to pydevd 2.2.0)
+	* Better support for Python flags when auto-attaching to subprocesses.
+	* Fixes to path translation (when debugging in a different machine).
+	* Catch warnings related to **imp** import from **pkg_resources**.
+	* No longer crashing when running with **Pyjion** (patch by Anthony Shaw).
 
-* Fixed issues dealing with ansi colors in the interactive console.
+* **Others**
+	* Code analysis now supports **from __future__ import anotations**. (**#PyDev-1040**)
+	* AST pretty-printing supports printing slices. (**#PyDev-1106**)
+	* Code-completion with auto imports for the builtin module is no longer shown. (**#PyDev-1117**)
+	* MyPy messages from a different file are no longer shown in the current editor. (**#PyDev-1114**)
 
-* When autopep8 is applied as the code formatting engine, the region selected is used to specify the lines for formatting.
-
-* Minor improvements in the debugger.
 
 
-What is PyDev?
+About PyDev
 ---------------------------
 
-PyDev is an open-source Python IDE on top of Eclipse for Python, Jython and IronPython development.
+PyDev is an open-source Python IDE on top of Eclipse for Python, Jython and IronPython development, now also available for Python on Visual Studio Code.
 
 It comes with goodies such as code completion, syntax highlighting, syntax analysis, code analysis, refactor, debug, interactive console, etc.
 
-Details on PyDev: http://pydev.org
-Details on its development: http://pydev.blogspot.com
+It is also available as a standalone through LiClipse with goodies such as multiple cursors, theming and support for many other languages, such as Django Templates, Jinja2, Html, JavaScript, etc.
 
+Links:
 
-What is LiClipse?
----------------------------
-
-LiClipse is a PyDev standalone with goodies such as support for Multiple cursors, theming, TextMate bundles and a number of other languages such as Django Templates, Jinja2, Kivy Language, Mako Templates, Html, Javascript, etc.
-
-It's also a commercial counterpart which helps supporting the development of PyDev.
-
-Details on LiClipse: http://www.liclipse.com/
-
-
+PyDev: http://pydev.org
+PyDev Blog: http://pydev.blogspot.com
+PyDev on VSCode: http://pydev.org/vscode
+LiClipse: http://www.liclipse.com
+PyVmMonitor - Python Profiler: http://www.pyvmmonitor.com/
 
 Cheers,
 
---
 Fabio Zadrozny
-------------------------------------------------------
-Software Developer
-
-LiClipse
-http://www.liclipse.com
-
-PyDev - Python Development Environment for Eclipse
-http://pydev.org
-http://pydev.blogspot.com
-
-PyVmMonitor - Python Profiler
-http://www.pyvmmonitor.com/

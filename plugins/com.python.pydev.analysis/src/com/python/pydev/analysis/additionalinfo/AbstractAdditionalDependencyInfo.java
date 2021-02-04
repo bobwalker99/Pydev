@@ -23,26 +23,28 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
-import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.core.runtime.OperationCanceledException;
+import org.python.pydev.ast.codecompletion.revisited.PyPublicTreeMap;
+import org.python.pydev.ast.codecompletion.revisited.PythonPathHelper;
+import org.python.pydev.ast.codecompletion.revisited.modules.IAbstractJavaClassModule;
+import org.python.pydev.ast.interpreter_managers.InterpreterInfo;
 import org.python.pydev.core.FastBufferedReader;
+import org.python.pydev.core.IInfo;
 import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.IModule;
+import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.IToken;
+import org.python.pydev.core.IterTokenEntry;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.ModulesKey;
 import org.python.pydev.core.ObjectsInternPool;
 import org.python.pydev.core.ObjectsInternPool.ObjectsPoolMap;
+import org.python.pydev.core.TokensList;
 import org.python.pydev.core.cache.CompleteIndexKey;
 import org.python.pydev.core.cache.DiskCache;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.editor.codecompletion.revisited.PyPublicTreeMap;
-import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
-import org.python.pydev.editor.codecompletion.revisited.javaintegration.AbstractJavaClassModule;
-import org.python.pydev.logging.DebugSettings;
+import org.python.pydev.core.logging.DebugSettings;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.Name;
 import org.python.pydev.parser.jython.ast.stmtType;
@@ -52,10 +54,8 @@ import org.python.pydev.shared_core.callbacks.CallbackWithListeners;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.string.FastStringBuffer;
 import org.python.pydev.shared_core.string.StringUtils;
-import org.python.pydev.shared_core.structure.OrderedMap;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.shared_core.structure.Tuple3;
-import org.python.pydev.ui.pythonpathconf.InterpreterInfo;
 
 /**
  * Adds information on the modules being tracked.
@@ -91,10 +91,7 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
     }
 
     public void dispose() {
-        if (this.referenceSearches != null) {
-            this.referenceSearches.dispose();
-            this.referenceSearches = null;
-        }
+        this.referenceSearches = null;
     }
 
     /**
@@ -157,6 +154,8 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
      * the keys added and the keys removed.
      */
     public static final CallbackWithListeners modulesAddedAndRemoved = new CallbackWithListeners(1);
+
+    public final Object updateKeysLock = new Object(); // Calls to updateKeysIfNeededAndSave should be synchronized.
 
     /**
      * If info == null we're dealing with project info (otherwise we're dealing with interpreter info).
@@ -257,7 +256,7 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
                         IModule builtinModule = info.getModulesManager().getModule(newKey.name,
                                 info.getModulesManager().getNature(), true);
                         if (builtinModule != null) {
-                            if (builtinModule instanceof AbstractJavaClassModule) {
+                            if (builtinModule instanceof IAbstractJavaClassModule) {
                                 if (newKey.file != null) {
                                     ignoreFiles.add(newKey.file);
                                 } else {
@@ -265,7 +264,7 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
                                 }
                                 continue;
                             }
-                            boolean removeFirst = keys.containsKey(newKey);
+                            boolean removeFirst = keys.containsKey(new CompleteIndexKey(newKey));
                             addAstForCompiledModule(builtinModule, info, newKey, removeFirst);
                         }
                     }
@@ -275,7 +274,7 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
 
         if (hasNew || hasRemoved) {
             if (DebugSettings.DEBUG_INTERPRETER_AUTO_UPDATE) {
-                Log.toLogFile(this,
+                org.python.pydev.shared_core.log.ToLogFile.toLogFile(this,
                         StringUtils.format(
                                 "Additional info modules. Added: %s Removed: %s", newKeys, removedKeys));
             }
@@ -284,12 +283,13 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
     }
 
     private void addAstForCompiledModule(IModule module, InterpreterInfo info, ModulesKey newKey, boolean removeFirst) {
-        IToken[] globalTokens = module.getGlobalTokens();
+        TokensList globalTokens = module.getGlobalTokens();
         PyAstFactory astFactory = new PyAstFactory(new AdapterPrefs("\n", info.getModulesManager().getNature()));
 
-        List<stmtType> body = new ArrayList<>(globalTokens.length);
+        List<stmtType> body = new ArrayList<>(globalTokens.size());
 
-        for (IToken token : globalTokens) {
+        for (IterTokenEntry entry : globalTokens) {
+            IToken token = entry.getToken();
             switch (token.getType()) {
 
                 case IToken.TYPE_CLASS:
@@ -315,57 +315,6 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
 
     static interface IBufferFiller {
         void fillBuffer(FastStringBuffer buf);
-    }
-
-    /**
-     * Note: if it's a name with dots, we'll split it and search for each one.
-     */
-    @Override
-    public List<ModulesKey> getModulesWithToken(IProject project, String token, IProgressMonitor monitor)
-            throws OperationCanceledException {
-        NullProgressMonitor nullMonitor = new NullProgressMonitor();
-        if (monitor == null) {
-            monitor = nullMonitor;
-        }
-        int length = token.length();
-        if (token == null || length == 0) {
-            return new ArrayList<>();
-        }
-
-        for (int i = 0; i < length; i++) {
-            char c = token.charAt(i);
-            if (!Character.isJavaIdentifierPart(c) && c != '.') {
-                throw new RuntimeException(StringUtils.format(
-                        "Token: %s is not a valid token to search for.", token));
-            }
-        }
-
-        StringUtils.checkTokensValidForWildcardQuery(token);
-
-        OrderedMap<String, Set<String>> fieldNameToValues = new OrderedMap<>();
-        Set<String> split = new HashSet<>();
-        for (String s : StringUtils.splitForIndexMatching(token)) {
-            // We need to search in lowercase (we only index case-insensitive).
-            split.add(s.toLowerCase());
-        }
-        fieldNameToValues.put(IReferenceSearches.FIELD_CONTENTS, split);
-
-        List<ModulesKey> search = getReferenceSearches().search(project, fieldNameToValues, monitor);
-
-        //Checking consistency with old version
-        //List<ModulesKey> old = new ReferenceSearches(this).search(project, token, nullMonitor);
-        //System.out.println("Searching for: " + token);
-        //Collections.sort(search);
-        //Collections.sort(old);
-        //System.out.println("---- New ----");
-        //for (ModulesKey modulesKey : search) {
-        //    System.out.println(modulesKey);
-        //}
-        //System.out.println("---- Old ----");
-        //for (ModulesKey modulesKey : old) {
-        //    System.out.println(modulesKey);
-        //}
-        return search;
     }
 
     protected abstract String getUIRepresentation();
@@ -459,7 +408,7 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
             }
             if (file.exists() && file.isFile()) {
                 try {
-                    return loadContentsFromFile(file) != null;
+                    return loadContentsFromFile(file, getNature()) != null;
                 } catch (Throwable e) {
                     errorFound = new RuntimeException("Unable to read: " + file, e);
                 }
@@ -480,7 +429,7 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
         return false;
     }
 
-    private Object loadContentsFromFile(File file)
+    private Object loadContentsFromFile(File file, IPythonNature nature)
             throws FileNotFoundException, IOException, MisconfigurationException {
         FileInputStream fileInputStream = new FileInputStream(file);
         try {
@@ -509,11 +458,11 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
 
                                     if (line.startsWith("-- START TREE 1")) {
                                         superTupWithResults.o1 = TreeIO.loadTreeFrom(bufferedReader, dictionary,
-                                                tempBuf.clear(), objectsPoolMap);
+                                                tempBuf.clear(), objectsPoolMap, nature);
 
                                     } else if (line.startsWith("-- START TREE 2")) {
                                         superTupWithResults.o2 = TreeIO.loadTreeFrom(bufferedReader, dictionary,
-                                                tempBuf.clear(), objectsPoolMap);
+                                                tempBuf.clear(), objectsPoolMap, nature);
 
                                     } else if (line.startsWith("-- START DICTIONARY")) {
                                         dictionary = TreeIO.loadDictFrom(bufferedReader, tempBuf.clear(),

@@ -25,6 +25,7 @@ import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Widget;
+import org.python.pydev.ast.interpreter_managers.InterpreterInfo;
 
 /**
  * Helper to create a list of strings with buttons for new/remove.
@@ -69,9 +70,11 @@ abstract/*default*/class AbstractListWithNewRemoveControl extends SelectionAdapt
         l2.setText(internalLabel);
         l2.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 Program.launch("http://pydev.org/manual_101_interpreter.html");
             }
@@ -134,6 +137,7 @@ abstract/*default*/class AbstractListWithNewRemoveControl extends SelectionAdapt
         removeBt = interpreterEditor.createBt(box, "ListEditor.remove", this);//$NON-NLS-1$
     }
 
+    @Override
     public void widgetDisposed(DisposeEvent event) {
         if (addBt != null) {
             addBt.dispose();
@@ -149,6 +153,7 @@ abstract/*default*/class AbstractListWithNewRemoveControl extends SelectionAdapt
         }
     }
 
+    @Override
     public void widgetSelected(SelectionEvent event) {
         Widget widget = event.widget;
         if (widget == addBt) {
@@ -179,6 +184,7 @@ abstract/*default*/class AbstractListWithNewRemoveControl extends SelectionAdapt
             itemsList = new List(parent, SWT.BORDER | SWT.MULTI | SWT.V_SCROLL | SWT.H_SCROLL);
             itemsList.setFont(parent.getFont());
             itemsList.addDisposeListener(new DisposeListener() {
+                @Override
                 public void widgetDisposed(DisposeEvent event) {
                     itemsList = null;
                 }

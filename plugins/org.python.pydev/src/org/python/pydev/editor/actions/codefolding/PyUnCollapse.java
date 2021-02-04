@@ -14,6 +14,7 @@ package org.python.pydev.editor.actions.codefolding;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.text.source.projection.ProjectionAnnotationModel;
 import org.python.pydev.core.docutils.PySelection;
+import org.python.pydev.editor.PySelectionFromEditor;
 import org.python.pydev.editor.actions.PyAction;
 
 /**
@@ -28,10 +29,11 @@ public class PyUnCollapse extends PyAction {
      * 
      * @see org.eclipse.ui.IActionDelegate#run(org.eclipse.jface.action.IAction)
      */
+    @Override
     public void run(IAction action) {
-        PySelection ps = new PySelection(getTextEditor());
+        PySelection ps = PySelectionFromEditor.createPySelectionFromEditor(getTextEditor());
 
-        ProjectionAnnotationModel model = (ProjectionAnnotationModel) getTextEditor().getAdapter(
+        ProjectionAnnotationModel model = getTextEditor().getAdapter(
                 ProjectionAnnotationModel.class);
 
         if (model != null) {

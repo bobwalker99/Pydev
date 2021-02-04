@@ -11,8 +11,12 @@
 ******************************************************************************/
 package org.python.pydev.ui.pythonpathconf;
 
+import org.python.pydev.ast.interpreter_managers.IInterpreterProvider;
+import org.python.pydev.ast.interpreter_managers.IInterpreterProviderFactory;
+
 public class IronpythonInterpreterProviderFactory extends AbstractInterpreterProviderFactory {
 
+    @Override
     public IInterpreterProvider[] getInterpreterProviders(InterpreterType type) {
         if (type != IInterpreterProviderFactory.InterpreterType.IRONPYTHON) {
             return null;

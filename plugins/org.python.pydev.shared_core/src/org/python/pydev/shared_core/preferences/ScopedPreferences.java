@@ -9,7 +9,7 @@ package org.python.pydev.shared_core.preferences;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.FileTime;
 import java.util.Collections;
@@ -30,7 +30,7 @@ import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Platform;
-import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.jface.text.IDocument;
 import org.osgi.framework.Bundle;
 import org.python.pydev.shared_core.cache.LRUCache;
@@ -41,7 +41,7 @@ import org.python.pydev.shared_core.string.FastStringBuffer;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.OrderedSet;
 import org.python.pydev.shared_core.structure.Tuple;
-import org.yaml.snakeyaml.Yaml;
+import org.python.pydev.shared_core.yaml.YamlWrapper;
 
 public final class ScopedPreferences implements IScopedPreferences {
 
@@ -209,7 +209,8 @@ public final class ScopedPreferences implements IScopedPreferences {
                         StringUtils
                                 .format("Error: unable to write settings because the file: %s already exists but "
                                         + "is not a parseable YAML file (aborting to avoid overriding existing file).",
-                                        yamlFile), e);
+                                        yamlFile),
+                        e);
             }
         }
 
@@ -239,7 +240,8 @@ public final class ScopedPreferences implements IScopedPreferences {
                                 StringUtils
                                         .format("Error: unable to write settings because the file: %s already exists but "
                                                 + "is not a parseable YAML file (aborting to avoid overriding existing file).\n",
-                                                projectConfigFile), e);
+                                                projectConfigFile),
+                                e);
 
                     }
                     Map<String, Object> yamlMapToWrite = new TreeMap<>();
@@ -270,20 +272,18 @@ public final class ScopedPreferences implements IScopedPreferences {
 
     private void dumpSaveDataToFile(Map<String, Object> saveData, IFile yamlFile, boolean exists) throws IOException,
             CoreException {
-        Yaml yaml = new Yaml();
-        String dumpAsMap = yaml.dumpAsMap(saveData);
+        String dumpAsMap = YamlWrapper.dumpAsMap(saveData);
         if (!exists) {
             // Create empty (so that we can set the charset properly later on).
             yamlFile.create(new ByteArrayInputStream("".getBytes()), true, new NullProgressMonitor());
         }
         yamlFile.setCharset("UTF-8", new NullProgressMonitor());
-        yamlFile.setContents(new ByteArrayInputStream(dumpAsMap.getBytes(Charset.forName("UTF-8"))), true, true,
+        yamlFile.setContents(new ByteArrayInputStream(dumpAsMap.getBytes(StandardCharsets.UTF_8)), true, true,
                 new NullProgressMonitor());
     }
 
     private void dumpSaveDataToFile(Map<String, Object> saveData, File yamlFile) throws IOException {
-        Yaml yaml = new Yaml();
-        String dumpAsMap = yaml.dumpAsMap(saveData);
+        String dumpAsMap = YamlWrapper.dumpAsMap(saveData);
         FileUtils.writeStrToFile(dumpAsMap, yamlFile);
         // Don't use the code below because we want to dump as a map to have a better layout for the file.
         //
@@ -321,33 +321,38 @@ public final class ScopedPreferences implements IScopedPreferences {
     //long modificationStamp = projectConfigFile.getModificationStamp();
 
     @Override
-    public String getString(IPreferenceStore pluginPreferenceStore, String keyInPreferenceStore, IAdaptable adaptable) {
+    public String getString(IEclipsePreferences instancePreferences, IEclipsePreferences defaultPreferences,
+            String keyInPreferenceStore,
+            IAdaptable adaptable) {
         Object object = getFromProjectOrUserSettings(keyInPreferenceStore, adaptable);
         if (object != null) {
             return object.toString();
         }
         // Ok, not in project or user settings: get it from the workspace settings.
-        return pluginPreferenceStore.getString(keyInPreferenceStore);
+        return instancePreferences.get(keyInPreferenceStore, defaultPreferences.get(keyInPreferenceStore, ""));
     }
 
     @Override
-    public boolean getBoolean(IPreferenceStore pluginPreferenceStore, String keyInPreferenceStore, IAdaptable adaptable) {
+    public boolean getBoolean(IEclipsePreferences instancePreferences, IEclipsePreferences defaultPreferences,
+            String keyInPreferenceStore, IAdaptable adaptable) {
         Object object = getFromProjectOrUserSettings(keyInPreferenceStore, adaptable);
         if (object != null) {
             return toBoolean(object);
         }
         // Ok, not in project or user settings: get it from the workspace settings.
-        return pluginPreferenceStore.getBoolean(keyInPreferenceStore);
+        return instancePreferences.getBoolean(keyInPreferenceStore,
+                defaultPreferences.getBoolean(keyInPreferenceStore, false));
     }
 
     @Override
-    public int getInt(IPreferenceStore pluginPreferenceStore, String keyInPreferenceStore, IAdaptable adaptable) {
+    public int getInt(IEclipsePreferences instancePreferences, IEclipsePreferences defaultPreferences,
+            String keyInPreferenceStore, IAdaptable adaptable) {
         Object object = getFromProjectOrUserSettings(keyInPreferenceStore, adaptable);
         if (object != null) {
             return toInt(object);
         }
         // Ok, not in project or user settings: get it from the workspace settings.
-        return pluginPreferenceStore.getInt(keyInPreferenceStore);
+        return instancePreferences.getInt(keyInPreferenceStore, defaultPreferences.getInt(keyInPreferenceStore, 0));
     }
 
     private Object getFromProjectOrUserSettings(String keyInPreferenceStore, IAdaptable adaptable) {
@@ -360,7 +365,7 @@ public final class ScopedPreferences implements IScopedPreferences {
                 if (adaptable instanceof IResource) {
                     project = ((IResource) adaptable).getProject();
                 } else {
-                    project = (IProject) adaptable.getAdapter(IProject.class);
+                    project = adaptable.getAdapter(IProject.class);
                 }
                 IFile projectConfigFile = getProjectSettingsLocation(project);
                 if (projectConfigFile != null && projectConfigFile.exists()) {
@@ -534,8 +539,7 @@ public final class ScopedPreferences implements IScopedPreferences {
         if (yamlContents.trim().length() == 0) {
             return new HashMap<String, Object>();
         }
-        Yaml yaml = new Yaml();
-        Object load = yaml.load(yamlContents);
+        Object load = YamlWrapper.load(yamlContents);
         if (!(load instanceof Map)) {
             if (load == null) {
                 throw new Exception("Expected top-level element to be a map. Found: null");

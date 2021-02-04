@@ -27,11 +27,15 @@ import org.eclipse.debug.ui.IDebugUIConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
-import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.dialogs.ListDialog;
 import org.eclipse.ui.dialogs.SelectionDialog;
+import org.python.pydev.ast.runners.SimpleIronpythonRunner;
+import org.python.pydev.ast.runners.SimpleJythonRunner;
+import org.python.pydev.ast.runners.SimplePythonRunner;
+import org.python.pydev.ast.runners.SimpleRunner;
+import org.python.pydev.core.CorePlugin;
 import org.python.pydev.core.IInterpreterInfo;
 import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.IPythonNature;
@@ -39,15 +43,14 @@ import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.core.PydevDebugPlugin;
 import org.python.pydev.debug.model.PyStackFrame;
 import org.python.pydev.debug.newconsole.PydevConsoleConstants;
+import org.python.pydev.debug.newconsole.prefs.InteractiveConsolePrefs;
 import org.python.pydev.debug.newconsole.prefs.InteractiveConsoleUMDPrefs;
 import org.python.pydev.editor.PyEdit;
-import org.python.pydev.plugin.PydevPlugin;
-import org.python.pydev.runners.SimpleIronpythonRunner;
-import org.python.pydev.runners.SimpleJythonRunner;
-import org.python.pydev.runners.SimplePythonRunner;
-import org.python.pydev.runners.SimpleRunner;
+import org.python.pydev.plugin.nature.PythonNature;
 import org.python.pydev.shared_core.net.SocketUtil;
 import org.python.pydev.shared_core.structure.Tuple;
+import org.python.pydev.shared_core.utils.PlatformUtils;
+import org.python.pydev.shared_ui.EditorUtils;
 import org.python.pydev.ui.pythonpathconf.AbstractInterpreterPreferencesPage;
 
 /**
@@ -117,10 +120,8 @@ public class PydevIProcessFactory {
      * @throws Exception
      */
     public PydevConsoleLaunchInfo createInteractiveLaunch() throws UserCanceledException, Exception {
-
-        IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-        IWorkbenchPage activePage = workbenchWindow.getActivePage();
-        IEditorPart activeEditor = activePage.getActiveEditor();
+        IWorkbenchWindow workbenchWindow = EditorUtils.getActiveWorkbenchWindow();
+        IEditorPart activeEditor = EditorUtils.getActiveEditor();
         PyEdit edit = null;
 
         if (activeEditor instanceof PyEdit) {
@@ -128,7 +129,17 @@ public class PydevIProcessFactory {
         }
 
         ChooseProcessTypeDialog dialog = new ChooseProcessTypeDialog(getShell(), edit);
-        if (dialog.open() == ChooseProcessTypeDialog.OK) {
+        String rep = InteractiveConsolePrefs.getDefaultInteractiveConsole();
+        boolean hasPrefs = false;
+        if (!rep.isEmpty()) {
+            dialog.create();
+            hasPrefs = dialog.setInteractiveConsoleInterpreterPref(rep);
+            if (hasPrefs) {
+                dialog.okPressed();
+            }
+        }
+
+        if (hasPrefs || dialog.open() == ChooseProcessTypeDialog.OK) {
 
             PyStackFrame selectedFrame = dialog.getSelectedFrame();
             if (selectedFrame != null) {
@@ -157,19 +168,31 @@ public class PydevIProcessFactory {
             }
 
             if (interpreter == null) {
-                SelectionDialog listDialog = AbstractInterpreterPreferencesPage.createChooseIntepreterInfoDialog(
-                        workbenchWindow, interpreters, "Select interpreter to be used.", false);
-
-                int open = listDialog.open();
-                if (open != ListDialog.OK || listDialog.getResult().length > 1) {
-                    return null;
+                if (PydevConsoleConstants.ACTIVE_EDITOR_INTERPRETER_REPRESENTATION
+                        .equals(dialog.getSelectedInteractiveConsoleInterpreterRep())) {
+                    if (edit != null) {
+                        PythonNature pythonNature = PythonNature.getPythonNature(edit.getProject());
+                        if (pythonNature != null) {
+                            interpreter = pythonNature.getProjectInterpreter();
+                        }
+                    }
                 }
-                Object[] result = listDialog.getResult();
-                if (result == null || result.length == 0) {
-                    interpreter = interpreters[0];
 
-                } else {
-                    interpreter = ((IInterpreterInfo) result[0]);
+                if (interpreter == null) {
+                    SelectionDialog listDialog = AbstractInterpreterPreferencesPage.createChooseIntepreterInfoDialog(
+                            workbenchWindow, interpreters, "Select interpreter to be used.", false);
+
+                    int open = listDialog.open();
+                    if (open != ListDialog.OK || listDialog.getResult().length > 1) {
+                        return null;
+                    }
+                    Object[] result = listDialog.getResult();
+                    if (result == null || result.length == 0) {
+                        interpreter = interpreters[0];
+
+                    } else {
+                        interpreter = ((IInterpreterInfo) result[0]);
+                    }
                 }
             }
 
@@ -190,7 +213,7 @@ public class PydevIProcessFactory {
 
     public static String getEncodingFromFrame(PyStackFrame selectedFrame) {
         try {
-            IDebugTarget adapter = (IDebugTarget) selectedFrame.getAdapter(IDebugTarget.class);
+            IDebugTarget adapter = selectedFrame.getAdapter(IDebugTarget.class);
             if (adapter == null) {
                 return "UTF-8";
             }
@@ -251,7 +274,7 @@ public class PydevIProcessFactory {
         launch.setAttribute(DebugPlugin.ATTR_CAPTURE_OUTPUT, "false");
         launch.setAttribute(INTERACTIVE_LAUNCH_PORT, "" + port);
 
-        File scriptWithinPySrc = PydevPlugin.getScriptWithinPySrc("pydevconsole.py");
+        File scriptWithinPySrc = CorePlugin.getScriptWithinPySrc("pydevconsole.py");
         String pythonpathEnv = SimpleRunner.makePythonPathEnvFromPaths(pythonpath);
         String[] commandLine;
         switch (interpreterManager.getInterpreterType()) {
@@ -303,9 +326,10 @@ public class PydevIProcessFactory {
             env = SimpleRunner.createEnvWithPythonpath(pythonpathEnv, interpreter.getExecutableOrJar(),
                     interpreterManager, nature);
             // Add in UMD settings
-            String[] s = new String[env.length + 4];
+            String[] s = new String[env.length + 5];
             System.arraycopy(env, 0, s, 0, env.length);
 
+            s[s.length - 5] = "PYDEV_ECLIPSE_PID=" + PlatformUtils.getPid();
             s[s.length - 4] = "PYTHONIOENCODING=" + encoding;
             s[s.length - 3] = "PYDEV_UMD_ENABLED="
                     + Boolean.toString(InteractiveConsoleUMDPrefs.isUMDEnabled());

@@ -36,7 +36,6 @@ import org.python.pydev.refactoring.core.change.IChangeProcessor;
 import org.python.pydev.refactoring.core.edit.AbstractTextEdit;
 import org.python.pydev.refactoring.core.request.IRefactoringRequest;
 import org.python.pydev.refactoring.core.request.IRequestProcessor;
-import org.python.pydev.shared_ui.utils.SynchronizedTextFileChange;
 
 public abstract class AbstractFileChangeProcessor<T extends IRefactoringRequest> implements IChangeProcessor {
 
@@ -55,6 +54,7 @@ public abstract class AbstractFileChangeProcessor<T extends IRefactoringRequest>
 
     protected abstract void processEdit() throws MisconfigurationException;
 
+    @Override
     public Change createChange() throws MisconfigurationException {
         if (info.getSourceFile() != null) {
             change = new SynchronizedTextFileChange(name, info.getSourceFile());

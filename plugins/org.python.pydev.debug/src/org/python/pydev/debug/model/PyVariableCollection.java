@@ -10,82 +10,52 @@
  */
 package org.python.pydev.debug.model;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.debug.core.DebugEvent;
 import org.eclipse.debug.core.DebugException;
 import org.eclipse.debug.core.model.IVariable;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.core.PydevDebugPlugin;
 import org.python.pydev.debug.model.remote.AbstractDebuggerCommand;
 import org.python.pydev.debug.model.remote.GetVariableCommand;
-import org.python.pydev.debug.model.remote.ICommandResponseListener;
-
 
 /**
  * PyVariableCollection represents container variables.
- * 
+ *
  * It knows how to fetch its contents over the network.
- * 
+ *
  */
-public class PyVariableCollection extends PyVariable implements ICommandResponseListener, IVariableLocator {
+public class PyVariableCollection extends PyVariable implements IVariablesContainerParent {
 
-    PyVariable[] variables = new PyVariable[0];
-    IVariable[] waitVariables = null;
-
-    static final int NETWORK_REQUEST_NOT_REQUESTED = 0;
-    static final int NETWORK_REQUEST_NOT_ARRIVED = 1;
-    static final int NETWORK_REQUEST_ARRIVED = 2;
-
-    /**
-     * Defines the network state
-     */
-    int networkState = NETWORK_REQUEST_NOT_REQUESTED; // Network request state: 0 did not request, 1 requested, 2 requested & arrived
-
-    /**
-     * Defines whether object is variable or watchExpression
-     */
-    boolean isWatchExpression = false;
-
-    private boolean fireChangeEvent = true;
+    private final ContainerOfVariables variableContainer = new ContainerOfVariables(this, false);
 
     public PyVariableCollection(AbstractDebugTarget target, String name, String type, String value,
-            IVariableLocator locator) {
-        super(target, name, type, value, locator);
+            IVariableLocator locator, String scope) {
+        super(target, name, type, value, locator, scope);
     }
 
+    @Override
     public String getDetailText() throws DebugException {
         return super.getDetailText();
     }
 
-    private IVariable[] getWaitVariables() {
-        if (waitVariables == null) {
-            PyVariable waitVar = new PyVariable(target, "wait", "", "for network", locator);
-            waitVariables = new IVariable[1];
-            waitVariables[0] = waitVar;
-        }
-        return waitVariables;
-    }
+    public static final String SCOPE_SPECIAL_VARS = "special variables";
+    public static final String SCOPE_PROTECTED_VARS = "protected variables";
+    public static final String SCOPE_CLASS_VARS = "class variables";
+    public static final String SCOPE_FUNCTION_VARS = "function variables";
 
-    public IVariable[] getTimedoutVariables() {
-        return new IVariable[] { new PyVariable(target, "err:", "", "Timed out while getting var.", locator) };
-    }
-
-    /**
-     * Received when the command has been completed.
-     */
-    public void commandComplete(AbstractDebuggerCommand cmd) {
-        variables = getCommandVariables(cmd);
-
-        networkState = NETWORK_REQUEST_ARRIVED;
-        if (fireChangeEvent) {
-            target.fireEvent(new DebugEvent(this, DebugEvent.CHANGE, DebugEvent.STATE));
-        }
-    }
-
-    public PyVariable[] getCommandVariables(AbstractDebuggerCommand cmd) {
-        return getCommandVariables(cmd, target, this);
-    }
+    private static final String[] SCOPES_SORTED_REVERSED = new String[] {
+            SCOPE_FUNCTION_VARS,
+            SCOPE_CLASS_VARS,
+            SCOPE_PROTECTED_VARS,
+            SCOPE_SPECIAL_VARS,
+    };
 
     /**
      * @return a list of variables resolved for some command
@@ -96,9 +66,50 @@ public class PyVariableCollection extends PyVariable implements ICommandResponse
         try {
             String payload = ((GetVariableCommand) cmd).getResponse();
             tempVariables = XMLUtils.XMLToVariables(target, locator, payload);
+
+            // Ok, now that we have the variables, group them based on the scope.
+            Map<String, List<PyVariable>> scopedVars = new HashMap<>();
+            List<PyVariable> otherVars = new ArrayList<PyVariable>(tempVariables.length);
+            for (PyVariable v : tempVariables) {
+                if (v.scope != null && v.scope.length() > 0) {
+                    List<PyVariable> list = scopedVars.get(v.scope);
+                    if (list == null) {
+                        list = new ArrayList<>();
+                        scopedVars.put(v.scope, list);
+                    }
+                    list.add(v);
+                } else {
+                    otherVars.add(v);
+                }
+            }
+
+            if (!scopedVars.isEmpty()) {
+                for (String scope : SCOPES_SORTED_REVERSED) {
+                    List<PyVariable> list = scopedVars.remove(scope);
+                    if (list != null && list.size() > 0) {
+                        PyVariableGroup element = new PyVariableGroup(target, scope, "", "", locator.getThreadId(), "");
+                        element.setVariables(list);
+                        otherVars.add(0, element);
+                    }
+                }
+                // Add any remainder group (shouldn't really happen).
+                for (Entry<String, List<PyVariable>> entry : scopedVars.entrySet()) {
+                    Log.log("Unexpected scope: " + entry.getKey());
+                    List<PyVariable> list = entry.getValue();
+                    PyVariableGroup element = new PyVariableGroup(target, entry.getKey(), "", "", locator.getThreadId(),
+                            "");
+                    element.setVariables(list);
+                    otherVars.add(0, element);
+
+                }
+                tempVariables = otherVars.toArray(new PyVariable[0]);
+            }
+
+            // if no variable was added, don't change tempVariables.
         } catch (CoreException e) {
             tempVariables = new PyVariable[1];
-            tempVariables[0] = new PyVariable(target, "Error", "pydev ERROR", "Could not resolve variable", locator);
+            tempVariables[0] = new PyVariable(target, "Error", "pydev ERROR", "Could not resolve variable", locator,
+                    "");
 
             String msg = e.getMessage(); //we don't want to show this error
             if (msg == null || (msg.indexOf("Error resolving frame:") == -1 && msg.indexOf("from thread:") == -1)) {
@@ -108,54 +119,39 @@ public class PyVariableCollection extends PyVariable implements ICommandResponse
         return tempVariables;
     }
 
+    @Override
     public IVariable[] getVariables() throws DebugException {
-        if (networkState == NETWORK_REQUEST_ARRIVED) {
-            return variables;
-        } else if (networkState == NETWORK_REQUEST_NOT_ARRIVED) {
-            return getWaitVariables();
-        }
-
-        // send the command, and then busy-wait
-        GetVariableCommand cmd = getVariableCommand(target);
-        cmd.setCompletionListener(this);
-        networkState = NETWORK_REQUEST_NOT_ARRIVED;
-        fireChangeEvent = false; // do not fire change event while we are waiting on response
-        target.postCommand(cmd);
-        try {
-            // VariablesView does not deal well with children changing asynchronously.
-            // it causes unneeded scrolling, because view preserves selection instead
-            // of visibility.
-            // I try to minimize the occurrence here, by giving pydevd time to complete the
-            // task before we are forced to do asynchronous notification.
-            int i = 10;
-            while (--i > 0 && networkState != NETWORK_REQUEST_ARRIVED) {
-                Thread.sleep(50);
-            }
-
-        } catch (InterruptedException e) {
-            Log.log(e);
-        }
-        fireChangeEvent = true;
-        if (networkState == NETWORK_REQUEST_ARRIVED) {
-            return variables;
-        } else {
-            return getWaitVariables();
-        }
+        return this.variableContainer.getVariables();
     }
 
+    @Override
     public GetVariableCommand getVariableCommand(AbstractDebugTarget dbg) {
         return new GetVariableCommand(dbg, getPyDBLocation());
     }
 
+    @Override
+    public void forceGetNewVariables() {
+        this.variableContainer.forceGetNewVariables();
+    }
+
+    @Override
     public boolean hasVariables() throws DebugException {
         return true;
     }
 
+    @Override
     public String getReferenceTypeName() throws DebugException {
         return type;
     }
 
+    @Override
     public AbstractDebugTarget getTarget() {
         return target;
     }
+
+    @Override
+    public IVariableLocator getGlobalLocator() {
+        return null;
+    }
+
 }

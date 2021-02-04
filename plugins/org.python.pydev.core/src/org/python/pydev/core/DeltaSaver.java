@@ -19,6 +19,7 @@ import org.python.pydev.core.log.Log;
 import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.FullRepIterable;
 
 /**
  * This class can be used to work on deltas. It is able to save and restore data on a 'delta' fashion.
@@ -224,6 +225,7 @@ public class DeltaSaver<X> {
         //also, sort by the name (which must be an integer)
         Collections.sort(deltasFound, new Comparator<File>() {
 
+            @Override
             public int compare(File o1, File o2) {
                 String i = FullRepIterable.headAndTail(o1.getName())[0];
                 String j = FullRepIterable.headAndTail(o2.getName())[0];

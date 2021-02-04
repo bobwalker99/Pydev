@@ -23,17 +23,17 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
+import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.shared_ui.search.SearchMessages;
-
-import com.python.pydev.PydevPlugin;
 
 public class EditorOpener {
 
     private IEditorReference fReusedEditor;
 
     public IEditorPart open(IWorkbenchPage wbPage, IFile file, boolean activate) throws PartInitException {
-        if (NewSearchUI.reuseEditor())
+        if (NewSearchUI.reuseEditor()) {
             return showWithReuse(file, wbPage, getEditorID(file), activate);
+        }
         return showWithoutReuse(file, wbPage, getEditorID(file), activate);
     }
 
@@ -70,9 +70,10 @@ public class EditorOpener {
 
     private String getEditorID(IFile file) throws PartInitException {
         IEditorDescriptor desc = IDE.getEditorDescriptor(file);
-        if (desc == null)
+        if (desc == null) {
             return PydevPlugin.getDefault().getWorkbench().getEditorRegistry()
                     .findEditor(IEditorRegistry.SYSTEM_EXTERNAL_EDITOR_ID).getId();
+        }
         return desc.getId();
     }
 
@@ -124,19 +125,20 @@ public class EditorOpener {
         try {
             marker = file.createMarker(NewSearchUI.SEARCH_MARKER);
             HashMap attributes = new HashMap(4);
-            attributes.put(IMarker.CHAR_START, new Integer(offset));
-            attributes.put(IMarker.CHAR_END, new Integer(offset + length));
+            attributes.put(IMarker.CHAR_START, offset);
+            attributes.put(IMarker.CHAR_END, offset + length);
             marker.setAttributes(attributes);
             IDE.gotoMarker(editor, marker);
         } catch (CoreException e) {
             throw new PartInitException(SearchMessages.FileSearchPage_error_marker, e);
         } finally {
-            if (marker != null)
+            if (marker != null) {
                 try {
                     marker.delete();
                 } catch (CoreException e) {
                     // ignore
                 }
+            }
         }
     }
 

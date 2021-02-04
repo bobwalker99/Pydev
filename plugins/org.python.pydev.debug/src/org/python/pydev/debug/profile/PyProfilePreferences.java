@@ -8,7 +8,7 @@ import java.util.Properties;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceStore;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.plugin.preferences.PydevPrefs;
+import org.python.pydev.plugin.PyDevUiPrefs;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.process.ProcessUtils;
 import org.python.pydev.shared_core.utils.PlatformUtils;
@@ -61,7 +61,7 @@ public class PyProfilePreferences {
     private static final Object lock = new Object();
 
     public static IPreferenceStore getPermanentPreferenceStore() {
-        IPreferenceStore preferenceStore = PydevPrefs.getPreferenceStore();
+        IPreferenceStore preferenceStore = PyDevUiPrefs.getPreferenceStore();
         if (firstCall) {
             synchronized (lock) {
                 if (firstCall) {
@@ -129,6 +129,7 @@ public class PyProfilePreferences {
                 if (actualRun) {
                     RunInUiThread.async(new Runnable() {
 
+                        @Override
                         public void run() {
                             PyDialogHelpers
                                     .openWarning(
@@ -145,6 +146,7 @@ public class PyProfilePreferences {
                 if (actualRun) {
                     RunInUiThread.async(new Runnable() {
 
+                        @Override
                         public void run() {
                             PyDialogHelpers
                                     .openWarning(
@@ -167,6 +169,7 @@ public class PyProfilePreferences {
                 if (actualRun) {
                     RunInUiThread.async(new Runnable() {
 
+                        @Override
                         public void run() {
                             PyDialogHelpers
                                     .openWarning(

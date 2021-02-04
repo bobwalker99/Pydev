@@ -14,7 +14,6 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.python.pydev.core.docutils.PySelection;
-import org.python.pydev.shared_core.string.SelectionKeeper;
 
 public class SelectionKeeperTest extends TestCase {
 
@@ -24,18 +23,22 @@ public class SelectionKeeperTest extends TestCase {
         private SelectionProvider() {
         }
 
+        @Override
         public void setSelection(ISelection selection) {
             sel = (TextSelection) selection;
         }
 
+        @Override
         public void removeSelectionChangedListener(ISelectionChangedListener listener) {
             throw new RuntimeException("Not implemented");
         }
 
+        @Override
         public ISelection getSelection() {
             return sel;
         }
 
+        @Override
         public void addSelectionChangedListener(ISelectionChangedListener listener) {
             throw new RuntimeException("Not implemented");
         }

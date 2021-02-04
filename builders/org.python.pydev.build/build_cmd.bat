@@ -11,22 +11,24 @@
 @echo The contents here may just be copied into cmd.exe or some other shell (just note that
 @echo in some cases a call to git may stop executing, so, you may need to copy the commands in chunks).
 
-set BRANCH=development
+set BRANCH=master
 
 set DRIVE=x:
 set BASE_LOCAL_PYDEV_GIT=x:\pydev
 set BUILD_DIR=X:\pydev_build\build_dir
 set DEPLOY_DIR=X:\pydev_build\deploy_dir
-set JAVA_HOME=C:\bin\jdk1.7.0_55
-set MAVEN_BIN=C:\bin\maven-3.2.1\bin
-set GIT_EXECUTABLE="C:\Program Files (x86)\Git\bin\git.exe"
-set ECLIPSE_CLEAN=C:\bin\eclipse45final
-set LAUNCHER_PLUGIN=org.eclipse.equinox.launcher_1.3.100.v20150511-1540.jar
-set BUILDER_PLUGIN=org.eclipse.pde.build_3.9.100.v20150521-1524
-set KEYSTORE=X:\release_tools\pydevkeystore
-set KEYSTORE_ALIAS=pydev
-set SIGN_KEYSTORE=X:\release_tools\pydevkeystore
-set SIGN_ALIAS=pydev
+set JAVA_HOME=C:\bin\jdk1.8.0_172
+set MAVEN_BIN=C:\bin\apache-maven-3.5.3\bin
+set GIT_EXECUTABLE="C:\Program Files\Git\bin\git.exe"
+set ECLIPSE_CLEAN=C:\bin\eclipse_411_clean
+set LAUNCHER_PLUGIN=org.eclipse.equinox.launcher_1.5.300.v20190213-1655.jar
+set BUILDER_PLUGIN=org.eclipse.pde.build_3.10.300.v20190305-0856
+@echo Expected in env var: SIGN_KEYPASS
+@echo Expected in env var: SIGN_STOREPASS
+@echo Expected in env var: SIGN_ALIAS
+@echo Expected in env var: SIGN_KEYSTORE
+@echo Expected in env var: SIGN_STORETYPE
+@echo Expected in env var: SIGN_TSA
 SET MAVEN_OPTS=-Xmx1024m
 
 
@@ -35,13 +37,12 @@ set BASEWS=win32
 set BASEARCH=x86
 
 set PATH=
-set PATH=C:\bin\Python27
 set PATH=C:\bin\FastCopy211;%PATH%
 set PATH=C:\Windows\system32;%PATH%
 set PATH=%MAVEN_BIN%;%PATH%
 set PATH=%JAVA_HOME%\bin;%PATH%
-set PATH=C:\Program Files (x86)\Git\bin;%PATH%
-set PATH=%ECLIPSE_CLEAN%\plugins\org.apache.ant_1.9.2.v201404171502\bin;%PATH%
+set PATH="C:\Program Files\Git\bin\";%PATH%
+set PATH=%ECLIPSE_CLEAN%\plugins\org.apache.ant_1.10.5.v20180808-0324\bin;%PATH%
 
 
 @echo actual build command
@@ -56,12 +57,18 @@ git reset --hard
 git clean -f -d -x
 git checkout -f
 git remote update
+git fetch
 git checkout %BRANCH%
 git pull origin %BRANCH%
 @echo If copied/pasted into cmd.exe, it will break here
 
+@echo Create builtin modules
+set PYTHONPATH=%BUILD_DIR%/Pydev/plugins/org.python.pydev.core/pysrc
+C:\bin\Python38-32\python %BUILD_DIR%/Pydev/plugins/org.python.pydev.core/pysrc/build_tools/build.py
+C:\bin\Python38-32\python %BUILD_DIR%/Pydev/plugins/org.python.pydev.core/pysrc/build_tools/build_binaries_windows.py
+
 @echo to clean after the build: -DcleanAfter.set=true
-mvn -o install
+mvn install
 
 
 

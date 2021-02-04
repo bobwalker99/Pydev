@@ -14,12 +14,21 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.contentassist.ICompletionProposal;
-import org.python.pydev.core.FullRepIterable;
+import org.python.pydev.ast.codecompletion.revisited.CompletionCache;
+import org.python.pydev.ast.codecompletion.revisited.CompletionState;
+import org.python.pydev.ast.codecompletion.revisited.CompletionStateFactory;
+import org.python.pydev.ast.codecompletion.revisited.visitors.AssignDefinition;
+import org.python.pydev.ast.codecompletion.revisited.visitors.Definition;
+import org.python.pydev.ast.item_pointer.ItemPointer;
+import org.python.pydev.ast.refactoring.AbstractPyRefactoring;
+import org.python.pydev.ast.refactoring.IPyRefactoring;
+import org.python.pydev.ast.refactoring.RefactoringRequest;
 import org.python.pydev.core.ICompletionCache;
 import org.python.pydev.core.IDefinition;
+import org.python.pydev.core.IPyEdit;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.IToken;
+import org.python.pydev.core.ITypeInfo;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.docutils.PySelection.LineStartingScope;
@@ -27,15 +36,6 @@ import org.python.pydev.core.docutils.PySelection.TddPossibleMatches;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.core.structure.CompletionRecursionException;
 import org.python.pydev.editor.PyEdit;
-import org.python.pydev.editor.codecompletion.revisited.CompletionCache;
-import org.python.pydev.editor.codecompletion.revisited.CompletionState;
-import org.python.pydev.editor.codecompletion.revisited.CompletionStateFactory;
-import org.python.pydev.editor.codecompletion.revisited.visitors.AssignDefinition;
-import org.python.pydev.editor.codecompletion.revisited.visitors.Definition;
-import org.python.pydev.editor.model.ItemPointer;
-import org.python.pydev.editor.refactoring.AbstractPyRefactoring;
-import org.python.pydev.editor.refactoring.IPyRefactoring;
-import org.python.pydev.editor.refactoring.RefactoringRequest;
 import org.python.pydev.parser.jython.ast.ClassDef;
 import org.python.pydev.parser.jython.ast.FunctionDef;
 import org.python.pydev.parser.jython.ast.Return;
@@ -44,10 +44,13 @@ import org.python.pydev.parser.visitors.scope.ASTEntry;
 import org.python.pydev.parser.visitors.scope.EasyASTIteratorVisitor;
 import org.python.pydev.parser.visitors.scope.ReturnVisitor;
 import org.python.pydev.shared_core.callbacks.ICallback;
+import org.python.pydev.shared_core.code_completion.ICompletionProposalHandle;
+import org.python.pydev.shared_core.code_completion.IPyCompletionProposal;
+import org.python.pydev.shared_core.image.IImageCache;
+import org.python.pydev.shared_core.string.FullRepIterable;
 import org.python.pydev.shared_core.string.StringUtils;
-import org.python.pydev.shared_ui.ImageCache;
-import org.python.pydev.shared_ui.proposals.IPyCompletionProposal;
 
+import com.python.pydev.analysis.additionalinfo.builders.AnalysisRunner;
 import com.python.pydev.analysis.ctrl_1.AbstractAnalysisMarkersParticipants;
 
 public class TddCodeGenerationQuickFixParticipant extends AbstractAnalysisMarkersParticipants {
@@ -61,17 +64,24 @@ public class TddCodeGenerationQuickFixParticipant extends AbstractAnalysisMarker
     }
 
     @Override
-    public List<ICompletionProposal> getProps(PySelection ps, ImageCache imageCache, File f, IPythonNature nature,
-            PyEdit edit, int offset) throws BadLocationException {
-        List<ICompletionProposal> ret = super.getProps(ps, imageCache, f, nature, edit, offset);
-        this.getTddProps(ps, imageCache, f, nature, edit, offset, ret);
+    protected String getMarkerType() {
+        return AnalysisRunner.PYDEV_ANALYSIS_PROBLEM_MARKER;
+    }
+
+    @Override
+    public List<ICompletionProposalHandle> getProps(PySelection ps, IImageCache imageCache, File f,
+            IPythonNature nature,
+            IPyEdit edit, int offset) throws BadLocationException {
+        List<ICompletionProposalHandle> ret = super.getProps(ps, imageCache, f, nature, edit, offset);
+        this.getTddProps(ps, imageCache, f, nature, (PyEdit) edit, offset, ret);
         return ret;
     }
 
-    public List<ICompletionProposal> getTddProps(PySelection ps, ImageCache imageCache, File f, IPythonNature nature,
-            PyEdit edit, int offset, List<ICompletionProposal> ret) {
+    public List<ICompletionProposalHandle> getTddProps(PySelection ps, IImageCache imageCache, File f,
+            IPythonNature nature,
+            PyEdit edit, int offset, List<ICompletionProposalHandle> ret) {
         if (ret == null) {
-            ret = new ArrayList<ICompletionProposal>();
+            ret = new ArrayList<ICompletionProposalHandle>();
         }
         //Additional option: Generate markers for 'self.' accesses
         int lineOfOffset = ps.getLineOfOffset(offset);
@@ -118,7 +128,8 @@ public class TddCodeGenerationQuickFixParticipant extends AbstractAnalysisMarker
                             Log.log("Did not expect index < 0.");
                             continue CONTINUE_FOR;
                         }
-                        callPs = new PySelection(ps.getDoc(), ps.getLineOffset() + indexOf + callWithoutParens.length());
+                        callPs = new PySelection(ps.getDoc(),
+                                ps.getLineOffset() + indexOf + callWithoutParens.length());
 
                         RefactoringRequest request = new RefactoringRequest(f, callPs, null, nature, edit);
                         //Don't look in additional info.
@@ -126,7 +137,8 @@ public class TddCodeGenerationQuickFixParticipant extends AbstractAnalysisMarker
                                 RefactoringRequest.FIND_DEFINITION_IN_ADDITIONAL_INFO, false);
                         pointers = pyRefactoring.findDefinition(request);
 
-                        if (((pointers != null && pointers.length > 0) || StringUtils.count(possibleMatch.full, '.') <= 1)) {
+                        if (((pointers != null && pointers.length > 0)
+                                || StringUtils.count(possibleMatch.full, '.') <= 1)) {
                             break;
                         }
                     }
@@ -200,7 +212,8 @@ public class TddCodeGenerationQuickFixParticipant extends AbstractAnalysisMarker
     public static ICallback<Boolean, Exception> onGetTddPropsError;
 
     private boolean checkMethodCreationAtClass(PyEdit edit, IPyRefactoring pyRefactoring, String callWithoutParens,
-            PySelection callPs, List<ICompletionProposal> ret, String lineContents, TddPossibleMatches possibleMatch,
+            PySelection callPs, List<ICompletionProposalHandle> ret, String lineContents,
+            TddPossibleMatches possibleMatch,
             File f, IPythonNature nature) throws MisconfigurationException, Exception {
         RefactoringRequest request;
         ItemPointer[] pointers;
@@ -255,24 +268,48 @@ public class TddCodeGenerationQuickFixParticipant extends AbstractAnalysisMarker
 
     public Definition rebaseAssignDefinition(AssignDefinition assignDef, IPythonNature nature,
             ICompletionCache completionCache) throws Exception {
-        //if the value is currently None, it will be set later on
-        if (assignDef.value.equals("None")) {
+        IDefinition[] definitions2;
+        if ("None".equals(assignDef.type)) {
             return assignDef; // keep the old one
         }
-
-        //ok, go to the definition of whatever is set
-        IDefinition[] definitions2 = assignDef.module.findDefinition(
-                CompletionStateFactory.getEmptyCompletionState(assignDef.value, nature, completionCache),
-                assignDef.line, assignDef.col, nature);
-
-        if (definitions2.length > 0) {
-            return (Definition) definitions2[0];
+        if (assignDef.nodeType != null) {
+            definitions2 = assignDef.module.findDefinition(
+                    CompletionStateFactory.getEmptyCompletionState(assignDef.type, nature, completionCache),
+                    assignDef.line, assignDef.col, nature);
+            if (definitions2.length > 0) {
+                return (Definition) definitions2[0];
+            }
         }
+        if ("None".equals(assignDef.value)) {
+            return assignDef; // keep the old one
+        }
+        if (assignDef.nodeValue != null) {
+            //ok, go to the definition of whatever is set
+            definitions2 = assignDef.module.findDefinition(
+                    CompletionStateFactory.getEmptyCompletionState(assignDef.value, nature, completionCache),
+                    assignDef.line, assignDef.col, nature);
+            if (definitions2.length > 0) {
+                return (Definition) definitions2[0];
+            }
+        }
+
         return assignDef;
     }
 
     public Definition rebaseFunctionDef(Definition definition, IPythonNature nature, ICompletionCache completionCache)
             throws Exception {
+        ITypeInfo type = NodeUtils.getReturnTypeFromFuncDefAST(definition.ast);
+        if (type != null) {
+            // ok, go to the definition of whatever is set
+            IDefinition[] definitions2 = definition.module.findDefinition(
+                    CompletionStateFactory.getEmptyCompletionState(type.getActTok(), nature, completionCache),
+                    definition.line,
+                    definition.col, nature);
+            if (definitions2.length == 1) {
+                return (Definition) definitions2[0];
+            }
+        }
+
         List<Return> returns = ReturnVisitor.findReturns((FunctionDef) definition.ast);
         for (Return returnFound : returns) {
             String act = NodeUtils.getFullRepresentationString(returnFound.value);
@@ -317,7 +354,8 @@ public class TddCodeGenerationQuickFixParticipant extends AbstractAnalysisMarker
         return definition;
     }
 
-    public boolean checkCreationBasedOnFoundPointers(PyEdit edit, PySelection callPs, List<ICompletionProposal> ret,
+    public boolean checkCreationBasedOnFoundPointers(PyEdit edit, PySelection callPs,
+            List<ICompletionProposalHandle> ret,
             TddPossibleMatches possibleMatch, ItemPointer[] pointers, String methodToCreate, PySelection newSelection,
             IPythonNature nature) throws MisconfigurationException, Exception {
         CompletionCache completionCache = new CompletionCache();
@@ -381,7 +419,7 @@ public class TddCodeGenerationQuickFixParticipant extends AbstractAnalysisMarker
         return parametersAfterCall;
     }
 
-    private void addCreateMethodOption(PySelection ps, PyEdit edit, List<ICompletionProposal> props,
+    private void addCreateMethodOption(PySelection ps, PyEdit edit, List<ICompletionProposalHandle> props,
             String markerContents, List<String> parametersAfterCall, PyCreateMethodOrField pyCreateMethod,
             String classNameInLine) {
         String displayString = StringUtils.format("Create %s %s at %s",
@@ -394,7 +432,7 @@ public class TddCodeGenerationQuickFixParticipant extends AbstractAnalysisMarker
     }
 
     private boolean checkInitCreation(PyEdit edit, PySelection callPs, ItemPointer[] pointers,
-            List<ICompletionProposal> ret) {
+            List<ICompletionProposalHandle> ret) {
         for (ItemPointer pointer : pointers) {
             Definition definition = pointer.definition;
             if (definition != null && definition.ast instanceof ClassDef) {

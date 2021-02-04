@@ -6,6 +6,7 @@
  */
 package org.python.pydev.navigator.actions.copied;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -88,9 +89,10 @@ public class CopyAction extends SelectionListenerAction {
      * on <code>IAction</code> copies the selected resources to the 
      * clipboard.
      */
+    @Override
     public void run() {
-        List selectedResources = getSelectedResources();
-        IResource[] resources = (IResource[]) selectedResources.toArray(new IResource[selectedResources.size()]);
+        List<? extends IResource> selectedResources = getSelectedResources();
+        IResource[] resources = selectedResources.toArray(new IResource[selectedResources.size()]);
 
         // Get the file names and a string representation
         final int length = resources.length;
@@ -110,11 +112,7 @@ public class CopyAction extends SelectionListenerAction {
         }
         // was one or more of the locations null?
         if (actualLength < length) {
-            String[] tempFileNames = fileNames;
-            fileNames = new String[actualLength];
-            for (int i = 0; i < actualLength; i++) {
-                fileNames[i] = tempFileNames[i];
-            }
+            fileNames = Arrays.copyOf(fileNames, actualLength);
         }
         setClipboard(resources, fileNames, buf.toString());
 
@@ -160,6 +158,7 @@ public class CopyAction extends SelectionListenerAction {
      * <code>SelectionListenerAction</code> method enables this action if 
      * one or more resources of compatible types are selected.
      */
+    @Override
     protected boolean updateSelection(IStructuredSelection selection) {
         if (!super.updateSelection(selection)) {
             return false;
@@ -169,7 +168,7 @@ public class CopyAction extends SelectionListenerAction {
             return false;
         }
 
-        List selectedResources = getSelectedResources();
+        List<? extends IResource> selectedResources = getSelectedResources();
         if (selectedResources.size() == 0) {
             return false;
         }
@@ -191,9 +190,9 @@ public class CopyAction extends SelectionListenerAction {
             return false;
         }
 
-        Iterator resourcesEnum = selectedResources.iterator();
+        Iterator<? extends IResource> resourcesEnum = selectedResources.iterator();
         while (resourcesEnum.hasNext()) {
-            IResource currentResource = (IResource) resourcesEnum.next();
+            IResource currentResource = resourcesEnum.next();
             if (!currentResource.getParent().equals(firstParent)) {
                 return false;
             }

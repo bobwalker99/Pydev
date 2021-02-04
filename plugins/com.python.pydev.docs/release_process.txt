@@ -3,121 +3,115 @@ Update the version:
 
 x:
 cd x:\pydev
-python update_version.py 4.3.1
+python update_version.py 8.1.0
 
 X:\pydev\builders\org.python.pydev.build\build_cmd.bat
-C:\bin\Python27\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository -d https://api.bintray.com/content/fabioz/pydev/nightly/
+C:\bin\Miniconda\envs\tests_py27\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository -d https://api.bintray.com/content/fabioz/pydev/nightly/
 
 
 --------- For full build ---------
+		Update the version:
+
+			x:
+			cd x:\pydev
+			python update_version.py 8.1.0
+
+		Make sure debugger builtins are updated and commited:
+
+			cd /D x:\PyDev.Debugger
+			set PYTHONPATH=x:\PyDev.Debugger
+			C:\bin\Python38-32\python build_tools\build.py
+			C:\bin\Python38-32\python build_tools\build_binaries_windows.py
 
 		Update homepage
 			- index.rst
+			- download.contents.rst
 			- history_pydev.rst (move contents from index.rst if needed)
+
+		Replace the referenced version in this file
 
 		Update the version of all plugins to the new version.
 
 		Run:
-		    - Update version at W:\pydev\plugins\com.python.pydev.docs\build_both.py
-		    - W:\pydev\plugins\com.python.pydev.docs\build_both.py
+		    - Update version at X:\pydev.page\build_homepage.py
+		    - Add version to update sites:
+		    	- pydev.page/homepage/update_sites/index.contents.rst_html
+		    - X:\pydev.page\build_homepage.py
 
 		Commit everything
         Merge with master
 
-		Execute in cmd.exe: X:\pydev\builders\org.python.pydev.build\build_cmd.bat
+		Check that
+
+			C:\bin\Python38-32\python -c "import pydevd"
+
+		throws an exception (it cannot be installed in the environment)
+
+		Create tab in cmdermini: X:\pydev\builders\org.python.pydev.build\build_cmd.bat
 
 		Copy features and plugins folders from X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository to X:\pydev_build\update_site_dir\updates
 
 copy X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\features\*.jar X:\pydev_build\update_site_dir\updates\features /Y
 copy X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\plugins\*.jar X:\pydev_build\update_site_dir\updates\plugins /Y
 
-		Update the site.xml at X:\pydev_build\update_site_dir\updates
-
-		Remove the artifacts.jar and content.jar from X:\pydev_build\update_site_dir\updates
-
-del X:\pydev_build\update_site_dir\updates\artifacts.jar
-del X:\pydev_build\update_site_dir\updates\content.jar
-
-		Update artifacts.jar and content.jar
-
-
-C:\bin\eclipse45final\eclipse.exe -application org.eclipse.equinox.p2.publisher.EclipseGenerator -updateSite X:\pydev_build\update_site_dir\updates\ -site file:X:\pydev_build\update_site_dir\updates\site.xml -metadataRepository file:X:\pydev_build\update_site_dir\updates -metadataRepositoryName "PyDev Update Site" -artifactRepository file:X:\pydev_build\update_site_dir\updates -artifactRepositoryName "PyDev Artifacts" -publishArtifacts -publishArtifactRepository -compress -reusePack200Files -noDefaultIUs -vmargs -Xmx256m
-
-
-		** Copy site.xml, artifacts.jar and content.jar to X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository
-
-copy X:\pydev_build\update_site_dir\updates\site.xml X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\site.xml /Y
-copy X:\pydev_build\update_site_dir\updates\artifacts.jar X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\artifacts.jar /Y
-copy X:\pydev_build\update_site_dir\updates\content.jar X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\content.jar /Y
-
-
 		** Create zips to distribute
 
-
-x:\
+x:
 cd X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable
-"C:\Program Files\7-Zip\7z" a -tzip -r "PyDev 4.4.0.zip" features plugins
+"C:\Program Files\7-Zip\7z" a -tzip -r "PyDev 8.1.0.zip" features plugins
 cd X:\pydev_build\build_dir\pydev
-git archive -o "X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable\PyDev 4.4.0-sources.zip" origin/development
-
-		** Copy zips from X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable to sourceforge:
-
+git archive -o "X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable\PyDev 8.1.0-sources.zip" origin/master
 
         ** Submit feature and sources .zip in folder X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable to:
 
-c:\bin\FileZilla\filezilla.exe sftp://fabioz,pydev@frs.sourceforge.net/home/pfs/project/p/py/pydev/pydev/ --local="X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable"
+"C:\Program Files\FileZilla FTP Client\filezilla.exe" sftp://fabioz,pydev@frs.sourceforge.net/home/pfs/project/p/py/pydev/pydev/ --local="X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable"
 
 Note: check pageant if it does not connect.
 
 Check if the main download button points to the proper place (not to the sources) --
-https://sourceforge.net/projects/pydev/files/pydev/PyDev 4.4.0/ -- choose file > file info > set default and give better name.
+https://sourceforge.net/projects/pydev/files/pydev/PyDev 8.1.0/ -- choose file > file info > set default.
 
 
 		** Add contents to the update site
 
 
-c:\bin\Python27\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository -d https://api.bintray.com/content/fabioz/pydev/all/
+cd /D X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\
 
-cd X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\
+mkdir org.python.pydev.p2-repo-8.1.0-SNAPSHOT
 
-mkdir org.python.pydev.p2-repo-4.4.0-SNAPSHOT
+cd org.python.pydev.p2-repo-8.1.0-SNAPSHOT
 
-cd org.python.pydev.p2-repo-4.4.0-SNAPSHOT
+"C:\Program Files\7-Zip\7z" x ..\org.python.pydev.p2-repo-8.1.0-SNAPSHOT.zip
 
-"C:\Program Files\7-Zip\7z" x ..\org.python.pydev.p2-repo-4.4.0-SNAPSHOT.zip
-
-c:\bin\Python27\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\org.python.pydev.p2-repo-4.4.0-SNAPSHOT -d https://api.bintray.com/content/fabioz/pydev/latest/
-
+Create "8.1.0" version in "https://bintray.com/fabioz/pydev/pydev/new/version"
+Add "8.1.0" in X:\release_tools\pydev_uploader_bintray.py
+C:\bin\Miniconda3\envs\py37_tests\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\org.python.pydev.p2-repo-8.1.0-SNAPSHOT -d https://api.bintray.com/content/fabioz/pydev/8.1.0/
 
 		** Update homepage:
 
-robocopy X:\pydev\plugins\com.python.pydev.docs\merged_homepage\final X:\openshift\pydev.page2\ /xd .git /xd .openshift  /s
-X:\openshift\pydev.page2\
-mu st
-mu acp "Updated to 4.4.0"
-
-c:\bin\FileZilla\filezilla.exe sftp://fabioz,pydev@frs.sourceforge.net/home/project-web/pydev/htdocs --local="x:\pydev\plugins\com.python.pydev.docs\merged_homepage\final"
-c:\bin\FileZilla\filezilla.exe sftp://deploy@173.45.225.54/var/www --local="x:\pydev\plugins\com.python.pydev.docs\merged_homepage\final"
-
+Update version in build_homepage.py
+cd /D X:\pydev.page
+python deploy.py
 
 		** Tag repository:
-		  git tag pydev_4_4_0 -a -m "PyDev 4.4.0"
+		  git tag pydev_8_1_0 -a -m "PyDev 8.1.0"
 		  git push --tags
 
 
+		** update version in eclipse marketplace: http://marketplace.eclipse.org/
+
 		** Add news in forum (same as e-mail)
 
-		** update version in eclipse marketplace: http://marketplace.eclipse.org/
+		** Send e-mail (use contents from sf e-mail -- change title sizes)
 
 		** Add blog post
 
 		** Add to reddit: http://www.reddit.com/r/Python/submit
 
-		** Send e-mail
-
 		** Twitter
 
         ** Update the versions:
-            x:
-            cd x:\pydev
-            python update_version.py 4.3.1
+x:
+cd x:\pydev
+python update_version.py 8.1.0
+

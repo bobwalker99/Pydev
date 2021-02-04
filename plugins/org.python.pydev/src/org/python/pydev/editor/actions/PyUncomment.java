@@ -12,7 +12,7 @@
 package org.python.pydev.editor.actions;
 
 import org.eclipse.jface.text.BadLocationException;
-import org.python.pydev.editor.actions.PyFormatStd.FormatStd;
+import org.python.pydev.core.formatter.FormatStd;
 import org.python.pydev.shared_core.string.TextSelectionUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 
@@ -31,6 +31,7 @@ public class PyUncomment extends PyComment {
 
     /* Selection element */
 
+    @Override
     public Tuple<Integer, Integer> perform(TextSelectionUtils ps) throws BadLocationException {
         return performUncomment(ps);
     }

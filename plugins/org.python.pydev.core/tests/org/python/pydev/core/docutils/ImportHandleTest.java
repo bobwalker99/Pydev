@@ -27,10 +27,12 @@ public class ImportHandleTest extends TestCase {
         }
     }
 
+    @Override
     protected void setUp() throws Exception {
         super.setUp();
     }
 
+    @Override
     protected void tearDown() throws Exception {
         super.tearDown();
     }
@@ -185,6 +187,9 @@ public class ImportHandleTest extends TestCase {
 
         importHandle = new ImportHandle(null, "from AAA import BBB;from XXX import YYY", 0, 0);
         assertTrue(importHandle.contains(new ImportHandle.ImportHandleInfo("from  XXX  import   YYY")));
+
+        importHandle = new ImportHandle(null, "from AAA.aaa\\\n   .bbb import BBB", 0, 0);
+        assertTrue(importHandle.contains(new ImportHandle.ImportHandleInfo("from AAA.aaa.bbb import BBB")));
     }
 
 }

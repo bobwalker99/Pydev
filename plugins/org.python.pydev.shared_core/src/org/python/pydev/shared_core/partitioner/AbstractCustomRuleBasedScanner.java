@@ -13,11 +13,6 @@ package org.python.pydev.shared_core.partitioner;
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.rules.ICharacterScanner;
-import org.eclipse.jface.text.rules.IRule;
-import org.eclipse.jface.text.rules.IToken;
-import org.eclipse.jface.text.rules.ITokenScanner;
-import org.eclipse.jface.text.rules.Token;
 import org.python.pydev.shared_core.log.Log;
 
 /**
@@ -61,7 +56,7 @@ public abstract class AbstractCustomRuleBasedScanner implements ICharacterScanne
 
     /**
      * Configures the scanner with the given sequence of rules.
-     * 
+     *
      * @param rules the sequence of rules controlling this scanner (can be null).
      * @note the rules may be null and a reference to them will be kept (i.e.: the
      * passed array should not be modified outside of this method).
@@ -90,6 +85,7 @@ public abstract class AbstractCustomRuleBasedScanner implements ICharacterScanne
     /*
      * @see ITokenScanner#setRange(IDocument, int, int)
      */
+    @Override
     public void setRange(final IDocument document, int offset, int length) {
         Assert.isLegal(document != null);
         final int documentLength = document.getLength();
@@ -129,6 +125,7 @@ public abstract class AbstractCustomRuleBasedScanner implements ICharacterScanne
     /*
      * @see ITokenScanner#getTokenOffset()
      */
+    @Override
     public int getTokenOffset() {
         return fTokenOffset;
     }
@@ -136,6 +133,7 @@ public abstract class AbstractCustomRuleBasedScanner implements ICharacterScanne
     /*
      * @see ITokenScanner#getTokenLength()
      */
+    @Override
     public int getTokenLength() {
         if (fOffset < fRangeEnd) {
             return fOffset - getTokenOffset();
@@ -146,6 +144,7 @@ public abstract class AbstractCustomRuleBasedScanner implements ICharacterScanne
     /*
      * @see ICharacterScanner#getColumn()
      */
+    @Override
     public int getColumn() {
         if (fColumn == UNDEFINED) {
             try {
@@ -163,6 +162,7 @@ public abstract class AbstractCustomRuleBasedScanner implements ICharacterScanne
     /*
      * @see ICharacterScanner#getLegalLineDelimiters()
      */
+    @Override
     public char[][] getLegalLineDelimiters() {
         return fDelimiters;
     }
@@ -181,6 +181,7 @@ public abstract class AbstractCustomRuleBasedScanner implements ICharacterScanne
      *  }
      *
      */
+    @Override
     public IToken nextToken() {
         //Treat case where we have no rules (read to the end).
         if (fRules == null) {
@@ -224,10 +225,12 @@ public abstract class AbstractCustomRuleBasedScanner implements ICharacterScanne
     /*
      * @see ICharacterScanner#read()
      */
+    @Override
     public abstract int read();
 
     /*
      * @see ICharacterScanner#unread()
      */
+    @Override
     public abstract void unread();
 }

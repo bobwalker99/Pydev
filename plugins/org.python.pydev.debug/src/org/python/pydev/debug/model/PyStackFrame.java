@@ -10,11 +10,13 @@
  */
 package org.python.pydev.debug.model;
 
+import java.io.File;
+import java.util.Arrays;
+
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.PlatformObject;
-import org.eclipse.debug.core.DebugEvent;
 import org.eclipse.debug.core.DebugException;
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.model.IDebugTarget;
@@ -22,40 +24,47 @@ import org.eclipse.debug.core.model.IRegisterGroup;
 import org.eclipse.debug.core.model.IStackFrame;
 import org.eclipse.debug.core.model.IThread;
 import org.eclipse.debug.core.model.IVariable;
-import org.eclipse.ui.progress.IDeferredWorkbenchAdapter;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.views.properties.IPropertySource;
 import org.eclipse.ui.views.tasklist.ITaskListResourceAdapter;
+import org.python.pydev.core.CorePlugin;
 import org.python.pydev.core.IPyStackFrame;
+import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.model.remote.AbstractDebuggerCommand;
 import org.python.pydev.debug.model.remote.AbstractRemoteDebugger;
 import org.python.pydev.debug.model.remote.GetFileContentsCommand;
 import org.python.pydev.debug.model.remote.GetFrameCommand;
 import org.python.pydev.debug.model.remote.GetVariableCommand;
 import org.python.pydev.debug.model.remote.ICommandResponseListener;
+import org.python.pydev.editorinput.EditorInputFactory;
 import org.python.pydev.editorinput.PySourceLocatorPrefs;
+import org.python.pydev.shared_core.cache.LRUMap;
+import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.string.StringUtils;
+import org.python.pydev.shared_core.structure.Tuple;
 
 /**
  * Represents a stack entry.
  *
  * Needs to integrate with the source locator
  */
-public class PyStackFrame extends PlatformObject implements IStackFrame, IVariableLocator, IPyStackFrame {
+public class PyStackFrame extends PlatformObject
+        implements IStackFrame, IVariableLocator, IPyStackFrame, IVariablesContainerParent {
 
     private String name;
     private PyThread thread;
     private String id;
     private IPath path;
     private int line;
-    private volatile IVariable[] variables;
+    private final ContainerOfVariables variableContainer = new ContainerOfVariables(this, true);
     private IVariableLocator localsLocator;
     private IVariableLocator globalsLocator;
     private IVariableLocator frameLocator;
     private IVariableLocator expressionLocator;
     private AbstractDebugTarget target;
-    private volatile boolean onAskGetNewVars = true;
 
-    public PyStackFrame(PyThread in_thread, String in_id, String name, IPath file, int line, AbstractDebugTarget target) {
+    public PyStackFrame(PyThread in_thread, String in_id, String name, IPath file, int line,
+            AbstractDebugTarget target) {
         this.id = in_id;
         this.name = name;
         this.path = file;
@@ -63,37 +72,45 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
         this.thread = in_thread;
 
         localsLocator = new IVariableLocator() {
+            @Override
             public String getPyDBLocation() {
                 return thread.getId() + "\t" + id + "\tLOCAL";
             }
 
+            @Override
             public String getThreadId() {
                 return thread.getId();
             }
         };
         frameLocator = new IVariableLocator() {
+            @Override
             public String getPyDBLocation() {
                 return thread.getId() + "\t" + id + "\tFRAME";
             }
 
+            @Override
             public String getThreadId() {
                 return thread.getId();
             }
         };
         globalsLocator = new IVariableLocator() {
+            @Override
             public String getPyDBLocation() {
                 return thread.getId() + "\t" + id + "\tGLOBAL";
             }
 
+            @Override
             public String getThreadId() {
                 return thread.getId();
             }
         };
         expressionLocator = new IVariableLocator() {
+            @Override
             public String getPyDBLocation() {
                 return thread.getId() + "\t" + id + "\tEXPRESSION";
             }
 
+            @Override
             public String getThreadId() {
                 return thread.getId();
             }
@@ -101,6 +118,7 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
         this.target = target;
     }
 
+    @Override
     public AbstractDebugTarget getTarget() {
         return target;
     }
@@ -109,6 +127,7 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
         return id;
     }
 
+    @Override
     public String getThreadId() {
         return this.thread.getId();
     }
@@ -121,6 +140,7 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
         return frameLocator;
     }
 
+    @Override
     public IVariableLocator getGlobalLocator() {
         return globalsLocator;
     }
@@ -145,73 +165,21 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
         return path;
     }
 
+    @Override
     public IThread getThread() {
         return thread;
     }
 
-    public void setVariables(IVariable[] locals) {
-        this.variables = locals;
-    }
-
-    private final static IVariable[] EMPTY_VARIABLES = new IVariable[0];
-    private final static Object lock = new Object();
-
-    /**
-     * This interface changed in 3.2... we returned an empty collection before, and used the
-     * DeferredWorkbenchAdapter to get the actual children, but now we have to use the
-     * DeferredWorkbenchAdapter from here, as it is not called in that other interface
-     * anymore.
-     *
-     * @see org.eclipse.debug.core.model.IStackFrame#getVariables()
-     */
+    @Override
     public IVariable[] getVariables() throws DebugException {
-        if (onAskGetNewVars) {
-            synchronized (lock) {
-                //double check idiom for accessing onAskGetNewVars.
-                if (onAskGetNewVars) {
-                    IVariable[] oldVars = this.variables;
-                    if (oldVars == null) {
-                        //Temporary in case some other thread asks for it while we're still calculating.
-                        this.variables = EMPTY_VARIABLES;
-                    }
-                    onAskGetNewVars = false;
-
-                    DeferredWorkbenchAdapter adapter = new DeferredWorkbenchAdapter(this);
-                    IVariable[] vars = (IVariable[]) adapter.getChildren(this);
-
-                    if (oldVars != null) {
-                        this.target.getModificationChecker().verifyVariablesModified(vars, oldVars);
-
-                    } else {
-                        this.target.getModificationChecker().verifyModified(this, vars);
-                    }
-
-                    this.variables = vars;
-                }
-
-            }
-        }
-        return this.variables;
-    }
-
-    /**
-     * @return the internal variables array directly (may be null).
-     */
-    public IVariable[] getInternalVariables() {
-        return this.variables;
+        return variableContainer.getVariables();
     }
 
     public void forceGetNewVariables() {
-        this.onAskGetNewVars = true;
-        AbstractDebugTarget target = getTarget();
-        if (target != null) {
-            // I.e.: if we do a new DebugEvent(this, DebugEvent.CHANGE, DebugEvent.CONTENT), the selection
-            // of the editor is redone (thus, if the user uses F2 it'd get back to the current breakpoint
-            // location because it'd be reselected).
-            target.fireEvent(new DebugEvent(this, DebugEvent.CHANGE, DebugEvent.UNSPECIFIED));
-        }
+        variableContainer.forceGetNewVariables();
     }
 
+    @Override
     public boolean hasVariables() throws DebugException {
         return true;
     }
@@ -219,14 +187,17 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
     /**
      * Note: line 1-based.
      */
+    @Override
     public int getLineNumber() throws DebugException {
         return line;
     }
 
+    @Override
     public int getCharStart() throws DebugException {
         return -1;
     }
 
+    @Override
     public int getCharEnd() throws DebugException {
         return -1;
     }
@@ -237,6 +208,7 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
         this.currentStackFrame = true;
     }
 
+    @Override
     public String getName() throws DebugException {
         String ret = StringUtils.join("", name, " [", path.lastSegment(), ":", Integer.toString(line), "]");
         if (currentStackFrame) {
@@ -245,88 +217,109 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
         return ret;
     }
 
+    @Override
     public IRegisterGroup[] getRegisterGroups() throws DebugException {
         return new IRegisterGroup[0];
     }
 
+    @Override
     public boolean hasRegisterGroups() throws DebugException {
         return false;
     }
 
+    @Override
     public String getModelIdentifier() {
         return thread.getModelIdentifier();
     }
 
+    @Override
     public IDebugTarget getDebugTarget() {
         return thread.getDebugTarget();
     }
 
+    @Override
     public ILaunch getLaunch() {
         return thread.getLaunch();
     }
 
+    @Override
     public boolean canStepInto() {
         return thread.canStepInto();
     }
 
+    @Override
     public boolean canStepOver() {
         return thread.canStepOver();
     }
 
+    @Override
     public boolean canStepReturn() {
         return thread.canStepReturn();
     }
 
+    @Override
     public boolean isStepping() {
         return thread.isStepping();
     }
 
+    @Override
     public void stepInto() throws DebugException {
         thread.stepInto();
     }
 
+    @Override
     public void stepOver() throws DebugException {
         thread.stepOver();
     }
 
+    @Override
     public void stepReturn() throws DebugException {
         thread.stepReturn();
     }
 
+    @Override
     public boolean canResume() {
         return thread.canResume();
     }
 
+    @Override
     public boolean canSuspend() {
         return thread.canSuspend();
     }
 
+    @Override
     public boolean isSuspended() {
         return thread.isSuspended();
     }
 
+    @Override
     public void resume() throws DebugException {
         thread.resume();
     }
 
+    @Override
     public void suspend() throws DebugException {
         thread.suspend();
     }
 
+    @Override
     public boolean canTerminate() {
         return thread.canTerminate();
     }
 
+    @Override
     public boolean isTerminated() {
         return thread.isTerminated();
     }
 
+    @Override
     public void terminate() throws DebugException {
         thread.terminate();
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public Object getAdapter(Class adapter) {
+    public <T> T getAdapter(Class<T> adapter) {
         AdapterDebug.print(this, adapter);
 
         if (adapter.equals(ILaunch.class) || adapter.equals(IResource.class)) {
@@ -338,20 +331,16 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
         }
 
         if (adapter.equals(IDebugTarget.class)) {
-            return thread.getDebugTarget();
+            return (T) thread.getDebugTarget();
         }
 
         if (adapter.equals(org.eclipse.debug.ui.actions.IRunToLineTarget.class)) {
-            return this.target.getRunToLineTarget();
+            return (T) this.target.getRunToLineTarget();
         }
 
         if (adapter.equals(IPropertySource.class) || adapter.equals(ITaskListResourceAdapter.class)
                 || adapter.equals(org.eclipse.debug.ui.actions.IToggleBreakpointsTarget.class)) {
             return super.getAdapter(adapter);
-        }
-
-        if (adapter.equals(IDeferredWorkbenchAdapter.class)) {
-            return new DeferredWorkbenchAdapter(this);
         }
 
         AdapterDebug.printDontKnow(this, adapter);
@@ -386,6 +375,12 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
         return new GetFrameCommand(dbg, frameLocator.getPyDBLocation());
     }
 
+    @Override
+    public GetVariableCommand getVariableCommand(AbstractDebugTarget target) {
+        return getFrameCommand(target);
+    }
+
+    @Override
     public String getPyDBLocation() {
         return this.frameLocator.getPyDBLocation();
     }
@@ -399,18 +394,39 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
         return "PyStackFrame: " + this.id;
     }
 
+    @Override
+    public boolean isFileLoadedFromDebugger(IPath path) {
+        if (path.lastSegment().startsWith("<") || path.lastSegment().startsWith("&lt;")) {
+            return true;
+        }
+
+        if (target == null) {
+            return false;
+        }
+        return target.isFileLoadedFromDebugger(path);
+    }
+
+    @Override
+    public void setFileLoadedFromDebugger(IPath path) {
+        if (target != null) {
+            target.setFileLoadedFromDebugger(path);
+        }
+    }
+
     private String fileContents = null;
 
+    @Override
     public String getFileContents() {
         if (fileContents == null) {
             // send the command, and then busy-wait
-            GetFileContentsCommand cmd = new GetFileContentsCommand(target, this.path.toOSString());
+            GetFileContentsCommand cmd = new GetFileContentsCommand(target, this.id);
 
             final Object lock = new Object();
             final String[] response = new String[1];
 
             cmd.setCompletionListener(new ICommandResponseListener() {
 
+                @Override
                 public void commandComplete(AbstractDebuggerCommand cmd) {
                     try {
                         response[0] = ((GetFileContentsCommand) cmd).getResponse();
@@ -445,5 +461,84 @@ public class PyStackFrame extends PlatformObject implements IStackFrame, IVariab
             fileContents = response[0];
         }
         return fileContents;
+    }
+
+    private IEditorInput editorInput = null;
+    private final static LRUMap<File, File> createdInCurrentSession = new LRUMap<File, File>(200);
+    private final static Object lock = new Object();
+
+    @Override
+    public IEditorInput getEditorInputFromLoadedSource(IPath initialPath) {
+        if (editorInput != null) {
+            return editorInput;
+        }
+        try {
+            String fileContents = this.getFileContents();
+            if (fileContents != null && fileContents.length() > 0) {
+                synchronized (lock) {
+                    this.setFileLoadedFromDebugger(initialPath);
+                    String lastSegment = path.lastSegment();
+                    if (lastSegment.length() > 255) {
+                        lastSegment = lastSegment.substring(0, 255);
+                    }
+                    lastSegment = lastSegment.replaceAll("[\\\\/:*?\"<>|]", "_"); // make it a valid filename.
+                    File workspaceMetadataFile = CorePlugin.getWorkspaceMetadataFile("temporary_files");
+                    if (!workspaceMetadataFile.exists()) {
+                        workspaceMetadataFile.mkdirs();
+                    }
+                    File file = new File(workspaceMetadataFile, lastSegment);
+                    for (int i = 0; i < 1000; i++) {
+                        if (file.exists()) {
+                            if (Arrays.equals(FileUtils.getFileContentsBytes(file), fileContents.getBytes())) {
+                                createdInCurrentSession.put(file, file);
+                                editorInput = EditorInputFactory.create(file, true);
+                                return editorInput;
+                            }
+
+                            if (!createdInCurrentSession.containsKey(file)) {
+                                createdInCurrentSession.put(file, file);
+                                file.delete();
+                                FileUtils.writeStrToFile(fileContents, file);
+                                try {
+                                    file.setReadOnly();
+                                } catch (Exception e) {
+                                    Log.log(e);
+                                }
+                                editorInput = EditorInputFactory.create(file, true);
+                                return editorInput;
+                            } else {
+                                // It was created in this session and it doesn't match, so, generate a new name.
+                                Tuple<String, String> splitted = StringUtils.splitExt(lastSegment);
+                                if (splitted.o2.isEmpty()) {
+                                    file = new File(workspaceMetadataFile,
+                                            StringUtils.format("%s-%s", splitted.o1, i));
+
+                                } else {
+                                    file = new File(workspaceMetadataFile,
+                                            StringUtils.format("%s-%s.%s", splitted.o1, i, splitted.o2));
+
+                                }
+                            }
+
+                        } else {
+                            // File does not exist...
+                            createdInCurrentSession.put(file, file);
+                            FileUtils.writeStrToFile(fileContents, file);
+                            try {
+                                file.setReadOnly();
+                            } catch (Exception e) {
+                                Log.log(e);
+                            }
+                            editorInput = EditorInputFactory.create(file, true);
+                            return editorInput;
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            Log.log(e);
+        }
+        return null;
     }
 }

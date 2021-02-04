@@ -13,6 +13,7 @@ import org.python.pydev.parser.jython.ISpecialStr;
 import org.python.pydev.parser.jython.ParseException;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.Token;
+import org.python.pydev.parser.jython.ast.Assign;
 import org.python.pydev.parser.jython.ast.Attribute;
 import org.python.pydev.parser.jython.ast.AugAssign;
 import org.python.pydev.parser.jython.ast.BinOp;
@@ -34,6 +35,7 @@ import org.python.pydev.parser.jython.ast.ImportFrom;
 import org.python.pydev.parser.jython.ast.Module;
 import org.python.pydev.parser.jython.ast.Name;
 import org.python.pydev.parser.jython.ast.NameTok;
+import org.python.pydev.parser.jython.ast.NamedExpr;
 import org.python.pydev.parser.jython.ast.Num;
 import org.python.pydev.parser.jython.ast.Pass;
 import org.python.pydev.parser.jython.ast.Set;
@@ -57,9 +59,9 @@ import org.python.pydev.shared_core.string.FastStringBuffer;
 
 /**
  * Provides the basic behavior for a tree builder (opening and closing node scopes).
- * 
+ *
  * Subclasses must provide actions where it's not common.
- * 
+ *
  * @author Fabio
  */
 public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
@@ -72,6 +74,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
     /**
      * @return the last opened node.
      */
+    @Override
     public final SimpleNode getLastOpened() {
         return lastOpened;
     }
@@ -102,14 +105,11 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
      * in {@link #closeNode(SimpleNode, int)} to have its scope closed (and at that time it may be changed
      * for a new node that represents the scope more accurately.
      */
+    @Override
     public final SimpleNode openNode(final int id) {
         SimpleNode ret;
 
         switch (id) {
-
-            case JJTFILE_INPUT:
-                ret = new Module(null);
-                break;
 
             case JJTFALSE:
                 ret = new Name("False", Name.Load, true);
@@ -136,12 +136,13 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
             case JJTSTRING:
             case JJTUNICODE:
             case JJTBINARY:
+            case JJTFSTRING:
                 //the actual number will be set during the parsing (token image) -- see Num construct
-                ret = new Str(null, -1, false, false, false);
+                ret = new Str(null, -1, false, false, false, false, null);
                 break;
 
             case JJTFOR_STMT:
-                ret = new For(null, null, null, null);
+                ret = new For(null, null, null, null, stack.getGrammar().getInsideAsync());
                 break;
 
             case JJTEXEC_STMT:
@@ -166,6 +167,10 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
 
             case JJTIF_STMT:
                 ret = new If(null, null, null);
+                break;
+
+            case JJTNAMEDEXPR_TEST:
+                ret = new NamedExpr(null, null);
                 break;
 
             case JJTAUG_PLUS:
@@ -268,7 +273,15 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
                 ret = new Attribute(null, null, Attribute.Load);
                 break;
             case JJTSTAR_EXPR:
-                ret = new Starred(null, Starred.Store);
+                ret = new Starred(null, stack.getGrammar().getGrammarActions().getStarExprScope());
+                break;
+
+            case JJTFILE_INPUT:
+                ret = new Module(null);
+                break;
+
+            case JJTEVAL_INPUT:
+                ret = new Expr(null);
                 break;
 
             default:
@@ -287,6 +300,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
      * @return a new node representing the node that's having it's context closed.
      * @throws Exception
      */
+    @Override
     public final SimpleNode closeNode(final SimpleNode n, final int arity) throws Exception {
         exprType value;
         suiteType orelseSuite;
@@ -327,6 +341,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
             case JJTSTRING:
             case JJTUNICODE:
             case JJTBINARY:
+            case JJTFSTRING:
             case JJTBEGIN_DECORATOR:
             case JJTCOMMA:
             case JJTCOLON:
@@ -591,12 +606,6 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
                 }
                 return new aliasType(makeName(NameTok.ImportName), asname);
 
-            case JJTSTAR_EXPR:
-                Starred s = (Starred) n;
-                s.value = (exprType) this.stack.popNode();
-                ctx.setStore(s);
-                return s;
-
             case JJTSTRJOIN:
                 Str str2 = (Str) stack.popNode();
                 Object o = stack.popNode();
@@ -624,7 +633,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
 
     /**
      * Handles a found if construct.
-     * 
+     *
      * @param n the node that opened the if scope.
      * @param arity the current number of nodes in the stack.
      * @return the If node that should close this context.
@@ -822,7 +831,25 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
         suiteType s = new Suite(suite.body);
         addSpecialsAndClearOriginal(suite, s);
 
-        return new With(items, s);
+        return new With(items, s, stack.getGrammar().getInsideAsync());
+    }
+
+    public final Assign typedDeclaration(int arity, JJTPythonGrammarState stack, CtxVisitor ctx)
+            throws Exception {
+        exprType type;
+        exprType[] exprs;
+        if (arity >= 3) {
+            exprType value = (exprType) stack.popNode();
+            type = (exprType) stack.popNode();
+            exprs = makeExprs(arity - 2);
+            ctx.setStore(exprs);
+            return new Assign(exprs, value, type);
+        } else {
+            type = (exprType) stack.popNode();
+            exprs = makeExprs(arity - 1);
+            ctx.setStore(exprs);
+            return new Assign(exprs, null, type);
+        }
     }
 
 }

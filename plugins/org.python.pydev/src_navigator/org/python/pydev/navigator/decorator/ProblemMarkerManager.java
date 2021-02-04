@@ -28,7 +28,6 @@ import org.eclipse.ui.progress.UIJob;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.shared_ui.utils.UIUtils;
 
-
 /**
  * Listens to resource deltas and filters for marker changes of type IMarker.PROBLEM
  * Viewers showing error ticks should register as listener to
@@ -49,6 +48,7 @@ public class ProblemMarkerManager implements IResourceChangeListener {
             fChangedElements = changedElements;
         }
 
+        @Override
         public boolean visit(IResourceDelta delta) throws CoreException {
             IResource res = delta.getResource();
             if (res instanceof IProject && delta.getKind() == IResourceDelta.CHANGED) {
@@ -123,13 +123,15 @@ public class ProblemMarkerManager implements IResourceChangeListener {
     /*
      * @see IResourceChangeListener#resourceChanged
      */
+    @Override
     public void resourceChanged(IResourceChangeEvent event) {
         HashSet<IResource> changedElements = new HashSet<IResource>();
 
         try {
             IResourceDelta delta = event.getDelta();
-            if (delta != null)
+            if (delta != null) {
                 delta.accept(new ProjectErrorVisitor(changedElements));
+            }
         } catch (CoreException e) {
             Log.log(e);
         }
@@ -182,18 +184,19 @@ public class ProblemMarkerManager implements IResourceChangeListener {
     private void postAsyncUpdate(final Display display) {
         if (fNotifierJob == null) {
             fNotifierJob = new UIJob(display, "Update problem marker decorations") {
+                @Override
                 public IStatus runInUIThread(IProgressMonitor monitor) {
                     //Yes, MUST be called on UI thread!
                     IResource[] markerResources = null;
                     IResource[] annotationResources = null;
-                    synchronized (this) {
+                    synchronized (ProblemMarkerManager.this) {
                         if (!fResourcesWithMarkerChanges.isEmpty()) {
-                            markerResources = (IResource[]) fResourcesWithMarkerChanges
+                            markerResources = fResourcesWithMarkerChanges
                                     .toArray(new IResource[fResourcesWithMarkerChanges.size()]);
                             fResourcesWithMarkerChanges.clear();
                         }
                         if (!fResourcesWithAnnotationChanges.isEmpty()) {
-                            annotationResources = (IResource[]) fResourcesWithAnnotationChanges
+                            annotationResources = fResourcesWithAnnotationChanges
                                     .toArray(new IResource[fResourcesWithAnnotationChanges.size()]);
                             fResourcesWithAnnotationChanges.clear();
                         }

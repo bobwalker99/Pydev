@@ -22,15 +22,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.jface.text.ITextSelection;
 import org.python.pydev.core.IGrammarVersionProvider;
-import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.parser.jython.ast.factory.AdapterPrefs;
 import org.python.pydev.refactoring.ast.adapters.AbstractScopeNode;
 import org.python.pydev.refactoring.ast.adapters.ModuleAdapter;
 import org.python.pydev.refactoring.coderefactoring.extractmethod.edit.ParameterReturnDeduce;
 import org.python.pydev.refactoring.coderefactoring.extractmethod.request.ExtractMethodRequest;
 import org.python.pydev.refactoring.core.request.IRequestProcessor;
+import org.python.pydev.shared_core.string.ICoreTextSelection;
 
 public class MockupExtractMethodRequestProcessor implements IRequestProcessor<ExtractMethodRequest> {
 
@@ -44,9 +43,12 @@ public class MockupExtractMethodRequestProcessor implements IRequestProcessor<Ex
 
     private Map<String, String> renameMap;
 
-    private ITextSelection selection;
+    private ICoreTextSelection selection;
 
-    public MockupExtractMethodRequestProcessor(AbstractScopeNode<?> scopeAdapter, ITextSelection selection,
+    private IGrammarVersionProvider versionProvider;
+
+    public MockupExtractMethodRequestProcessor(AbstractScopeNode<?> scopeAdapter, ICoreTextSelection selection,
+            IGrammarVersionProvider versionProvider,
             ModuleAdapter parsedSelection, ParameterReturnDeduce deducer, Map<String, String> renameMap,
             int offsetStrategy) {
 
@@ -56,18 +58,15 @@ public class MockupExtractMethodRequestProcessor implements IRequestProcessor<Ex
         this.offsetStrategy = offsetStrategy;
         this.deducer = deducer;
         this.renameMap = renameMap;
+        this.versionProvider = versionProvider;
     }
 
+    @Override
     public List<ExtractMethodRequest> getRefactoringRequests() {
         List<ExtractMethodRequest> requests = new ArrayList<ExtractMethodRequest>();
         ExtractMethodRequest req = new ExtractMethodRequest("extracted_method", this.selection, this.scopeAdapter,
                 this.parsedSelection, deducer.getParameters(), deducer.getReturns(), this.renameMap,
-                this.offsetStrategy, new AdapterPrefs("\n", new IGrammarVersionProvider() {
-
-                    public int getGrammarVersion() throws MisconfigurationException {
-                        return IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_2_7;
-                    }
-                }));
+                this.offsetStrategy, new AdapterPrefs("\n", versionProvider));
         requests.add(req);
 
         return requests;

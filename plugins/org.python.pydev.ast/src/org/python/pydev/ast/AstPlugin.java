@@ -6,14 +6,17 @@
  */
 package org.python.pydev.ast;
 
-import org.eclipse.ui.plugin.*;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
+
+import org.eclipse.core.runtime.Plugin;
 import org.osgi.framework.BundleContext;
-import java.util.*;
+import org.python.pydev.ast.codecompletion.PyCodeCompletionInitializer;
 
 /**
  * The main plugin class to be used in the desktop.
  */
-public class AstPlugin extends AbstractUIPlugin {
+public class AstPlugin extends Plugin {
     //The shared instance.
     private static AstPlugin plugin;
     //Resource bundle.
@@ -35,13 +38,18 @@ public class AstPlugin extends AbstractUIPlugin {
     /**
      * This method is called upon plug-in activation
      */
+    @Override
     public void start(BundleContext context) throws Exception {
         super.start(context);
+        // Just called to initialize org.python.pydev.ast.codecompletion.PyCodeCompletionInitializer
+        // because we're actually initializing things in the "org.python.pydev" node.
+        new PyCodeCompletionInitializer().initializeDefaultPreferences();
     }
 
     /**
      * This method is called when the plug-in is stopped
      */
+    @Override
     public void stop(BundleContext context) throws Exception {
         super.stop(context);
     }

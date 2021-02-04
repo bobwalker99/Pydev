@@ -106,6 +106,7 @@ public class LinkFieldEditor extends FieldEditor {
             }
 
             link.addDisposeListener(new DisposeListener() {
+                @Override
                 public void widgetDisposed(DisposeEvent event) {
                     link = null;
                 }
@@ -148,5 +149,13 @@ public class LinkFieldEditor extends FieldEditor {
     public void setEnabled(boolean enabled, Composite parent) {
         //super.setEnabled(enabled, parent); -- don't call super!
         link.setEnabled(enabled);
+    }
+
+    public void setVisible(boolean visible) {
+        link.setVisible(visible);
+        Object layoutData = link.getLayoutData();
+        if (layoutData instanceof GridData) {
+            ((GridData) layoutData).exclude = !visible;
+        }
     }
 }

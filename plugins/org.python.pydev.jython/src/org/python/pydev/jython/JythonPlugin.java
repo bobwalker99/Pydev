@@ -36,9 +36,12 @@ import org.python.pydev.core.log.Log;
 import org.python.pydev.jython.ui.JyScriptingPreferencesPage;
 import org.python.pydev.shared_core.callbacks.ICallback0;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_core.jython.IPythonInterpreter;
+import org.python.pydev.shared_core.jython.JythonPep8Core;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.shared_ui.ConsoleColorCache;
+import org.python.pydev.shared_ui.ImageCache;
 import org.python.pydev.shared_ui.bundle.BundleInfo;
 import org.python.pydev.shared_ui.bundle.IBundleInfo;
 import org.python.util.PythonInterpreter;
@@ -222,6 +225,10 @@ public class JythonPlugin extends AbstractUIPlugin {
     public void start(BundleContext context) throws Exception {
         super.start(context);
         bundles = context.getBundles();
+        JythonPep8Core.analyzeCallback = (params) -> {
+            JythonPep8.analyzePep8WithJython(params);
+            return null;
+        };
     }
 
     private static final Object lock = new Object();
@@ -235,6 +242,7 @@ public class JythonPlugin extends AbstractUIPlugin {
                 prop2.put("python.path", FileUtils.getFileAbsolutePath(getJySrcDirFile()));
                 prop2.put("python.console.encoding", "UTF-8"); // Used to prevent: console: Failed to install '': java.nio.charset.UnsupportedCharsetException: cp0.
                 prop2.put("python.security.respectJavaAccessibility", "false"); //don't respect java accessibility, so that we can access protected members on subclasses
+                // prop2.put("python.verbose", "0"); //Don't print anything -- Jython itself won't start!
                 try {
                     AllBundleClassLoader allBundleClassLoader = new AllBundleClassLoader(plugin.getClass()
                             .getClassLoader());
@@ -396,6 +404,7 @@ public class JythonPlugin extends AbstractUIPlugin {
     public static File[] getFilesBeneathFolder(final String startingWith, File jySrc) {
         File[] files = jySrc.listFiles(new FileFilter() {
 
+            @Override
             public boolean accept(File pathname) {
                 String name = pathname.getName();
                 if (name.startsWith(startingWith) && name.endsWith(".py")) {
@@ -460,8 +469,8 @@ public class JythonPlugin extends AbstractUIPlugin {
 
                 if (!regenerate) {
                     //if the 'code' object does not exist or if it's timestamp is outdated, we have to re-set it.
-                    PyObject obj = interpreter.get(codeObjName);
-                    PyObject pyTime = interpreter.get(codeObjTimestampName);
+                    PyObject obj = (PyObject) interpreter.get(codeObjName);
+                    PyObject pyTime = (PyObject) interpreter.get(codeObjTimestampName);
                     if (obj == null || pyTime == null || !pyTime.__tojava__(Long.class).equals(timestamp.o1)) {
                         if (DEBUG) {
                             System.out.println("Resetting object: " + codeObjName);
@@ -543,7 +552,8 @@ public class JythonPlugin extends AbstractUIPlugin {
                 PyException pE = (PyException) e;
                 if (pE.type instanceof PyJavaType) {
                     PyJavaType t = (PyJavaType) pE.type;
-                    if (t.getName() != null && t.getName().equals("org.python.pydev.jython.ExitScriptException")) {
+                    if (t.getName() != null
+                            && t.getName().indexOf("ExitScriptException") != -1) {
                         return null;
                     }
                 } else if (pE.type instanceof PyClass) {
@@ -577,8 +587,9 @@ public class JythonPlugin extends AbstractUIPlugin {
     private static MessageConsole getConsole() {
         try {
             if (fConsole == null) {
-                fConsole = new MessageConsole("PyDev Scripting", JythonPlugin.getBundleInfo().getImageCache()
-                        .getDescriptor("icons/python_scripting.png"));
+                fConsole = new MessageConsole("PyDev Scripting",
+                        ImageCache.asImageDescriptor(JythonPlugin.getBundleInfo().getImageCache()
+                                .getDescriptor("icons/python_scripting.png")));
 
                 fOutputStream = fConsole.newOutputStream();
                 fErrorStream = fConsole.newOutputStream();
@@ -620,6 +631,7 @@ public class JythonPlugin extends AbstractUIPlugin {
         if (redirect) {
             interpreter.setOut(new ScriptOutput(new ICallback0<IOConsoleOutputStream>() {
 
+                @Override
                 public IOConsoleOutputStream call() {
                     getConsole(); //Just to make sure it's initialized.
                     return fOutputStream;
@@ -628,6 +640,7 @@ public class JythonPlugin extends AbstractUIPlugin {
 
             interpreter.setErr(new ScriptOutput(new ICallback0<IOConsoleOutputStream>() {
 
+                @Override
                 public IOConsoleOutputStream call() {
                     getConsole(); //Just to make sure it's initialized.
                     return fErrorStream;

@@ -10,6 +10,7 @@
 package org.python.pydev.ui.pythonpathconf;
 
 import org.eclipse.swt.widgets.Composite;
+import org.python.pydev.ast.interpreter_managers.IInterpreterProviderFactory;
 import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.shared_core.utils.PlatformUtils;
 
@@ -35,7 +36,12 @@ public class PythonInterpreterEditor extends AbstractInterpreterEditor {
     @Override
     protected void doFillIntoGrid(Composite parent, int numColumns) {
         super.doFillIntoGrid(parent, numColumns);
-        this.autoConfigButton.setToolTipText("Will try to find Python on the PATH (will fail if not available)");
+        this.autoConfigMenuItem.setToolTipText("Will try to find Python on the PATH (will fail if not available)");
+    }
+
+    @Override
+    protected boolean getShowPackageTab() {
+        return true;
     }
 
 }

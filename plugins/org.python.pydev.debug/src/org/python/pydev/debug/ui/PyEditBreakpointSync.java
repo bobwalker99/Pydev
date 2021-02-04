@@ -36,12 +36,12 @@ import org.python.pydev.shared_core.callbacks.ICallbackListener;
 import org.python.pydev.shared_ui.editor.BaseEditor;
 import org.python.pydev.shared_ui.editor.IPyEditListener;
 import org.python.pydev.shared_ui.editor.IPyEditListener4;
-import org.python.pydev.shared_ui.utils.PyMarkerUtils;
+import org.python.pydev.shared_ui.utils.PyMarkerUIUtils;
 
 /**
  * This class is used to keep the annotations related to the debugger in sync with external editors
  * (if we're not dealing with an external editor, this class won't actually do anything)
- * 
+ *
  * @author Fabio
  */
 public class PyEditBreakpointSync implements IPyEditListener, IPyEditListener4 {
@@ -58,13 +58,16 @@ public class PyEditBreakpointSync implements IPyEditListener, IPyEditListener4 {
         // breakpoints listening ---------------------------------------------------------------------------------------
         // breakpoints listening ---------------------------------------------------------------------------------------
 
+        @Override
         public void breakpointAdded(IBreakpoint breakpoint) {
             updateAnnotations();
         }
 
+        @Override
         public void breakpointChanged(IBreakpoint breakpoint, IMarkerDelta delta) {
         }
 
+        @Override
         public void breakpointRemoved(IBreakpoint breakpoint, IMarkerDelta delta) {
             updateAnnotations();
         }
@@ -73,9 +76,11 @@ public class PyEditBreakpointSync implements IPyEditListener, IPyEditListener4 {
         // pyedit listening --------------------------------------------------------------------------------------------
         // pyedit listening --------------------------------------------------------------------------------------------
 
+        @Override
         public void onCreateActions(ListResourceBundle resources, BaseEditor baseEditor, IProgressMonitor monitor) {
         }
 
+        @Override
         public void onDispose(BaseEditor baseEditor, IProgressMonitor monitor) {
             if (this.edit != null) {
                 this.edit = null;
@@ -84,9 +89,11 @@ public class PyEditBreakpointSync implements IPyEditListener, IPyEditListener4 {
             }
         }
 
+        @Override
         public void onEditorCreated(BaseEditor baseEditor) {
         }
 
+        @Override
         public void onSave(BaseEditor baseEditor, IProgressMonitor monitor) {
             updateAnnotations();
         }
@@ -95,6 +102,7 @@ public class PyEditBreakpointSync implements IPyEditListener, IPyEditListener4 {
          * When the document is set, this class will start listening for the breakpoint manager, so that any changes in it
          * will update the debug annotations.
          */
+        @Override
         public void onSetDocument(IDocument document, BaseEditor baseEditor, IProgressMonitor monitor) {
             PyEdit edit = (PyEdit) baseEditor;
             if (this.edit != null) {
@@ -117,7 +125,6 @@ public class PyEditBreakpointSync implements IPyEditListener, IPyEditListener4 {
         // update annotations ----------------------------------------------------------------------------------------------
         // update annotations ----------------------------------------------------------------------------------------------
 
-        @SuppressWarnings("unchecked")
         private void updateAnnotations() {
             if (edit == null) {
                 return;
@@ -143,14 +150,14 @@ public class PyEditBreakpointSync implements IPyEditListener, IPyEditListener4 {
             }
 
             IDocument doc = edit.getDocument();
-            IResource resource = PyMarkerUtils.getResourceForTextEditor(edit);
+            IResource resource = PyMarkerUIUtils.getResourceForTextEditor(edit);
             IEditorInput externalFileEditorInput = AbstractBreakpointRulerAction.getExternalFileEditorInput(edit);
             List<IMarker> markers = AbstractBreakpointRulerAction.getMarkersFromEditorResource(resource, doc,
                     externalFileEditorInput, 0, false, model);
 
             Map<Annotation, Position> annotationsToAdd = new HashMap<Annotation, Position>();
             for (IMarker m : markers) {
-                Position pos = PyMarkerUtils.getMarkerPosition(doc, m, model);
+                Position pos = PyMarkerUIUtils.getMarkerPosition(doc, m, model);
                 MarkerAnnotation newAnnotation = new MarkerAnnotation(m);
                 annotationsToAdd.put(newAnnotation, pos);
             }
@@ -160,18 +167,23 @@ public class PyEditBreakpointSync implements IPyEditListener, IPyEditListener4 {
         }
     }
 
+    @Override
     public void onSave(BaseEditor baseEditor, IProgressMonitor monitor) {
     }
 
+    @Override
     public void onCreateActions(ListResourceBundle resources, BaseEditor baseEditor, IProgressMonitor monitor) {
     }
 
+    @Override
     public void onDispose(BaseEditor baseEditor, IProgressMonitor monitor) {
     }
 
+    @Override
     public void onSetDocument(IDocument document, BaseEditor baseEditor, IProgressMonitor monitor) {
     }
 
+    @Override
     public void onEditorCreated(final BaseEditor baseEditor) {
         final PyEdit edit = (PyEdit) baseEditor;
         Map<String, Object> cache = edit.getCache();
@@ -188,6 +200,7 @@ public class PyEditBreakpointSync implements IPyEditListener, IPyEditListener4 {
         //Register the adapter for IToggleBreakpointsTarget
         edit.onGetAdapter.registerListener(new ICallbackListener<Class<?>>() {
 
+            @Override
             public Object call(Class<?> obj) {
                 if (IToggleBreakpointsTarget.class == obj) {
                     Map<String, Object> cache = edit.getCache();

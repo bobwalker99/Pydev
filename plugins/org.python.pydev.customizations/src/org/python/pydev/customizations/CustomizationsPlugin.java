@@ -11,7 +11,7 @@ import java.util.ResourceBundle;
 
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
-import org.python.pydev.shared_ui.ImageCache;
+import org.python.pydev.shared_core.image.IImageCache;
 import org.python.pydev.shared_ui.bundle.BundleInfo;
 import org.python.pydev.shared_ui.bundle.IBundleInfo;
 
@@ -40,6 +40,7 @@ public class CustomizationsPlugin extends AbstractUIPlugin {
     /**
      * This method is called upon plug-in activation
      */
+    @Override
     public void start(BundleContext context) throws Exception {
         super.start(context);
     }
@@ -47,6 +48,7 @@ public class CustomizationsPlugin extends AbstractUIPlugin {
     /**
      * This method is called when the plug-in is stopped
      */
+    @Override
     public void stop(BundleContext context) throws Exception {
         super.stop(context);
     }
@@ -96,7 +98,7 @@ public class CustomizationsPlugin extends AbstractUIPlugin {
     /**
      * @return the cache that should be used to access images within the pydev plugin.
      */
-    public static ImageCache getImageCache() {
+    public static IImageCache getImageCache() {
         return CustomizationsPlugin.getBundleInfo().getImageCache();
     }
 }

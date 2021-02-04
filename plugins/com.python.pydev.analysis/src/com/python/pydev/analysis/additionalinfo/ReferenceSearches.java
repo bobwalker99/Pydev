@@ -25,15 +25,16 @@ import java.util.zip.ZipFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.python.pydev.ast.codecompletion.revisited.ModulesFoundStructure;
+import org.python.pydev.ast.codecompletion.revisited.ModulesFoundStructure.ZipContents;
+import org.python.pydev.ast.codecompletion.revisited.ModulesManager;
+import org.python.pydev.ast.codecompletion.revisited.PyPublicTreeMap;
+import org.python.pydev.ast.codecompletion.revisited.PythonPathHelper;
 import org.python.pydev.core.ModulesKey;
+import org.python.pydev.core.ModulesKeyForFolder;
 import org.python.pydev.core.ModulesKeyForZip;
 import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.editor.codecompletion.revisited.ModulesFoundStructure;
-import org.python.pydev.editor.codecompletion.revisited.ModulesFoundStructure.ZipContents;
-import org.python.pydev.editor.codecompletion.revisited.ModulesManager;
-import org.python.pydev.editor.codecompletion.revisited.PyPublicTreeMap;
-import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
 import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.out_of_memory.OnExpectedOutOfMemory;
 import org.python.pydev.shared_core.string.FastStringBuffer;
@@ -167,11 +168,6 @@ public class ReferenceSearches implements IReferenceSearches {
         this.abstractAdditionalDependencyInfo = new WeakReference<>(abstractAdditionalDependencyInfo);
     }
 
-    @Override
-    public void dispose() {
-
-    }
-
     private void fill(FastStringBuffer bufFileContents, InputStream stream) throws IOException {
         for (int i = 0; i < 5; i++) {
             try {
@@ -206,7 +202,7 @@ public class ReferenceSearches implements IReferenceSearches {
         final List<ModulesKey> ret = new ArrayList<ModulesKey>();
         AbstractAdditionalDependencyInfo abstractAdditionalDependencyInfo = this.abstractAdditionalDependencyInfo.get();
         if (abstractAdditionalDependencyInfo == null) {
-            Log.log("AbstractAdditionalDependencyInfo alreeady collected!");
+            Log.log("AbstractAdditionalDependencyInfo already collected!");
             return ret;
         }
         final NullProgressMonitor nullMonitor = new NullProgressMonitor();
@@ -243,6 +239,9 @@ public class ReferenceSearches implements IReferenceSearches {
 
             //Get from regular files found
             for (ModulesKey entry : keys.values()) {
+                if (entry instanceof ModulesKeyForFolder) {
+                    continue;
+                }
                 if (monitor.isCanceled()) {
                     break;
                 }

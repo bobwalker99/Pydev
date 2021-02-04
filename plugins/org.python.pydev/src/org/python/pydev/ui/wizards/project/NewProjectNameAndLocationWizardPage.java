@@ -13,6 +13,7 @@
 package org.python.pydev.ui.wizards.project;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 
 import org.eclipse.core.resources.IProject;
@@ -44,23 +45,23 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IWorkingSet;
 import org.eclipse.ui.dialogs.WorkingSetConfigurationBlock;
+import org.python.pydev.ast.codecompletion.revisited.PythonPathHelper;
+import org.python.pydev.ast.listing_utils.PyFileListing;
+import org.python.pydev.ast.listing_utils.PyFileListing.PyFileInfo;
 import org.python.pydev.core.IPythonNature;
-import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
+import org.python.pydev.plugin.PyDevUiPrefs;
 import org.python.pydev.plugin.PyStructureConfigHelpers;
 import org.python.pydev.plugin.PydevPlugin;
-import org.python.pydev.plugin.preferences.PydevPrefs;
+import org.python.pydev.shared_core.callbacks.CallbackWithListeners;
 import org.python.pydev.ui.PyProjectPythonDetails;
 import org.python.pydev.ui.wizards.gettingstarted.AbstractNewProjectPage;
-import org.python.pydev.utils.ICallback;
-import org.python.pydev.utils.PyFileListing;
-import org.python.pydev.utils.PyFileListing.PyFileInfo;
 
 /**
  * First page for the new project creation wizard. This page
  * collects the name and location of the new project.
- * 
- * NOTE: COPIED FROM org.eclipse.ui.internal.ide.dialogs.WizardNewProjectNameAndLocationPage 
- * Changed to add the details for the python project type 
+ *
+ * NOTE: COPIED FROM org.eclipse.ui.internal.ide.dialogs.WizardNewProjectNameAndLocationPage
+ * Changed to add the details for the python project type
  */
 
 public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage implements
@@ -90,19 +91,22 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
 
     /**
      * @return a string as specified in the constants in IPythonNature
-     * @see IPythonNature#PYTHON_VERSION_XXX 
+     * @see IPythonNature#PYTHON_VERSION_XXX
      * @see IPythonNature#JYTHON_VERSION_XXX
      * @see IPythonNature#IRONPYTHON_VERSION_XXX
      */
+    @Override
     public String getProjectType() {
         return details.getSelectedPythonOrJythonAndGrammarVersion();
     }
 
+    @Override
     public String getProjectInterpreter() {
         return details.getProjectInterpreter();
     }
 
     private Listener nameModifyListener = new Listener() {
+        @Override
         public void handleEvent(Event e) {
             setLocationForSelection();
             setPageComplete(validatePage());
@@ -110,6 +114,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
     };
 
     private Listener locationModifyListener = new Listener() {
+        @Override
         public void handleEvent(Event e) {
             setPageComplete(validatePage());
         }
@@ -177,6 +182,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
     /* (non-Javadoc)
      * Method declared on IDialogPage.
      */
+    @Override
     public void createControl(Composite parent) {
         Composite composite = new Composite(parent, SWT.NULL);
         composite.setLayout(new GridLayout());
@@ -199,7 +205,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
         noSrcFolder = new Button(composite, SWT.RADIO);
         noSrcFolder.setText("Don't configure PYTHONPATH (to be done &manually later on)");
 
-        IPreferenceStore preferences = PydevPrefs.getPreferences();
+        IPreferenceStore preferences = PyDevUiPrefs.getPreferenceStore();
         int srcFolderCreate = preferences
                 .getInt(IWizardNewProjectNameAndLocationPage.PYDEV_NEW_PROJECT_CREATE_PREFERENCES);
         switch (srcFolderCreate) {
@@ -222,9 +228,10 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
 
         checkSrcFolder.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 if (e.widget == checkSrcFolder) {
-                    IPreferenceStore preferences = PydevPrefs.getPreferences();
+                    IPreferenceStore preferences = PyDevUiPrefs.getPreferenceStore();
                     if (checkSrcFolder.getSelection()) {
                         preferences.setValue(IWizardNewProjectNameAndLocationPage.PYDEV_NEW_PROJECT_CREATE_PREFERENCES,
                                 PYDEV_NEW_PROJECT_CREATE_SRC_FOLDER);
@@ -233,15 +240,17 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
                 }
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
         });
 
         projectAsSrcFolder.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 if (e.widget == projectAsSrcFolder) {
-                    IPreferenceStore preferences = PydevPrefs.getPreferences();
+                    IPreferenceStore preferences = PyDevUiPrefs.getPreferenceStore();
                     if (projectAsSrcFolder.getSelection()) {
                         preferences.setValue(IWizardNewProjectNameAndLocationPage.PYDEV_NEW_PROJECT_CREATE_PREFERENCES,
                                 PYDEV_NEW_PROJECT_CREATE_PROJECT_AS_SRC_FOLDER);
@@ -251,15 +260,17 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
                 }
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
         });
 
         exSrcFolder.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 if (e.widget == exSrcFolder) {
-                    IPreferenceStore preferences = PydevPrefs.getPreferences();
+                    IPreferenceStore preferences = PyDevUiPrefs.getPreferenceStore();
                     if (exSrcFolder.getSelection()) {
                         preferences.setValue(IWizardNewProjectNameAndLocationPage.PYDEV_NEW_PROJECT_CREATE_PREFERENCES,
                                 PYDEV_NEW_PROJECT_EXISTING_SOURCES);
@@ -268,15 +279,17 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
                 }
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
         });
 
         noSrcFolder.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 if (e.widget == noSrcFolder) {
-                    IPreferenceStore preferences = PydevPrefs.getPreferences();
+                    IPreferenceStore preferences = PyDevUiPrefs.getPreferenceStore();
                     if (noSrcFolder.getSelection()) {
                         preferences.setValue(IWizardNewProjectNameAndLocationPage.PYDEV_NEW_PROJECT_CREATE_PREFERENCES,
                                 PYDEV_NEW_PROJECT_NO_PYTHONPATH);
@@ -285,6 +298,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
                 }
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
         });
@@ -315,6 +329,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
      *
      * @return the selected working sets to which the new project should be added
      */
+    @Override
     public IWorkingSet[] getWorkingSets() {
         return fWorkingSetGroup.getSelectedWorkingSets();
     }
@@ -347,14 +362,24 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
         projectTypeLabel.setFont(font);
         projectTypeLabel.setText("Project type");
         //let him choose the type of the project
-        details = new PyProjectPythonDetails.ProjectInterpreterAndGrammarConfig(new ICallback() {
+        CallbackWithListeners<Event> onLocationChanged = new CallbackWithListeners<Event>();
+        locationPathField.addListener(SWT.Modify, new Listener() {
 
-            //Whenever the configuration changes there, we must evaluate whether the page is complete
-            public Object call(Object args) throws Exception {
-                setPageComplete(NewProjectNameAndLocationWizardPage.this.validatePage());
-                return null;
+            @Override
+            public void handleEvent(Event event) {
+                onLocationChanged.call(event);
             }
         });
+        details = new PyProjectPythonDetails.ProjectInterpreterAndGrammarConfig(
+                () -> {
+                    //Whenever the configuration changes there, we must evaluate whether the page is complete
+                    setPageComplete(NewProjectNameAndLocationWizardPage.this.validatePage());
+                    return null;
+                },
+                () -> {
+                    return getProjectLocationFieldValue();
+                },
+                onLocationChanged);
 
         Control createdOn = details.doCreateContents(projectDetails);
         details.setDefaultSelection();
@@ -496,12 +521,13 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
     }
 
     /**
-     * Returns the current project location path as entered by 
+     * Returns the current project location path as entered by
      * the user, or its anticipated initial value.
      *
      * @return the project location path, its anticipated initial value, or <code>null</code>
      *   if no project location path is known
      */
+    @Override
     public IPath getLocationPath() {
         if (useDefaults) {
             return initialLocationFieldValue;
@@ -519,6 +545,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
      *
      * @return the new project resource handle
      */
+    @Override
     public IProject getProjectHandle() {
         return PyStructureConfigHelpers.getProjectHandle(getProjectName());
     }
@@ -530,6 +557,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
      * @return the project name, its anticipated initial value, or <code>null</code>
      *   if no project name is known
      */
+    @Override
     public String getProjectName() {
         if (projectNameField == null) {
             return initialProjectFieldValue;
@@ -541,7 +569,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
     /**
      * Returns the value of the project name field
      * with leading and trailing spaces removed.
-     * 
+     *
      * @return the project name in the field
      */
     private String getProjectNameFieldValue() {
@@ -555,7 +583,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
     /**
      * Returns the value of the project location field
      * with leading and trailing spaces removed.
-     * 
+     *
      * @return the project location directory in the field
      */
     private String getProjectLocationFieldValue() {
@@ -604,7 +632,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
      * created. The name is ignored if the createControl(Composite)
      * method has already been called. Leading and trailing spaces
      * in the name are ignored.
-     * 
+     *
      * @param name initial project name for this page
      */
     /* package */void setInitialProjectName(String name) {
@@ -626,7 +654,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
     }
 
     /**
-     * Returns whether this page's controls currently all contain valid 
+     * Returns whether this page's controls currently all contain valid
      * values.
      *
      * @return <code>true</code> if all controls are valid, and
@@ -700,7 +728,7 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
 
         // Look for existing Python files in the destination folder.
         File locFile = (!useDefaults ? getLocationPath() : getLocationPath().append(projectFieldContents)).toFile();
-        PyFileListing pyFileListing = PythonPathHelper.getModulesBelow(locFile, null);
+        PyFileListing pyFileListing = PythonPathHelper.getModulesBelow(locFile, null, new ArrayList<>());
         if (pyFileListing != null) {
             boolean foundInit = false;
             Collection<PyFileInfo> modulesBelow = pyFileListing.getFoundPyFileInfos();
@@ -708,7 +736,8 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
                 // Only notify existence of init files in the top-level directory.
                 if (PythonPathHelper.isValidInitFile(fileInfo.getFile().getPath())
                         && fileInfo.getFile().getParentFile().equals(locFile)) {
-                    setMessage("Project location contains an __init__.py file. Consider using the location's parent folder instead.");
+                    setMessage(
+                            "Project location contains an __init__.py file. Consider using the location's parent folder instead.");
                     foundInit = true;
                     break;
                 }
@@ -732,8 +761,9 @@ public class NewProjectNameAndLocationWizardPage extends AbstractNewProjectPage 
         }
     }
 
+    @Override
     public int getSourceFolderConfigurationStyle() {
-        IPreferenceStore preferences = PydevPrefs.getPreferences();
+        IPreferenceStore preferences = PyDevUiPrefs.getPreferenceStore();
         int srcFolderCreate = preferences
                 .getInt(IWizardNewProjectNameAndLocationPage.PYDEV_NEW_PROJECT_CREATE_PREFERENCES);
         switch (srcFolderCreate) {

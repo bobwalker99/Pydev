@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -48,7 +49,6 @@ import org.eclipse.jface.viewers.AbstractTreeViewer;
 import org.eclipse.jface.viewers.StructuredViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerFilter;
-import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.IWorkingSet;
 import org.eclipse.ui.PlatformUI;
@@ -57,6 +57,8 @@ import org.eclipse.ui.navigator.CommonViewer;
 import org.eclipse.ui.navigator.ICommonContentExtensionSite;
 import org.eclipse.ui.navigator.INavigatorContentService;
 import org.eclipse.ui.navigator.INavigatorFilterService;
+import org.python.pydev.ast.codecompletion.revisited.PythonPathHelper;
+import org.python.pydev.ast.codecompletion.revisited.modules.SourceModule;
 import org.python.pydev.core.ICodeCompletionASTManager;
 import org.python.pydev.core.IModule;
 import org.python.pydev.core.IModulesManager;
@@ -66,8 +68,6 @@ import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.ModulesKey;
 import org.python.pydev.core.PythonNatureWithoutProjectException;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
-import org.python.pydev.editor.codecompletion.revisited.modules.SourceModule;
 import org.python.pydev.navigator.elements.IWrappedResource;
 import org.python.pydev.navigator.elements.PythonFile;
 import org.python.pydev.navigator.elements.PythonFolder;
@@ -86,11 +86,11 @@ import org.python.pydev.plugin.nature.PythonNatureListenersManager;
 import org.python.pydev.plugin.preferences.PyTitlePreferencesPage;
 import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_core.callbacks.ICallback;
+import org.python.pydev.shared_core.image.IImageHandle;
+import org.python.pydev.shared_core.image.UIConstants;
 import org.python.pydev.shared_core.structure.TreeNode;
 import org.python.pydev.shared_ui.SharedUiPlugin;
-import org.python.pydev.shared_ui.UIConstants;
 import org.python.pydev.shared_ui.outline.IParsedItem;
-import org.python.pydev.ui.filetypes.FileTypesPreferencesPage;
 
 /**
  * A good part of the refresh for the model was gotten from org.eclipse.ui.model.WorkbenchContentProvider
@@ -138,6 +138,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
      * It's done this way (and not final) because we want to mock it on tests.
      */
     protected static ICallback<List<IWorkingSet>, IWorkspaceRoot> getWorkingSetsCallback = new ICallback<List<IWorkingSet>, IWorkspaceRoot>() {
+        @Override
         public List<IWorkingSet> call(IWorkspaceRoot arg) {
             return Arrays.asList(PlatformUI.getWorkbench().getWorkingSetManager().getWorkingSets());
         }
@@ -254,6 +255,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
     /**
      * Notification received when the pythonpath has been changed or rebuilt.
      */
+    @Override
     public void notifyPythonPathRebuilt(IProject project, IPythonNature nature) {
         if (project == null) {
             return;
@@ -277,6 +279,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
         createAndStartUpdater(project, projectPythonpath);
     }
 
+    @Override
     public void propertyChange(PropertyChangeEvent event) {
         //When a property that'd change an icon changes, the tree must be updated.
         String property = event.getProperty();
@@ -568,7 +571,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
     }
 
     private TreeNode<LabelAndImage> createErrorWorkingSetWithoutChildren(IWorkingSet parentElement) {
-        Image img = SharedUiPlugin.getImageCache().get(UIConstants.WARNING);
+        IImageHandle img = SharedUiPlugin.getImageCache().get(UIConstants.WARNING);
         TreeNode<LabelAndImage> root = new TreeNode<LabelAndImage>(parentElement,
                 new LabelAndImage("Warning: working set: " + parentElement.getName() + " does not have any contents.",
                         img));
@@ -580,7 +583,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
     }
 
     public TreeNode<LabelAndImage> createErrorNoWorkingSetsDefined(Object parentElement) {
-        Image img = SharedUiPlugin.getImageCache().get(UIConstants.WARNING);
+        IImageHandle img = SharedUiPlugin.getImageCache().get(UIConstants.WARNING);
         TreeNode<LabelAndImage> root = new TreeNode<LabelAndImage>(parentElement,
                 new LabelAndImage("Warning: Top level elements set to working sets but no working sets are defined.",
                         img));
@@ -602,6 +605,8 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
         if (parentElement instanceof IResource) {
             project = ((IResource) parentElement).getProject();
         }
+
+        final Map<PythonNature, Set<String>> natureToSourcePathSet = new HashMap<>();
 
         //we can only get the nature if the project is open
         if (project != null && project.isOpen()) {
@@ -644,42 +649,40 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
             if (child instanceof IContainer && !(child instanceof PythonSourceFolder)) {
                 IContainer container = (IContainer) child;
 
-                try {
-                    //check if it is a source folder (and if it is, create it)
-                    if (localNature == null) {
-                        if (container instanceof IProject) {
-                            localProject = (IProject) container;
-                            if (localProject.isOpen() == false) {
-                                continue;
-                            } else {
-                                localNature = PythonNature.getPythonNature(localProject);
-                            }
-                        } else {
+                //check if it is a source folder (and if it is, create it)
+                if (localNature == null) {
+                    if (container instanceof IProject) {
+                        localProject = (IProject) container;
+                        if (localProject.isOpen() == false) {
                             continue;
+                        } else {
+                            localNature = PythonNature.getPythonNature(localProject);
                         }
-                    }
-                    //if it's a python project, the nature can't be null
-                    if (localNature == null) {
+                    } else {
                         continue;
                     }
+                }
+                //if it's a python project, the nature can't be null
+                if (localNature == null) {
+                    continue;
+                }
 
-                    Set<String> sourcePathSet = localNature.getPythonPathNature().getProjectSourcePathSet(true);
-                    IPath fullPath = container.getFullPath();
-                    if (sourcePathSet.contains(fullPath.toString())) {
-                        PythonSourceFolder createdSourceFolder;
-                        if (container instanceof IFolder) {
-                            createdSourceFolder = new PythonSourceFolder(parentElement, (IFolder) container);
-                        } else if (container instanceof IProject) {
-                            createdSourceFolder = new PythonProjectSourceFolder(parentElement, (IProject) container);
-                        } else {
-                            throw new RuntimeException("Should not get here.");
-                        }
-                        ret.set(ret.size() - 1, createdSourceFolder); //replace the element added for the one in the python model
-                        Set<PythonSourceFolder> sourceFolders = getProjectSourceFolders(localProject);
-                        sourceFolders.add(createdSourceFolder);
+                // If possible, don't recalculate the source paths for each new folder (it can be costly).
+                Set<String> sourcePathSet = this.getSourcePathSet(natureToSourcePathSet, localNature);
+
+                IPath fullPath = container.getFullPath();
+                if (sourcePathSet.contains(fullPath.toString())) {
+                    PythonSourceFolder createdSourceFolder;
+                    if (container instanceof IFolder) {
+                        createdSourceFolder = new PythonSourceFolder(parentElement, (IFolder) container);
+                    } else if (container instanceof IProject) {
+                        createdSourceFolder = new PythonProjectSourceFolder(parentElement, (IProject) container);
+                    } else {
+                        throw new RuntimeException("Should not get here.");
                     }
-                } catch (CoreException e) {
-                    throw new RuntimeException(e);
+                    ret.set(ret.size() - 1, createdSourceFolder); //replace the element added for the one in the python model
+                    Set<PythonSourceFolder> sourceFolders = getProjectSourceFolders(localProject);
+                    sourceFolders.add(createdSourceFolder);
                 }
             }
         }
@@ -734,7 +737,8 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
                                     //ok, something strange happened... it shouldn't be null... maybe empty, but not null at this point
                                     //so, if it exists, let's try to create it...
                                     //TODO: This should be moved to somewhere else.
-                                    String resourceOSString = PydevPlugin.getIResourceOSString(file.getActualObject());
+                                    String resourceOSString = SharedCorePlugin
+                                            .getIResourceOSString(file.getActualObject());
                                     if (resourceOSString != null) {
                                         File f = new File(resourceOSString);
                                         if (f.exists()) {
@@ -963,6 +967,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
     /*
      * (non-Javadoc) Method declared on IResourceChangeListener.
      */
+    @Override
     public final void resourceChanged(final IResourceChangeEvent event) {
         processDelta(event.getDelta());
     }
@@ -1009,6 +1014,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
                  *
                  * @see java.lang.Runnable#run()
                  */
+                @Override
                 public void run() {
                     runUpdates(runnables);
                 }
@@ -1154,9 +1160,6 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
             for (int i = 0; i < addedChildren.length; i++) {
                 final IResourceDelta addedChild = addedChildren[i];
                 addedObjects[i] = addedChild.getResource();
-                if (checkInit(addedObjects[i], runnables)) {
-                    return; // If true, it means a refresh for the parent was issued!
-                }
                 if ((addedChild.getFlags() & IResourceDelta.MOVED_FROM) != 0) {
                     ++numMovedFrom;
                 }
@@ -1171,9 +1174,6 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
             for (int i = 0; i < removedChildren.length; i++) {
                 final IResourceDelta removedChild = removedChildren[i];
                 removedObjects[i] = removedChild.getResource();
-                if (checkInit(removedObjects[i], runnables)) {
-                    return; // If true, it means a refresh for the parent was issued!
-                }
                 if ((removedChild.getFlags() & IResourceDelta.MOVED_TO) != 0) {
                     ++numMovedTo;
                 }
@@ -1185,6 +1185,7 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
         final boolean hasRename = numMovedFrom > 0 && numMovedTo > 0;
 
         Runnable addAndRemove = new Runnable() {
+            @Override
             public void run() {
                 if (viewer instanceof AbstractTreeViewer) {
                     AbstractTreeViewer treeViewer = viewer;
@@ -1248,30 +1249,11 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
     }
 
     /**
-     * Checks if a given resource is an __init__ file and if it is, updates its parent (because its icon may have changed)
-     * @return
-     */
-    private boolean checkInit(final IResource resource, final Collection<Runnable> runnables) {
-        if (resource != null) {
-            String name = resource.getName();
-            if (name != null) {
-                for (String init : FileTypesPreferencesPage.getValidInitFiles()) {
-                    if (name.equals(init)) {
-                        //we must make an actual refresh (and not only update) because it'll affect all the children too.
-                        runnables.add(getRefreshRunnable(resource.getParent()));
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
      * Return a runnable for refreshing a resource. Handles structural changes.
      */
     private Runnable getRefreshRunnable(final IResource resource) {
         return new Runnable() {
+            @Override
             public void run() {
                 ((StructuredViewer) viewer).refresh(getResourceInPythonModel(resource));
             }
@@ -1283,10 +1265,25 @@ public abstract class PythonBaseModelProvider extends BaseWorkbenchContentProvid
      */
     private Runnable getUpdateRunnable(final IResource resource) {
         return new Runnable() {
+            @Override
             public void run() {
                 ((StructuredViewer) viewer).update(getResourceInPythonModel(resource), null);
             }
         };
+    }
+
+    protected Set<String> getSourcePathSet(Map<PythonNature, Set<String>> natureToSourcePathSet, PythonNature nature) {
+        Set<String> sourcePathSet = natureToSourcePathSet.get(nature);
+        if (sourcePathSet == null) {
+            sourcePathSet = new HashSet<String>();
+            try {
+                sourcePathSet = nature.getPythonPathNature().getProjectSourcePathSet(true);
+            } catch (CoreException e) {
+                Log.log(e);
+            }
+            natureToSourcePathSet.put(nature, sourcePathSet);
+        }
+        return Collections.unmodifiableSet(sourcePathSet);
     }
 
 }

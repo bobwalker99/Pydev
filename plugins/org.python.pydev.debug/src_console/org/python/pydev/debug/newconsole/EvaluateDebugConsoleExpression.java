@@ -23,7 +23,7 @@ import org.python.pydev.debug.model.remote.ICommandResponseListener;
 import org.python.pydev.shared_core.string.StringUtils;
 
 /**
- * Class to exectute console command in the debugging context
+ * Class to execute console command in the debugging context
  *
  * @author hussain.bohra
  * @author Fabio Zadrozny
@@ -43,6 +43,7 @@ public class EvaluateDebugConsoleExpression implements ICommandResponseListener 
      * This method will get called from AbstractDebugTarget when
      * output arrives for the posted command
      */
+    @Override
     public void commandComplete(AbstractDebuggerCommand cmd) {
         try {
             this.payload = ((EvaluateConsoleExpressionCommand) cmd).getResponse();
@@ -64,6 +65,7 @@ public class EvaluateDebugConsoleExpression implements ICommandResponseListener 
         AbstractDebuggerCommand cmd = new EvaluateConsoleExpressionCommand(target, locator,
                 new ICommandResponseListener() {
 
+                    @Override
                     public void commandComplete(AbstractDebuggerCommand cmd) {
                         frame.forceGetNewVariables();
                         EvaluateDebugConsoleExpression.this.commandComplete(cmd);
@@ -104,7 +106,7 @@ public class EvaluateDebugConsoleExpression implements ICommandResponseListener 
         String temp = this.payload;
         this.payload = null;
         if (temp == null) {
-            Log.logInfo("Timeout for waiting for debug completions elapsed (3 seconds).");
+            Log.logInfo("Timeout for waiting for command to return elapsed (3 seconds).");
             return EMPTY;
         }
         return temp;

@@ -27,8 +27,6 @@ import java.util.TreeMap;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.ITextSelection;
-import org.eclipse.jface.text.TextSelection;
 import org.eclipse.text.edits.MalformedTreeException;
 import org.eclipse.text.edits.MultiTextEdit;
 import org.python.pydev.core.IGrammarVersionProvider;
@@ -45,6 +43,8 @@ import org.python.pydev.refactoring.core.base.RefactoringInfo;
 import org.python.pydev.refactoring.tests.adapter.PythonNatureStub;
 import org.python.pydev.refactoring.tests.core.AbstractIOTestCase;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_core.string.CoreTextSelection;
+import org.python.pydev.shared_core.string.ICoreTextSelection;
 
 import com.thoughtworks.xstream.XStream;
 
@@ -62,7 +62,8 @@ public class ExtractMethodTestCase extends AbstractIOTestCase {
         MockupExtractMethodConfig config = initConfig();
 
         IDocument doc = new Document(data.source);
-        Module astModule = VisitorFactory.getRootNode(doc, createVersionProvider());
+        IGrammarVersionProvider versionProvider = createVersionProvider();
+        Module astModule = VisitorFactory.getRootNode(doc, versionProvider);
         String name = data.file.getName();
         name = name.substring(0, name.length() - EXTENSION);
         ModuleAdapter module = new ModuleAdapter(null, data.file, doc, astModule, new PythonNatureStub());
@@ -70,15 +71,10 @@ public class ExtractMethodTestCase extends AbstractIOTestCase {
         if (data.sourceSelection == null) {
             System.out.println("here");
         }
-        ITextSelection selection = new TextSelection(doc, data.sourceSelection.getOffset(),
+        ICoreTextSelection selection = new CoreTextSelection(doc, data.sourceSelection.getOffset(),
                 data.sourceSelection.getLength());
 
-        RefactoringInfo info = new RefactoringInfo(doc, selection, new IGrammarVersionProvider() {
-
-            public int getGrammarVersion() throws MisconfigurationException {
-                return IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_2_7;
-            }
-        });
+        RefactoringInfo info = new RefactoringInfo(doc, selection, versionProvider);
 
         MockupExtractMethodRequestProcessor requestProcessor = setupRequestProcessor(config, module, info);
 
@@ -121,7 +117,8 @@ public class ExtractMethodTestCase extends AbstractIOTestCase {
             renameMap.put(variable, newName);
         }
 
-        return new MockupExtractMethodRequestProcessor(scope, info.getExtendedSelection(), parsedSelection, deducer,
+        return new MockupExtractMethodRequestProcessor(scope, info.getExtendedSelection(), info.getVersionProvider(),
+                parsedSelection, deducer,
                 renameMap, config.getOffsetStrategy());
     }
 

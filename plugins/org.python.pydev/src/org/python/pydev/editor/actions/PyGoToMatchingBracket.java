@@ -13,6 +13,7 @@ import org.eclipse.jface.text.IRegion;
 import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.docutils.PythonPairMatcher;
 import org.python.pydev.editor.PyEdit;
+import org.python.pydev.editor.PySelectionFromEditor;
 import org.python.pydev.shared_core.string.StringUtils;
 
 /**
@@ -20,9 +21,10 @@ import org.python.pydev.shared_core.string.StringUtils;
  */
 public class PyGoToMatchingBracket extends PyAction {
 
+    @Override
     public void run(IAction action) {
         PyEdit pyEdit = getPyEdit();
-        PySelection ps = new PySelection(pyEdit);
+        PySelection ps = PySelectionFromEditor.createPySelectionFromEditor(pyEdit);
         if (ps.getSelLength() != 0) {
             return;
         }

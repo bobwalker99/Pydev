@@ -12,13 +12,13 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.eclipse.jface.text.Document;
-import org.eclipse.jface.text.ITextSelection;
-import org.eclipse.jface.text.TextSelection;
 import org.python.pydev.parser.PyParserTestBase;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.Expr;
 import org.python.pydev.parser.jython.ast.Module;
 import org.python.pydev.parser.jython.ast.stmtType;
+import org.python.pydev.shared_core.string.CoreTextSelection;
+import org.python.pydev.shared_core.string.ICoreTextSelection;
 import org.python.pydev.shared_core.structure.Tuple;
 
 /**
@@ -39,12 +39,14 @@ public class FindDuplicatesVisitorTest extends PyParserTestBase {
         stmtType b0 = mod.body[0];
 
         Document doc = new Document(s);
-        FindDuplicatesVisitor visitor = new FindDuplicatesVisitor(new TextSelection(doc, 0, 7), ((Expr) b0).value, doc);
+        FindDuplicatesVisitor visitor = new FindDuplicatesVisitor(new CoreTextSelection(doc, 0, 7), ((Expr) b0).value,
+                doc);
         mod.accept(visitor);
-        List<Tuple<ITextSelection, SimpleNode>> duplicates = visitor.getDuplicates();
+        List<Tuple<ICoreTextSelection, SimpleNode>> duplicates = visitor.getDuplicates();
 
         Comparator<? super Tuple<Integer, Integer>> comparator = new Comparator<Tuple<Integer, Integer>>() {
 
+            @Override
             public int compare(Tuple<Integer, Integer> o1, Tuple<Integer, Integer> o2) {
                 int comp = o1.o1.compareTo(o2.o1);
                 if (comp != 0) {
@@ -62,7 +64,7 @@ public class FindDuplicatesVisitorTest extends PyParserTestBase {
         assertEquals(expected.size(), duplicates.size());
 
         Set<Tuple<Integer, Integer>> found = new TreeSet<Tuple<Integer, Integer>>(comparator);
-        for (Tuple<ITextSelection, SimpleNode> tuple : duplicates) {
+        for (Tuple<ICoreTextSelection, SimpleNode> tuple : duplicates) {
             found.add(new Tuple<Integer, Integer>(tuple.o1.getOffset(), tuple.o1.getLength()));
         }
 

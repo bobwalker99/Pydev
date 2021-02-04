@@ -17,6 +17,7 @@ import org.python.pydev.parser.jython.ast.Assert;
 import org.python.pydev.parser.jython.ast.Assign;
 import org.python.pydev.parser.jython.ast.Attribute;
 import org.python.pydev.parser.jython.ast.AugAssign;
+import org.python.pydev.parser.jython.ast.Await;
 import org.python.pydev.parser.jython.ast.BinOp;
 import org.python.pydev.parser.jython.ast.BoolOp;
 import org.python.pydev.parser.jython.ast.Break;
@@ -30,6 +31,7 @@ import org.python.pydev.parser.jython.ast.Dict;
 import org.python.pydev.parser.jython.ast.DictComp;
 import org.python.pydev.parser.jython.ast.Ellipsis;
 import org.python.pydev.parser.jython.ast.Exec;
+import org.python.pydev.parser.jython.ast.ExtSlice;
 import org.python.pydev.parser.jython.ast.For;
 import org.python.pydev.parser.jython.ast.FunctionDef;
 import org.python.pydev.parser.jython.ast.Global;
@@ -132,9 +134,22 @@ public final class PrettyPrinterVisitorV2 extends PrettyPrinterUtilsV2 {
             recordChanges = this.doc.popRecordChanges(id);
             lowerAndHigher = doc.getLowerAndHigerFound(recordChanges);
         }
-        doc.add(lowerAndHigher.o2.getLine(), lowerAndHigher.o2.getBeginCol(), this.prefs.getAssignPunctuation(), node);
 
-        node.value.accept(this);
+        if (node.type != null) {
+            doc.add(lowerAndHigher.o2.getLine(), lowerAndHigher.o2.getBeginCol(),
+                    this.prefs.getTypePunctuationColon(), node);
+            id = this.doc.pushRecordChanges();
+            node.type.accept(this);
+            recordChanges = this.doc.popRecordChanges(id);
+            lowerAndHigher = doc.getLowerAndHigerFound(recordChanges);
+        }
+
+        if (node.value != null) {
+            doc.add(lowerAndHigher.o2.getLine(), lowerAndHigher.o2.getBeginCol(), this.prefs.getAssignPunctuation(),
+                    node);
+            node.value.accept(this);
+        }
+
         afterNode(node);
         return null;
     }
@@ -460,6 +475,9 @@ public final class PrettyPrinterVisitorV2 extends PrettyPrinterUtilsV2 {
     public Object visitWith(With node) throws Exception {
         startStatementPart();
         beforeNode(node);
+        if (node.async) {
+            doc.addRequire("async ", node);
+        }
         doc.addRequire("with", node);
         if (node.with_item != null) {
             for (int i = 0; i < node.with_item.length; i++) {
@@ -507,6 +525,9 @@ public final class PrettyPrinterVisitorV2 extends PrettyPrinterUtilsV2 {
 
         //a
         startStatementPart();
+        if (node.async) {
+            doc.addRequire("async ", node);
+        }
         doc.addRequire("for ", node); //Make the require with the final version of the "for " string.
         beforeNode(node);
 
@@ -749,6 +770,16 @@ public final class PrettyPrinterVisitorV2 extends PrettyPrinterUtilsV2 {
         if (node.yield_from) {
             doc.addRequire("from", node);
         }
+        node.traverse(this);
+
+        afterNode(node);
+        return null;
+    }
+
+    @Override
+    public Object visitAwait(Await node) throws Exception {
+        beforeNode(node);
+        doc.addRequire("await", node);
         node.traverse(this);
 
         afterNode(node);
@@ -1090,6 +1121,9 @@ public final class PrettyPrinterVisitorV2 extends PrettyPrinterUtilsV2 {
             }
         }
         beforeNode(node);
+        if (node.async) {
+            doc.add(node.name.beginLine, node.beginColumn, "async ", node);
+        }
         doc.add(node.name.beginLine, node.beginColumn, "def", node);
         node.name.accept(this);
 
@@ -1280,6 +1314,21 @@ public final class PrettyPrinterVisitorV2 extends PrettyPrinterUtilsV2 {
         afterNode(node);
 
         this.doc.replaceRecorded(this.doc.popRecordChanges(id), "import", "import ");
+        return null;
+    }
+
+    @Override
+    public Object visitExtSlice(ExtSlice node) throws Exception {
+        beforeNode(node);
+        if (node.dims != null) {
+            for (int i = 0; i < node.dims.length; i++) {
+                if (i > 0) {
+                    this.doc.addRequire(",", lastNode);
+                }
+                node.dims[i].accept(this);
+            }
+        }
+        afterNode(node);
         return null;
     }
 

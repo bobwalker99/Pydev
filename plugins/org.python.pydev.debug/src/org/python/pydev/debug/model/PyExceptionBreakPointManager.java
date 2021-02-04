@@ -11,15 +11,17 @@ import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.core.runtime.IPath;
+import org.python.pydev.ast.interpreter_managers.ChooseInterpreterManager;
 import org.python.pydev.core.IInterpreterManager;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.IToken;
+import org.python.pydev.core.IterTokenEntry;
+import org.python.pydev.core.TokensList;
 import org.python.pydev.debug.core.ConfigureExceptionsFileUtils;
 import org.python.pydev.debug.core.PydevDebugPlugin;
 import org.python.pydev.debug.core.PydevDebugPreferencesInitializer;
 import org.python.pydev.shared_core.callbacks.ListenerList;
 import org.python.pydev.shared_core.string.StringUtils;
-import org.python.pydev.ui.interpreters.ChooseInterpreterManager;
 
 public class PyExceptionBreakPointManager {
 
@@ -28,6 +30,7 @@ public class PyExceptionBreakPointManager {
     private static final String CUSTOM_EXCEPTION_FILE_NAME = "custom_exceptions.prefs";
     private static final String BREAK_ON_CAUGHT_EXCEPTION = "caught_exception_state.prefs";
     private static final String BREAK_ON_UNCAUGHT_EXCEPTION = "uncaught_exception_state.prefs";
+    private static final String BREAK_ON_USER_UNCAUGHT_EXCEPTION = "user_uncaught_exception_state.prefs";
 
     private static PyExceptionBreakPointManager pyExceptionBreakPointManager;
     private static final Object lock = new Object();
@@ -72,10 +75,15 @@ public class PyExceptionBreakPointManager {
     /**
      * Sets whether we should break on caught/uncaught exceptions and the array of exceptions to be used.
      */
-    public void setBreakOn(boolean breakOnCaught, boolean breakOnUncaught, String[] exceptionArray) {
+    public void setBreakOn(boolean breakOnCaught, boolean breakOnUncaught, boolean breakOnUserUncaught,
+            String[] exceptionArray) {
         ConfigureExceptionsFileUtils.writeToFile(BREAK_ON_CAUGHT_EXCEPTION, Boolean.toString(breakOnCaught), false);
 
         ConfigureExceptionsFileUtils.writeToFile(BREAK_ON_UNCAUGHT_EXCEPTION, Boolean.toString(breakOnUncaught), false);
+
+        ConfigureExceptionsFileUtils.writeToFile(BREAK_ON_USER_UNCAUGHT_EXCEPTION,
+                Boolean.toString(breakOnUserUncaught),
+                false);
 
         String pyExceptionsStr = StringUtils.join(
                 ConfigureExceptionsFileUtils.DELIMITER, exceptionArray);
@@ -89,7 +97,7 @@ public class PyExceptionBreakPointManager {
 
     /**
      * Adds a new custom exception the user entered (note that it just adds it to the list
-     * of custom exceptions, it doesn't really change the exceptions set). 
+     * of custom exceptions, it doesn't really change the exceptions set).
      */
     public void addUserConfiguredException(String userConfiguredException) {
         boolean isAppend = false;
@@ -103,6 +111,15 @@ public class PyExceptionBreakPointManager {
     }
 
     //Getters
+
+    public boolean getBreakOnUserUncaughtExceptions() {
+        String breakOnUncaught = ConfigureExceptionsFileUtils.readFromMetadataFile(BREAK_ON_USER_UNCAUGHT_EXCEPTION);
+        if (breakOnUncaught.length() > 0) {
+            return Boolean.parseBoolean(breakOnUncaught);
+        } else {
+            return false;
+        }
+    }
 
     public boolean getBreakOnUncaughtExceptions() {
         String breakOnUncaught = ConfigureExceptionsFileUtils.readFromMetadataFile(BREAK_ON_UNCAUGHT_EXCEPTION);
@@ -149,8 +166,9 @@ public class PyExceptionBreakPointManager {
         ArrayList<String> list = new ArrayList<String>();
         IInterpreterManager useManager = ChooseInterpreterManager.chooseInterpreterManager();
         if (useManager != null) {
-            IToken[] pythonTokens = useManager.getBuiltinMod(IPythonNature.DEFAULT_INTERPRETER).getGlobalTokens();
-            for (IToken token : pythonTokens) {
+            TokensList pythonTokens = useManager.getBuiltinMod(IPythonNature.DEFAULT_INTERPRETER).getGlobalTokens();
+            for (IterTokenEntry entry : pythonTokens) {
+                IToken token = entry.getToken();
                 String pyToken = token.getRepresentation();
                 String lower = pyToken.toLowerCase();
                 if (lower.contains("error") || lower.contains("exception") || lower.contains("warning")) {
@@ -160,6 +178,16 @@ public class PyExceptionBreakPointManager {
             Collections.sort(list);
         }
         return list;
+    }
+
+    public boolean getSkipCaughtExceptionsInLibraries() {
+        return PydevDebugPlugin.getDefault().getPreferenceStore()
+                .getBoolean(PydevDebugPreferencesInitializer.SKIP_CAUGHT_EXCEPTIONS_IN_LIBRARIES);
+    }
+
+    public void setSkipCaughtExceptionsInLibraries(boolean b) {
+        PydevDebugPlugin.getDefault().getPreferenceStore()
+                .setValue(PydevDebugPreferencesInitializer.SKIP_CAUGHT_EXCEPTIONS_IN_LIBRARIES, b);
     }
 
     public boolean getSkipCaughtExceptionsInSameFunction() {

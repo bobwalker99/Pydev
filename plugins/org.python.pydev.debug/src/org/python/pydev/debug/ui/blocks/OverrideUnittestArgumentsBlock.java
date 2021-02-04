@@ -24,18 +24,21 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Group;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.plugin.preferences.PydevPrefs;
+import org.python.pydev.debug.core.Constants;
+import org.python.pydev.plugin.PyDevUiPrefs;
 import org.python.pydev.pyunit.preferences.PyUnitPrefsPage2;
-
 
 public class OverrideUnittestArgumentsBlock extends AbstractLaunchConfigurationTab {
 
     private Button buttonAskOverride;
     private Combo comboSelectRunner;
     private Text textRunnerParameters;
+    private Text testsToRun; // test names (class + optionally methods)
 
+    @Override
     public void createControl(Composite parent) {
         Font font = parent.getFont();
 
@@ -72,10 +75,12 @@ public class OverrideUnittestArgumentsBlock extends AbstractLaunchConfigurationT
         }
         comboSelectRunner.addSelectionListener(new SelectionListener() {
 
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 updateLaunchConfigurationDialog();
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
                 updateLaunchConfigurationDialog();
             }
@@ -87,23 +92,38 @@ public class OverrideUnittestArgumentsBlock extends AbstractLaunchConfigurationT
         textRunnerParameters.setFont(font);
 
         textRunnerParameters.addModifyListener(new ModifyListener() {
+            @Override
             public void modifyText(ModifyEvent evt) {
                 updateLaunchConfigurationDialog();
             }
         });
 
+        GridLayout testsLayout = new GridLayout(2, false);
+        Composite testsGroup = new Composite(group, SWT.NONE);
+        testsGroup.setLayout(testsLayout);
+        gd = new GridData(GridData.FILL_HORIZONTAL);
+        testsGroup.setLayoutData(gd);
+        Label testsToRunLabel = new Label(testsGroup, SWT.LEFT);
+        testsToRunLabel.setText("Tests to run: ");
+        testsToRun = new Text(testsGroup, SWT.LEFT | SWT.FILL | SWT.BORDER);
+        testsToRun.setLayoutData(gd);
+        testsToRun.setFont(font);
+        // read only property
+        testsToRun.setEditable(false);
     }
 
+    @Override
     public void setDefaults(ILaunchConfigurationWorkingCopy configuration) {
         configuration.setAttribute(PyUnitPrefsPage2.LAUNCH_CONFIG_OVERRIDE_PYUNIT_RUN_PARAMS_CHOICE, (String) null);
         configuration.setAttribute(PyUnitPrefsPage2.LAUNCH_CONFIG_OVERRIDE_TEST_RUNNER, (String) null);
         configuration.setAttribute(PyUnitPrefsPage2.LAUNCH_CONFIG_OVERRIDE_PYUNIT_RUN_PARAMS, (String) null);
     }
 
+    @Override
     public void initializeFrom(ILaunchConfiguration configuration) {
 
         //Override selection
-        IPreferenceStore prefs = PydevPrefs.getPreferenceStore();
+        IPreferenceStore prefs = PyDevUiPrefs.getPreferenceStore();
         try {
             buttonAskOverride.setSelection(configuration.getAttribute(
                     PyUnitPrefsPage2.LAUNCH_CONFIG_OVERRIDE_PYUNIT_RUN_PARAMS_CHOICE, false));
@@ -141,9 +161,22 @@ public class OverrideUnittestArgumentsBlock extends AbstractLaunchConfigurationT
         } catch (CoreException e) {
             Log.log(e);
         }
+
+        // Test cases - arguments to test runner
+        try {
+            String testCases = configuration.getAttribute(Constants.ATTR_UNITTEST_TESTS, "");
+            if (testCases.contains(",") && !testCases.contains(", ")) {
+                testCases = testCases.replace(",", ", ");
+            }
+            testsToRun.setText(testCases);
+        } catch (CoreException e) {
+            Log.log(e);
+        }
+
         updateOverrideState();
     }
 
+    @Override
     public void performApply(ILaunchConfigurationWorkingCopy configuration) {
         configuration.setAttribute(PyUnitPrefsPage2.LAUNCH_CONFIG_OVERRIDE_PYUNIT_RUN_PARAMS_CHOICE,
                 buttonAskOverride.getSelection());
@@ -153,6 +186,7 @@ public class OverrideUnittestArgumentsBlock extends AbstractLaunchConfigurationT
                 textRunnerParameters.getText());
     }
 
+    @Override
     public String getName() {
         return "PyUnit";
     }

@@ -31,7 +31,7 @@ import org.python.pydev.shared_core.structure.Tuple;
  * is attached to PyEdit (a view), and it listens to document changes On every
  * document change, the syntax tree is regenerated The reparsing of the document
  * is done on a ParsingThread
- * 
+ *
  * Clients that need to know when new parse tree has been generated should
  * register as parseListeners.
  */
@@ -44,7 +44,7 @@ public abstract class BaseParser implements IParser {
     public static boolean ACCEPT_NULL_INPUT_EDITOR = false;
 
     /**
-     * this is the document we should parse 
+     * this is the document we should parse
      */
     protected volatile IDocument document;
 
@@ -88,6 +88,7 @@ public abstract class BaseParser implements IParser {
 
         documentListener = new IDocumentListener() {
 
+            @Override
             public void documentChanged(DocumentEvent event) {
                 if (useAnalysisOnlyOnDocSave) {
                     //if we're doing analysis only on doc change, the parser will not give any changes
@@ -117,6 +118,7 @@ public abstract class BaseParser implements IParser {
                 }
             }
 
+            @Override
             public void documentAboutToBeChanged(DocumentEvent event) {
             }
         };
@@ -126,6 +128,7 @@ public abstract class BaseParser implements IParser {
     /**
      * should be called when the editor is disposed
      */
+    @Override
     public void dispose() {
         this.disposed = true;
         this.scheduler.dispose();
@@ -143,6 +146,7 @@ public abstract class BaseParser implements IParser {
         return root;
     }
 
+    @Override
     public void notifySaved() {
         //force parse on save
         forceReparse();
@@ -151,6 +155,7 @@ public abstract class BaseParser implements IParser {
     /**
      * @return false if we asked a reparse and it will not be scheduled because a reparse is already in action.
      */
+    @Override
     public boolean forceReparse(Object... argsToReparse) {
         if (disposed) {
             return true; //reparse didn't happen, but no matter what happens, it won't happen anyways
@@ -163,6 +168,7 @@ public abstract class BaseParser implements IParser {
      */
     protected/*IEditorInput*/Object input;
 
+    @Override
     public void setDocument(IDocument document, Object input) {
         setDocument(document, true, input);
     }
@@ -191,6 +197,7 @@ public abstract class BaseParser implements IParser {
 
     // ---------------------------------------------------------------------------- listeners
     /** stock listener implementation */
+    @Override
     public void addParseListener(IParserObserver listener) {
         Assert.isNotNull(listener);
         synchronized (parserListeners) {
@@ -201,6 +208,7 @@ public abstract class BaseParser implements IParser {
     }
 
     /** stock listener implementation */
+    @Override
     public void removeParseListener(IParserObserver listener) {
         Assert.isNotNull(listener);
         synchronized (parserListeners) {
@@ -211,7 +219,7 @@ public abstract class BaseParser implements IParser {
     // ---------------------------------------------------------------------------- notifications
     /**
      * stock listener implementation event is fired whenever we get a new root
-     * @param original 
+     * @param original
      */
     protected void fireParserChanged(ChangedParserInfoForObservers info) {
         this.root = info.root;
@@ -240,7 +248,7 @@ public abstract class BaseParser implements IParser {
 
     /**
      * stock listener implementation event is fired when parse fails
-     * @param original 
+     * @param original
      */
     protected void fireParserError(ErrorParserInfoForObservers info) {
         List<IParserObserver> temp;
@@ -267,6 +275,7 @@ public abstract class BaseParser implements IParser {
         public final long modificationStamp;
         public final Throwable error;
         public final ISimpleNode ast;
+        public boolean isCython;
 
         public ParseOutput(Tuple<ISimpleNode, Throwable> astInfo, long modificationStamp) {
             this.ast = astInfo.o1;
@@ -290,14 +299,15 @@ public abstract class BaseParser implements IParser {
 
     /**
      * Parses the document, generates error annotations
-     * 
+     *
      * @param argsToReparse: will be passed to fireParserError / fireParserChanged so that the IParserObserver2
      * can check it. This is useful when the reparse was done with some specific thing in mind, so that its requestor
      * can pass some specific thing to the parser observers
-     * 
+     *
      * @return a tuple with the SimpleNode root(if parsed) and the error (if any).
      *         if we are able to recover from a reparse, we have both, the root and the error.
      */
+    @Override
     public abstract ParseOutput reparseDocument(Object... argsToReparse);
 
     /**
@@ -312,6 +322,7 @@ public abstract class BaseParser implements IParser {
         }
     }
 
+    @Override
     public void resetTimeoutPreferences(boolean useAnalysisOnlyOnDocSave) {
         this.useAnalysisOnlyOnDocSave = useAnalysisOnlyOnDocSave;
     }

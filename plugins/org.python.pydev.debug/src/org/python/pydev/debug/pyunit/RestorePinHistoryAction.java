@@ -11,33 +11,32 @@ import java.lang.ref.WeakReference;
 import org.eclipse.jface.action.Action;
 import org.python.pydev.debug.core.PydevDebugPlugin;
 import org.python.pydev.shared_core.callbacks.ICallbackListener;
+import org.python.pydev.shared_ui.ImageCache;
 
 /**
  * @author fabioz
- *
  */
 public class RestorePinHistoryAction extends Action implements ICallbackListener<PyUnitTestRun> {
 
     private WeakReference<PyUnitView> view;
-    private PinHistoryAction pinHistory;
     private PyUnitTestRun testRun;
 
     /**
      * @param pyUnitView
      */
-    public RestorePinHistoryAction(PyUnitView pyUnitView, PinHistoryAction pinHistory) {
+    public RestorePinHistoryAction(PyUnitView pyUnitView) {
         this.view = new WeakReference<PyUnitView>(pyUnitView);
-        this.pinHistory = pinHistory;
-        this.pinHistory.onRunSelected.registerListener(this);
-        this.setEnabled(false);
-        this.setImageDescriptor(PydevDebugPlugin.getImageCache().getDescriptor("icons/refresh.png"));
-        setInitialTooltipText();
+        this.setImageDescriptor(
+                ImageCache.asImageDescriptor(PydevDebugPlugin.getImageCache().getDescriptor("icons/refresh.png")));
+        PyUnitViewTestsHolder.onPinSelected.registerListener(this);
+        this.call(PyUnitViewTestsHolder.getCurrentPinned());
     }
 
     private void setInitialTooltipText() {
         this.setToolTipText("Click to restore pinned test run.");
     }
 
+    @Override
     public Object call(PyUnitTestRun obj) {
         if (obj != null) {
             this.setToolTipText("Click to restore test run: " + obj.name);

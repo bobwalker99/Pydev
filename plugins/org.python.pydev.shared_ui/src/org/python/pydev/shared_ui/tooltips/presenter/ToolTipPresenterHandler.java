@@ -28,9 +28,9 @@ import org.python.pydev.shared_ui.utils.UIUtils;
 
 /**
  * Shows tooltips as an information presenter, so, links can be added and the user can interact with it.
- * 
+ *
  * Based on http://demo.spars.info/j/frameset.cgi?compo_id=146467&q=mouseexit&hl=mouseexit&packagename=org.eclipse.swt.examples.hoverhelp&componame=org.eclipse.swt.examples.hoverhelp.HoverHelp$ToolTipPresenterHandler&CASE=0&MORPHO=1&location=1111111111111111111&ref=1&mode=frameset&LANG=1
- * 
+ *
  * Emulated tooltip handler
  * Notice that we could display anything in a tooltip besides text and images.
  * For instance, it might make sense to embed large tables of data or buttons linking
@@ -75,7 +75,7 @@ public class ToolTipPresenterHandler {
 
     /**
      * Enables customized hover help for a specified control
-     * 
+     *
      * @control the control on which to enable hoverhelp
      */
     public void install(final Control control) {
@@ -86,6 +86,7 @@ public class ToolTipPresenterHandler {
          * Get out of the way if we attempt to activate the control underneath the tooltip
          */
         control.addMouseListener(new MouseAdapter() {
+            @Override
             public void mouseDown(MouseEvent e) {
                 disposeOfCurrentTipShell();
             }
@@ -95,10 +96,12 @@ public class ToolTipPresenterHandler {
          * Trap hover events to pop-up tooltip
          */
         control.addMouseTrackListener(new MouseTrackAdapter() {
+            @Override
             public void mouseExit(MouseEvent e) {
                 disposeOfCurrentTipShell();
             }
 
+            @Override
             public void mouseHover(MouseEvent event) {
                 Point pt = new Point(event.x, event.y);
                 Widget widget = event.widget;
@@ -150,10 +153,12 @@ public class ToolTipPresenterHandler {
                 final Point pos = new Point(pt.x + 10, pt.y);
                 ITooltipInformationProvider provider = new ITooltipInformationProvider() {
 
+                    @Override
                     public Object getInformation(Control fControl) {
                         return text;
                     }
 
+                    @Override
                     public Point getPosition(Control fControl) {
                         return pos;
                     }

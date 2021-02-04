@@ -6,13 +6,12 @@
  */
 package org.python.pydev.editor.actions;
 
-import org.eclipse.core.runtime.Preferences;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 import org.python.pydev.core.docutils.PySelection;
-import org.python.pydev.plugin.PydevPlugin;
-import org.python.pydev.plugin.preferences.PydevPrefs;
+import org.python.pydev.editor.PySelectionFromEditor;
+import org.python.pydev.plugin.PyDevUiPrefs;
 import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_core.structure.Tuple;
 
@@ -36,13 +35,14 @@ public abstract class AbstractBlockCommentAction extends PyAction {
     /**
      * Grabs the selection information and performs the action.
      */
+    @Override
     public void run(IAction action) {
         try {
             if (!canModifyEditor()) {
                 return;
             }
             // Select from text editor
-            PySelection ps = new PySelection(getTextEditor());
+            PySelection ps = PySelectionFromEditor.createPySelectionFromEditor(getTextEditor());
             // Perform the action
             Tuple<Integer, Integer> toSelect = perform(ps);
             if (toSelect != null) {
@@ -71,9 +71,10 @@ public abstract class AbstractBlockCommentAction extends PyAction {
         if (SharedCorePlugin.inTestMode()) {
             // use defaults
         } else {
-            IPreferenceStore chainedPrefStore = PydevPrefs.getChainedPrefStore();
+            IPreferenceStore chainedPrefStore = PyDevUiPrefs.getChainedPrefStore();
             cols = chainedPrefStore.getInt(AbstractDecoratedTextEditorPreferenceConstants.EDITOR_PRINT_MARGIN_COLUMN);
-            Preferences prefs = PydevPlugin.getDefault().getPluginPreferences();
+
+            IPreferenceStore prefs = PyDevUiPrefs.getPreferenceStore();
             c = prefs.getString(getPreferencesNameForChar()).charAt(0);
         }
         return new Tuple<Integer, Character>(cols, c);
@@ -87,7 +88,7 @@ public abstract class AbstractBlockCommentAction extends PyAction {
             return 4; //if not available, default is 4
         }
 
-        IPreferenceStore chainedPrefStore = PydevPrefs.getChainedPrefStore();
+        IPreferenceStore chainedPrefStore = PyDevUiPrefs.getChainedPrefStore();
         return chainedPrefStore.getInt(AbstractDecoratedTextEditorPreferenceConstants.EDITOR_TAB_WIDTH);
     }
 

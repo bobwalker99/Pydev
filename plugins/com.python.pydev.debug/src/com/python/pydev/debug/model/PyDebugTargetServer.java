@@ -16,6 +16,7 @@ import org.python.pydev.debug.model.AbstractDebugTarget;
 import org.python.pydev.debug.model.PyExceptionBreakPointManager;
 import org.python.pydev.debug.model.PyPropertyTraceManager;
 import org.python.pydev.debug.model.PyThread;
+import org.python.pydev.debug.model.XMLMessage;
 import org.python.pydev.debug.model.remote.AbstractDebuggerCommand;
 import org.python.pydev.shared_core.structure.Tuple;
 
@@ -50,14 +51,17 @@ public class PyDebugTargetServer extends AbstractDebugTarget {
         DebugPlugin.getDefault().getLaunchManager().addLaunchListener(this);
     }
 
+    @Override
     public boolean canTerminate() {
         return !isTerminated;
     }
 
+    @Override
     public boolean isTerminated() {
         return isTerminated;
     }
 
+    @Override
     public void terminate() {
         isTerminated = true;
         super.terminate();
@@ -67,6 +71,7 @@ public class PyDebugTargetServer extends AbstractDebugTarget {
         isTerminated = true;
     }
 
+    @Override
     public void launchRemoved(ILaunch launch) {
         // shut down the remote debugger when parent launch
         if (launch == this.launch) {
@@ -77,6 +82,7 @@ public class PyDebugTargetServer extends AbstractDebugTarget {
         }
     }
 
+    @Override
     public void processCommand(String sCmdCode, String sSeqCode, String payload) {
         if (Integer.parseInt(sCmdCode) == AbstractDebuggerCommand.CMD_WRITE_TO_CONSOLE) {
             ProcessServer serverProcess = getDebugger().getServerProcess();
@@ -93,10 +99,12 @@ public class PyDebugTargetServer extends AbstractDebugTarget {
         }
     }
 
+    @Override
     public RemoteDebuggerServer getDebugger() {
         return (RemoteDebuggerServer) super.getDebugger();
     }
 
+    @Override
     public IProcess getProcess() {
         return getDebugger().getIProcess();
     }

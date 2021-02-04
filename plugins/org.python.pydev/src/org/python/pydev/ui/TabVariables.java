@@ -19,9 +19,10 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.TreeItem;
-import org.python.pydev.plugin.PydevPlugin;
+import org.python.pydev.shared_core.image.UIConstants;
 import org.python.pydev.shared_core.structure.Tuple;
-import org.python.pydev.shared_ui.UIConstants;
+import org.python.pydev.shared_ui.ImageCache;
+import org.python.pydev.shared_ui.SharedUiPlugin;
 import org.python.pydev.ui.dialogs.MapOfStringsInputDialog;
 import org.python.pydev.ui.editors.TreeWithAddRemove;
 
@@ -44,7 +45,7 @@ public class TabVariables {
         }
         TabItem tabItem = new TabItem(tabFolder, SWT.None);
         tabItem.setText("String Substitution Variables");
-        tabItem.setImage(PydevPlugin.getImageCache().get(UIConstants.VARIABLE_ICON));
+        tabItem.setImage(ImageCache.asImage(SharedUiPlugin.getImageCache().get(UIConstants.VARIABLE_ICON)));
         Composite topComp = new Composite(tabFolder, SWT.None);
         topComp.setLayout(new GridLayout(1, false));
 
@@ -75,6 +76,7 @@ public class TabVariables {
                     addItemWithDialog(new MapOfStringsInputDialog(getShell(), "Variable",
                             "Enter the variable name/value.", vars) {
 
+                        @Override
                         protected boolean isExistingKeyEdit() {
                             return false;
                         }
@@ -102,6 +104,7 @@ public class TabVariables {
                 MapOfStringsInputDialog dialog = new MapOfStringsInputDialog(getShell(), "Variable",
                         "Enter the variable name/value.", vars) {
 
+                    @Override
                     protected org.eclipse.swt.widgets.Control createDialogArea(Composite parent) {
                         Control control = super.createDialogArea(parent);
                         this.keyField.setText(fixedKeyText);
@@ -115,10 +118,12 @@ public class TabVariables {
                         return control;
                     }
 
+                    @Override
                     protected boolean isExistingKeyEdit() {
                         return true;
                     };
 
+                    @Override
                     protected String getInitialMessage() {
                         return null; //it starts in a valid state
                     };

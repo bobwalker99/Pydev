@@ -11,10 +11,6 @@
 package org.python.pydev.shared_core.partitioner;
 
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.rules.IPartitionTokenScanner;
-import org.eclipse.jface.text.rules.IPredicateRule;
-import org.eclipse.jface.text.rules.IRule;
-import org.eclipse.jface.text.rules.IToken;
 import org.python.pydev.shared_core.log.Log;
 
 /**
@@ -37,8 +33,9 @@ public class CustomRuleBasedPartitionScanner extends AbstractCustomBufferedRuleB
 
     /*
      * (non-Javadoc)
-     * @see com.brainwy.liclipse.editor.epl.rules.IDocumentScanner#getDocument()
+     * @see org.brainwy.liclipsetext.shared_core.partitioner.IDocumentScanner#getDocument()
      */
+    @Override
     public IDocument getDocument() {
         return fDocument;
     }
@@ -76,6 +73,7 @@ public class CustomRuleBasedPartitionScanner extends AbstractCustomBufferedRuleB
      * that match the given content type.
      * </p>
      */
+    @Override
     public void setPartialRange(IDocument document, int offset, int length, String contentType, int partitionOffset) {
         fContentType = contentType;
         fPartitionOffset = partitionOffset;

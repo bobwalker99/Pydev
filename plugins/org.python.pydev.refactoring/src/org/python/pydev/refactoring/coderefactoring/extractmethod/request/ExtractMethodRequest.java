@@ -27,7 +27,6 @@ package org.python.pydev.refactoring.coderefactoring.extractmethod.request;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.jface.text.ITextSelection;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.factory.AdapterPrefs;
 import org.python.pydev.refactoring.ast.adapters.AbstractScopeNode;
@@ -36,6 +35,7 @@ import org.python.pydev.refactoring.ast.adapters.IASTNodeAdapter;
 import org.python.pydev.refactoring.ast.adapters.ModuleAdapter;
 import org.python.pydev.refactoring.core.request.IExtractMethodRefactoringRequest;
 import org.python.pydev.refactoring.core.request.IRefactoringRequest;
+import org.python.pydev.shared_core.string.ICoreTextSelection;
 
 public class ExtractMethodRequest implements IRefactoringRequest, IExtractMethodRefactoringRequest {
 
@@ -46,11 +46,11 @@ public class ExtractMethodRequest implements IRefactoringRequest, IExtractMethod
     public final List<String> parameters;
     public final List<String> returnVariables;
     public final Map<String, String> renamedVariables;
-    public final ITextSelection selection;
+    public final ICoreTextSelection selection;
 
     private final AdapterPrefs adapterPrefs;
 
-    public ExtractMethodRequest(String methodName, ITextSelection selection, AbstractScopeNode<?> scopeAdapter,
+    public ExtractMethodRequest(String methodName, ICoreTextSelection selection, AbstractScopeNode<?> scopeAdapter,
             ModuleAdapter parsedSelection, List<String> callParameters, List<String> returnVariables,
             Map<String, String> renamedVariables, int offsetStrategy, AdapterPrefs adapterPrefs) {
         this.methodName = methodName;
@@ -65,6 +65,7 @@ public class ExtractMethodRequest implements IRefactoringRequest, IExtractMethod
         this.adapterPrefs = adapterPrefs;
     }
 
+    @Override
     public IASTNodeAdapter<? extends SimpleNode> getOffsetNode() {
         IASTNodeAdapter<? extends SimpleNode> offsetNode = scopeAdapter;
         while (offsetNode instanceof FunctionDefAdapter) {
@@ -74,10 +75,12 @@ public class ExtractMethodRequest implements IRefactoringRequest, IExtractMethod
         return offsetNode;
     }
 
+    @Override
     public AdapterPrefs getAdapterPrefs() {
         return adapterPrefs;
     }
 
+    @Override
     public AbstractScopeNode<?> getScopeAdapter() {
         return this.scopeAdapter;
     }

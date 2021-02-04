@@ -12,7 +12,7 @@ import org.eclipse.debug.ui.EnvironmentTab;
 import org.eclipse.debug.ui.ILaunchConfigurationDialog;
 import org.eclipse.debug.ui.ILaunchConfigurationTab;
 import org.eclipse.debug.ui.RefreshTab;
-import org.python.pydev.plugin.PydevPlugin;
+import org.python.pydev.ast.interpreter_managers.InterpreterManagersAPI;
 
 /**
  * Create tabs for the debugger setup.
@@ -25,10 +25,11 @@ import org.python.pydev.plugin.PydevPlugin;
  */
 public class IronpythonTabGroup extends AbstractLaunchConfigurationTabGroup {
 
+    @Override
     public void createTabs(ILaunchConfigurationDialog arg0, String arg1) {
         MainModuleTab mainModuleTab = new MainModuleTab();
         ILaunchConfigurationTab[] tabs = new ILaunchConfigurationTab[] { mainModuleTab,
-                new ArgumentsTab(mainModuleTab), new InterpreterTab(PydevPlugin.getIronpythonInterpreterManager()),
+                new ArgumentsTab(mainModuleTab), new InterpreterTab(InterpreterManagersAPI.getIronpythonInterpreterManager()),
                 new RefreshTab(), new EnvironmentTab(), new CommonTab() };
         setTabs(tabs);
     }

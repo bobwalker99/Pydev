@@ -1,11 +1,12 @@
 /**
- * Copyright (c) 2005-2013 by Appcelerator, Inc. All Rights Reserved.
+ * Copyright (c) 2005-2018 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the Eclipse Public License (EPL).
  * Please see the license.txt included with this distribution for details.
  * Any modifications to this file must keep this entire header intact.
  */
 package org.python.pydev.ui.pythonpathconf;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ import org.eclipse.debug.core.ILaunchConfigurationType;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.debug.core.ILaunchDelegate;
 import org.eclipse.debug.core.ILaunchManager;
+import org.python.pydev.ast.interpreter_managers.InterpreterInfo;
 
 @SuppressWarnings("unchecked")
 public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
@@ -55,7 +57,8 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
             return;
         }
 
-        Map<String, String> existing = (Map<String, String>) this.attributes.get(ILaunchManager.ATTR_ENVIRONMENT_VARIABLES);
+        Map<String, String> existing = (Map<String, String>) this.attributes
+                .get(ILaunchManager.ATTR_ENVIRONMENT_VARIABLES);
         HashMap<String, String> map = null;
         if (existing != null) {
             map = new HashMap<String, String>(existing);
@@ -69,31 +72,37 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
         }
     }
 
+    @Override
     public void addModes(Set modes) {
         throw new RuntimeException();
 
     }
 
+    @Override
     public ILaunchConfiguration doSave() throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public ILaunchConfiguration getOriginal() {
         return this;
 
     }
 
+    @Override
     public ILaunchConfigurationWorkingCopy getParent() {
         return null;
 
     }
 
+    @Override
     public boolean isDirty() {
         throw new RuntimeException();
 
     }
 
+    @Override
     public Object removeAttribute(String attributeName) {
         Object ret = this.attributes.remove(attributeName);
         if (attributeName.equals(ILaunchManager.ATTR_ENVIRONMENT_VARIABLES)) {
@@ -102,16 +111,19 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
         return ret;
     }
 
+    @Override
     public void removeModes(Set modes) {
         throw new RuntimeException();
 
     }
 
+    @Override
     public void rename(String name) {
         throw new RuntimeException();
 
     }
 
+    @Override
     public void setAttribute(String attributeName, int value) {
         this.attributes.put(attributeName, value);
         if (attributeName.equals(ILaunchManager.ATTR_ENVIRONMENT_VARIABLES)) {
@@ -119,6 +131,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
         }
     }
 
+    @Override
     public void setAttribute(String attributeName, String value) {
         this.attributes.put(attributeName, value);
         if (attributeName.equals(ILaunchManager.ATTR_ENVIRONMENT_VARIABLES)) {
@@ -127,6 +140,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
 
     }
 
+    @Override
     public void setAttribute(String attributeName, @SuppressWarnings("rawtypes") List value) {
         this.attributes.put(attributeName, value);
         if (attributeName.equals(ILaunchManager.ATTR_ENVIRONMENT_VARIABLES)) {
@@ -135,6 +149,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
 
     }
 
+    @Override
     public void setAttribute(String attributeName, @SuppressWarnings("rawtypes") Map value) {
         this.attributes.put(attributeName, value);
         if (attributeName.equals(ILaunchManager.ATTR_ENVIRONMENT_VARIABLES)) {
@@ -143,6 +158,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
 
     }
 
+    @Override
     public void setAttribute(String attributeName, @SuppressWarnings("rawtypes") Set value) {
         this.attributes.put(attributeName, value);
         if (attributeName.equals(ILaunchManager.ATTR_ENVIRONMENT_VARIABLES)) {
@@ -151,6 +167,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
 
     }
 
+    @Override
     public void setAttribute(String attributeName, boolean value) {
         this.attributes.put(attributeName, value);
         if (attributeName.equals(ILaunchManager.ATTR_ENVIRONMENT_VARIABLES)) {
@@ -159,6 +176,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
 
     }
 
+    @Override
     public void setAttributes(Map attributes) {
         this.attributes.clear();
         if (attributes != null) {
@@ -172,46 +190,55 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
 
     }
 
+    @Override
     public void setContainer(IContainer container) {
         throw new RuntimeException();
 
     }
 
+    @Override
     public void setMappedResources(IResource[] resources) {
         throw new RuntimeException();
 
     }
 
+    @Override
     public void setModes(Set modes) {
         throw new RuntimeException();
 
     }
 
+    @Override
     public void setPreferredLaunchDelegate(Set modes, String delegateId) {
         throw new RuntimeException();
 
     }
 
+    @Override
     public boolean contentsEqual(ILaunchConfiguration configuration) {
         throw new RuntimeException();
 
     }
 
+    @Override
     public ILaunchConfigurationWorkingCopy copy(String name) throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public void delete() throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public boolean exists() {
         throw new RuntimeException();
 
     }
 
+    @Override
     public boolean getAttribute(String attributeName, boolean defaultValue) throws CoreException {
         if (this.attributes.containsKey(attributeName)) {
             return (Boolean) this.attributes.get(attributeName);
@@ -220,6 +247,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
 
     }
 
+    @Override
     public int getAttribute(String attributeName, int defaultValue) throws CoreException {
 
         if (this.attributes.containsKey(attributeName)) {
@@ -228,6 +256,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
         return defaultValue;
     }
 
+    @Override
     public List getAttribute(String attributeName, List defaultValue) throws CoreException {
 
         if (this.attributes.containsKey(attributeName)) {
@@ -237,6 +266,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
 
     }
 
+    @Override
     public Set getAttribute(String attributeName, Set defaultValue) throws CoreException {
 
         if (this.attributes.containsKey(attributeName)) {
@@ -246,6 +276,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
 
     }
 
+    @Override
     public Map getAttribute(String attributeName, Map defaultValue) throws CoreException {
         if (this.attributes.containsKey(attributeName)) {
             return (Map) this.attributes.get(attributeName);
@@ -254,6 +285,7 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
 
     }
 
+    @Override
     public String getAttribute(String attributeName, String defaultValue) throws CoreException {
         if (this.attributes.containsKey(attributeName)) {
             return (String) this.attributes.get(attributeName);
@@ -261,112 +293,182 @@ public class MyEnvWorkingCopy implements ILaunchConfigurationWorkingCopy {
         return defaultValue;
     }
 
+    @Override
     public Map<String, Object> getAttributes() throws CoreException {
         return this.attributes;
 
     }
 
+    @Override
     public String getCategory() throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public IFile getFile() {
         throw new RuntimeException();
 
     }
 
+    @Override
     public IPath getLocation() {
         throw new RuntimeException();
 
     }
 
+    @Override
     public IResource[] getMappedResources() throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public String getMemento() throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public Set getModes() throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public String getName() {
         throw new RuntimeException();
 
     }
 
+    @Override
     public ILaunchDelegate getPreferredDelegate(Set modes) throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public ILaunchConfigurationType getType() throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public ILaunchConfigurationWorkingCopy getWorkingCopy() throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public boolean hasAttribute(String attributeName) throws CoreException {
         return this.attributes.containsKey(attributeName);
 
     }
 
+    @Override
     public boolean isLocal() {
         throw new RuntimeException();
 
     }
 
+    @Override
     public boolean isMigrationCandidate() throws CoreException {
         return false;
 
     }
 
+    @Override
     public boolean isReadOnly() {
         return false;
 
     }
 
+    @Override
     public boolean isWorkingCopy() {
         return true;
 
     }
 
+    @Override
     public ILaunch launch(String mode, IProgressMonitor monitor) throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public ILaunch launch(String mode, IProgressMonitor monitor, boolean build) throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public ILaunch launch(String mode, IProgressMonitor monitor, boolean build, boolean register) throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public void migrate() throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public boolean supportsMode(String mode) throws CoreException {
         throw new RuntimeException();
 
     }
 
+    @Override
     public Object getAdapter(Class adapter) {
+        throw new RuntimeException();
+    }
+
+    public void delete(int flag) throws CoreException {
+        throw new RuntimeException();
+    }
+
+    public ILaunchConfiguration getPrototype() throws CoreException {
+        return null;
+    }
+
+    public boolean isAttributeModified(String attribute) throws CoreException {
+        return false;
+    }
+
+    public boolean isPrototype() {
+        return false;
+    }
+
+    public Collection<ILaunchConfiguration> getPrototypeChildren() throws CoreException {
+        throw new RuntimeException();
+    }
+
+    public int getKind() throws CoreException {
+        throw new RuntimeException();
+    }
+
+    public Set<String> getPrototypeVisibleAttributes() throws CoreException {
+        throw new RuntimeException();
+    }
+
+    public void setPrototypeAttributeVisibility(String attribute, boolean visible) throws CoreException {
+        throw new RuntimeException();
+    }
+
+    public ILaunchConfiguration doSave(int flag) throws CoreException {
+        throw new RuntimeException();
+    }
+
+    public void setAttribute(String attributeName, Object value) {
+        throw new RuntimeException();
+    }
+
+    public void copyAttributes(ILaunchConfiguration prototype) throws CoreException {
+        throw new RuntimeException();
+    }
+
+    public void setPrototype(ILaunchConfiguration prototype, boolean copy) throws CoreException {
         throw new RuntimeException();
     }
 

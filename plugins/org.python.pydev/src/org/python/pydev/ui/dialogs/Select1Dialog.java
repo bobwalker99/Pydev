@@ -30,9 +30,9 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
 import org.python.pydev.shared_core.structure.TreeNode;
-import org.python.pydev.shared_core.structure.TreeNodeContentProvider;
 import org.python.pydev.shared_ui.EditorUtils;
 import org.python.pydev.shared_ui.dialogs.DialogMemento;
+import org.python.pydev.shared_ui.tree.TreeNodeContentProvider;
 
 public class Select1Dialog {
 
@@ -58,6 +58,7 @@ public class Select1Dialog {
                 Control ret = super.createDialogArea(parent);
                 ret.addTraverseListener(new TraverseListener() {
 
+                    @Override
                     public void keyTraversed(TraverseEvent e) {
                         if (e.detail == SWT.TRAVERSE_RETURN) {
                             okPressed();

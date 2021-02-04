@@ -23,7 +23,7 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.actions.MoveResourceAction;
 import org.eclipse.ui.dialogs.ContainerSelectionDialog;
-import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
+import org.python.pydev.ast.codecompletion.revisited.PythonPathHelper;
 
 public class PyMoveResourceAction extends MoveResourceAction {
 
@@ -91,7 +91,7 @@ public class PyMoveResourceAction extends MoveResourceAction {
         if (selected.size() == 1) {
             title = "Choose destination for ''" + selected.get(0).getName() + "'':";
         } else {
-            title = "Choose destination for " + new Integer(selected.size()) + " selected resources:";
+            title = "Choose destination for " + selected.size() + " selected resources:";
         }
         ContainerSelectionDialog dialog = new ContainerSelectionDialog(shellProvider.getShell(),
                 selected.get(0).getParent(), true, title);

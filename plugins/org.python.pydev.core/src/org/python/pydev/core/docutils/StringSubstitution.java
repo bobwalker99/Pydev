@@ -9,10 +9,14 @@ package org.python.pydev.core.docutils;
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.Set;
 import java.util.Stack;
 
 import org.eclipse.core.resources.IPathVariableManager;
@@ -33,6 +37,17 @@ import org.python.pydev.shared_core.string.StringUtils;
 public class StringSubstitution {
 
     private Map<String, String> variableSubstitution = null;
+
+    public Map<String, String> getStringSubstitutionVariables() {
+        if (variableSubstitution == null) {
+            return new HashMap<>();
+        }
+        return new HashMap<>(variableSubstitution);
+    }
+
+    public StringSubstitution(Map<String, String> vars) {
+        this.variableSubstitution = vars;
+    }
 
     public StringSubstitution(IPythonNature nature) {
         if (nature != null) {
@@ -98,6 +113,18 @@ public class StringSubstitution {
         }
     }
 
+    public void addAdditionalStringSubstitutionVariables(Properties stringSubstitutionVariables) {
+        if (stringSubstitutionVariables != null) {
+            if (variableSubstitution == null) {
+                variableSubstitution = new HashMap<>();
+            }
+            Set<Entry<Object, Object>> entrySet = stringSubstitutionVariables.entrySet();
+            for (Entry<Object, Object> entry : entrySet) {
+                variableSubstitution.put(entry.getKey().toString(), entry.getValue().toString());
+            }
+        }
+    }
+
     /**
      * Replaces with all variables (the ones for this class and the ones in the VariablesPlugin)
      *
@@ -152,7 +179,6 @@ public class StringSubstitution {
     /**
      * Performs string substitution for context and value variables.
      */
-    @SuppressWarnings("unchecked")
     class StringSubstitutionEngine {
 
         // delimiters
@@ -212,22 +238,22 @@ public class StringSubstitution {
         public String performStringSubstitution(String expression, boolean resolveVariables,
                 Map<String, String> variableSubstitution) throws CoreException {
             substitute(expression, resolveVariables, variableSubstitution);
-            List resolvedVariableSets = new ArrayList();
+            List<HashSet<String>> resolvedVariableSets = new ArrayList<HashSet<String>>();
             while (fSubs) {
-                HashSet resolved = substitute(fResult.toString(), true, variableSubstitution);
+                HashSet<String> resolved = substitute(fResult.toString(), true, variableSubstitution);
 
                 for (int i = resolvedVariableSets.size() - 1; i >= 0; i--) {
 
-                    HashSet prevSet = (HashSet) resolvedVariableSets.get(i);
+                    HashSet<String> prevSet = resolvedVariableSets.get(i);
 
                     if (prevSet.equals(resolved)) {
-                        HashSet conflictingSet = new HashSet();
+                        HashSet<String> conflictingSet = new HashSet<String>();
                         for (; i < resolvedVariableSets.size(); i++) {
-                            conflictingSet.addAll((HashSet) resolvedVariableSets.get(i));
+                            conflictingSet.addAll(resolvedVariableSets.get(i));
                         }
 
                         StringBuffer problemVariableList = new StringBuffer();
-                        for (Iterator it = conflictingSet.iterator(); it.hasNext();) {
+                        for (Iterator<?> it = conflictingSet.iterator(); it.hasNext();) {
                             problemVariableList.append(it.next().toString());
                             problemVariableList.append(", "); //$NON-NLS-1$
                         }
@@ -235,7 +261,8 @@ public class StringSubstitution {
                         throw new CoreException(new Status(IStatus.ERROR, VariablesPlugin.getUniqueIdentifier(),
                                 VariablesPlugin.REFERENCE_CYCLE_ERROR,
                                 StringUtils.format("Cycle error on:",
-                                        problemVariableList.toString()), null));
+                                        problemVariableList.toString()),
+                                null));
                     }
                 }
 
@@ -354,7 +381,8 @@ public class StringSubstitution {
          * @return variable value, possibly <code>null</code>
          * @exception CoreException if unable to resolve a value
          */
-        private String resolve(VariableReference var, boolean resolveVariables, Map<String, String> variableSubstitution)
+        private String resolve(VariableReference var, boolean resolveVariables,
+                Map<String, String> variableSubstitution)
                 throws CoreException {
             String text = var.getText();
             int pos = text.indexOf(VARIABLE_ARG);

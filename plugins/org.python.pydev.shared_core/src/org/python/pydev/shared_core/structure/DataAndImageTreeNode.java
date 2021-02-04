@@ -6,14 +6,14 @@
  */
 package org.python.pydev.shared_core.structure;
 
-import org.eclipse.swt.graphics.Image;
+import org.python.pydev.shared_core.image.IImageHandle;
 
 @SuppressWarnings("unchecked")
 public class DataAndImageTreeNode<X> extends TreeNode<X> {
 
-    public final Image image;
+    public final IImageHandle image;
 
-    public DataAndImageTreeNode(DataAndImageTreeNode<X> parent, X data, Image image) {
+    public DataAndImageTreeNode(DataAndImageTreeNode<X> parent, X data, IImageHandle image) {
         super(parent, data);
         this.image = image;
     }
@@ -73,6 +73,38 @@ public class DataAndImageTreeNode<X> extends TreeNode<X> {
 
     public Object[] childrenAsArray() {
         return this.children.toArray();
+    }
+
+    public int childrenCount() {
+        return this.children.size();
+    }
+
+    @SuppressWarnings("rawtypes")
+    public DataAndImageTreeNode childAt(int i) {
+        return (DataAndImageTreeNode) this.children.get(i);
+    }
+
+    public static interface ITraverser {
+
+        boolean traverse(@SuppressWarnings("rawtypes") DataAndImageTreeNode dataAndImageTreeNode);
+
+    }
+
+    /**
+     * Traverse all the items in the nodes structure (until the traverser returns "false".).
+     */
+    @SuppressWarnings("rawtypes")
+    public boolean traverse(ITraverser traverser) {
+        boolean continueTraverse = traverser.traverse(this);
+        if (continueTraverse) {
+            for (Object o : this.children) {
+                continueTraverse = ((DataAndImageTreeNode) o).traverse(traverser);
+                if (!continueTraverse) {
+                    return false;
+                }
+            }
+        }
+        return continueTraverse;
     }
 
 }

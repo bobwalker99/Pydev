@@ -20,11 +20,13 @@ import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.viewers.ISelection;
 import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.log.Log;
+import org.python.pydev.editor.PySelectionFromEditor;
+import org.python.pydev.editor.codecompletion.ConvertCompletionProposals;
 import org.python.pydev.editor.correctionassist.PyCorrectionAssistant;
 import org.python.pydev.editor.correctionassist.heuristics.AssistAssign;
-import org.python.pydev.plugin.PydevPlugin;
+import org.python.pydev.shared_core.code_completion.ICompletionProposalHandle;
 import org.python.pydev.shared_interactive_console.console.ui.internal.ScriptConsoleViewer;
-
+import org.python.pydev.shared_ui.SharedUiPlugin;
 
 /**
  * Shows quick assists for the console
@@ -36,10 +38,12 @@ public class PydevConsoleQuickAssistProcessor implements IQuickAssistProcessor {
     public PydevConsoleQuickAssistProcessor(PyCorrectionAssistant quickAssist) {
     }
 
+    @Override
     public boolean canAssist(IQuickAssistInvocationContext invocationContext) {
         return true;
     }
 
+    @Override
     public boolean canFix(Annotation annotation) {
         return false;
     }
@@ -47,9 +51,10 @@ public class PydevConsoleQuickAssistProcessor implements IQuickAssistProcessor {
     /**
      * Computes quick assists for the console.
      */
+    @Override
     public ICompletionProposal[] computeQuickAssistProposals(IQuickAssistInvocationContext invocationContext) {
         ISourceViewer sourceViewer = invocationContext.getSourceViewer();
-        List<ICompletionProposal> props = new ArrayList<ICompletionProposal>();
+        List<ICompletionProposalHandle> props = new ArrayList<ICompletionProposalHandle>();
         if (sourceViewer instanceof ScriptConsoleViewer) {
             ScriptConsoleViewer viewer = (ScriptConsoleViewer) sourceViewer;
 
@@ -58,7 +63,8 @@ public class PydevConsoleQuickAssistProcessor implements IQuickAssistProcessor {
 
             ISelection selection = sourceViewer.getSelectionProvider().getSelection();
             if (selection instanceof ITextSelection) {
-                PySelection ps = new PySelection(sourceViewer.getDocument(), (ITextSelection) selection);
+                PySelection ps = PySelectionFromEditor.createPySelectionFromEditor(sourceViewer,
+                        (ITextSelection) selection);
                 int offset = viewer.getCaretOffset();
                 String commandLine = viewer.getCommandLine();
 
@@ -78,7 +84,7 @@ public class PydevConsoleQuickAssistProcessor implements IQuickAssistProcessor {
                                 break;
                             }
                         }
-                        props.addAll(assistAssign.getProps(ps, PydevPlugin.getImageCache(), sourceViewer, offset,
+                        props.addAll(assistAssign.getProps(ps, SharedUiPlugin.getImageCache(), sourceViewer, offset,
                                 commandLine, commandLineOffset));
 
                     } catch (BadLocationException e) {
@@ -87,9 +93,11 @@ public class PydevConsoleQuickAssistProcessor implements IQuickAssistProcessor {
                 }
             }
         }
-        return props.toArray(new ICompletionProposal[props.size()]);
+        return ConvertCompletionProposals
+                .convertHandlesToProposals(props.toArray(new ICompletionProposalHandle[props.size()]));
     }
 
+    @Override
     public String getErrorMessage() {
         return null;
     }

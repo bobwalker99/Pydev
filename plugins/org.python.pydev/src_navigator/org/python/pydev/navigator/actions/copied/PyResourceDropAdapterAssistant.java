@@ -39,20 +39,21 @@ import org.eclipse.ui.internal.navigator.resources.plugin.WorkbenchNavigatorPlug
 import org.eclipse.ui.navigator.CommonDropAdapter;
 import org.eclipse.ui.navigator.resources.ResourceDropAdapterAssistant;
 import org.eclipse.ui.part.ResourceTransfer;
+import org.python.pydev.ast.codecompletion.revisited.PythonPathHelper;
+import org.python.pydev.ast.refactoring.ModuleRenameRefactoringRequest;
+import org.python.pydev.ast.refactoring.MultiModuleMoveRefactoringRequest;
+import org.python.pydev.ast.refactoring.TargetNotInPythonpathException;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.log.Log;
-import org.python.pydev.editor.codecompletion.revisited.PythonPathHelper;
-import org.python.pydev.editor.refactoring.AbstractPyRefactoring;
-import org.python.pydev.editor.refactoring.ModuleRenameRefactoringRequest;
-import org.python.pydev.editor.refactoring.MultiModuleMoveRefactoringRequest;
-import org.python.pydev.editor.refactoring.TargetNotInPythonpathException;
 import org.python.pydev.navigator.elements.IWrappedResource;
-import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
+import org.python.pydev.shared_core.SharedCorePlugin;
+import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.ui.refactoring.PyRenameRefactoring;
 
 /**
  * Copied becaus the original did not really adapt to resources (it tries to do if !xxx instanceof IResource in many places)
- * 
+ *
  * @author Fabio
  */
 @SuppressWarnings("restriction")
@@ -75,7 +76,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see org.eclipse.ui.navigator.CommonDropAdapterAssistant#isSupportedType(org.eclipse.swt.dnd.TransferData)
      */
     @Override
@@ -85,7 +86,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see org.eclipse.ui.navigator.CommonDropAdapterAssistant#validateDrop(java.lang.Object,
      *      int, org.eclipse.swt.dnd.TransferData)
      */
@@ -149,7 +150,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see org.eclipse.ui.navigator.CommonDropAdapterAssistant#handleDrop(CommonDropAdapter,
      *      DropTargetEvent, Object)
      */
@@ -202,7 +203,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see org.eclipse.ui.navigator.CommonDropAdapterAssistant#validatePluginTransferDrop(org.eclipse.jface.viewers.IStructuredSelection,
      *      java.lang.Object)
      */
@@ -243,7 +244,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see org.eclipse.ui.navigator.CommonDropAdapterAssistant#handlePluginTransferDrop(org.eclipse.jface.viewers.IStructuredSelection,
      *      java.lang.Object)
      */
@@ -284,7 +285,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
 
     /**
      * Returns the resource selection from the LocalSelectionTransfer.
-     * 
+     *
      * @return the resource selection from the LocalSelectionTransfer
      */
     private IResource[] getSelectedResources() {
@@ -298,26 +299,25 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
 
     /**
      * Returns the resource selection from the LocalSelectionTransfer.
-     * 
+     *
      * @return the resource selection from the LocalSelectionTransfer
      */
-    @SuppressWarnings("unchecked")
     private IResource[] getSelectedResources(IStructuredSelection selection) {
-        ArrayList selectedResources = new ArrayList();
+        ArrayList<Object> selectedResources = new ArrayList<Object>();
 
-        for (Iterator i = selection.iterator(); i.hasNext();) {
+        for (Iterator<?> i = selection.iterator(); i.hasNext();) {
             Object o = i.next();
             if (o instanceof IResource) {
                 selectedResources.add(o);
             } else if (o instanceof IAdaptable) {
                 IAdaptable a = (IAdaptable) o;
-                IResource r = (IResource) a.getAdapter(IResource.class);
+                IResource r = a.getAdapter(IResource.class);
                 if (r != null) {
                     selectedResources.add(r);
                 }
             }
         }
-        return (IResource[]) selectedResources.toArray(new IResource[selectedResources.size()]);
+        return selectedResources.toArray(new IResource[selectedResources.size()]);
     }
 
     /**
@@ -364,7 +364,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
             nature = PythonNature.getPythonNature(target);
             Set<String> projectSourcePathSet = nature.getPythonPathNature().getProjectSourcePathSet(true);
             for (String string : projectSourcePathSet) {
-                if (new Path(string).isPrefixOf(target.getFullPath())) {
+                if (FileUtils.isPrefixOf(new Path(string), target.getFullPath())) {
                     targetInSourceFolder = true;
                     break;
                 }
@@ -392,14 +392,9 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
                             if (isDir) {
                                 initFile = PythonPathHelper.getFolderInit(file);
                             }
-                            if (isDir && initFile == null) {
-                                //It's a directory without an __init__.py inside the pythonpath: can't move along with the others...
-                                break;
-                            } else {
-                                if (isDir) {
-                                    //If it's a directory, use the __init__.py instead.
-                                    file = initFile;
-                                }
+                            if (isDir && initFile != null) {
+                                //If it's a directory, and we have an __init__.py, use the __init__.py instead.
+                                file = initFile;
                             }
 
                             resolved += 1;
@@ -411,7 +406,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
                 }
                 if (resolved != 0) {
                     if (resolved != sources.length) {
-                        problems.add(PydevPlugin
+                        problems.add(SharedCorePlugin
                                 .makeStatus(
                                         IStatus.ERROR,
                                         "Unable to do refactor action because some of the resources moved are in the PYTHONPATH and some are not.",
@@ -419,7 +414,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
                         return problems;
                     } else {
                         //Make a refactoring operation
-                        AbstractPyRefactoring.getPyRefactoring().rename(
+                        PyRenameRefactoring.rename(
                                 new MultiModuleMoveRefactoringRequest(requests, target));
 
                         return problems;
@@ -465,6 +460,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
         // Otherwise the drag source (e.g., Windows Explorer) will be blocked
         // while the operation executes. Fixes bug 16478.
         Display.getCurrent().asyncExec(new Runnable() {
+            @Override
             public void run() {
                 getShell().forceActive();
                 CopyFilesAndFoldersOperation operation = new CopyFilesAndFoldersOperation(getShell());

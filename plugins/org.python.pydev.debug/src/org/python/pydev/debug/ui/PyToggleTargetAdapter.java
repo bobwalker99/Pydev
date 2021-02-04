@@ -19,12 +19,13 @@ import org.python.pydev.shared_ui.editor.BaseEditor;
 
 public class PyToggleTargetAdapter implements IAdapterFactory {
 
+    @SuppressWarnings("unchecked")
     @Override
-    public Object getAdapter(Object adaptableObject, Class adapterType) {
+    public <T> T getAdapter(Object adaptableObject, Class<T> adapterType) {
         if (adaptableObject instanceof ITextEditor && adapterType == IToggleBreakpointsTarget.class) {
             ITextEditor iTextEditor = (ITextEditor) adaptableObject;
             if (canToggleFor(iTextEditor)) {
-                return new PyDjangoToggleBreakpointsTarget();
+                return (T) new PyDjangoToggleBreakpointsTarget();
             }
             return null;
         }
@@ -33,8 +34,8 @@ public class PyToggleTargetAdapter implements IAdapterFactory {
     }
 
     public static boolean canToggleFor(ITextEditor iTextEditor) {
-        if (iTextEditor instanceof BaseEditor) {
-            IEditorInput editorInput = iTextEditor.getEditorInput();
+        IEditorInput editorInput = iTextEditor.getEditorInput();
+        if (editorInput != null) {
             String name = editorInput.getName();
             if (name != null) {
                 if (name.endsWith(".html") || name.endsWith(".htm") || name.endsWith(".djhtml")) {
@@ -47,7 +48,7 @@ public class PyToggleTargetAdapter implements IAdapterFactory {
     }
 
     @Override
-    public Class[] getAdapterList() {
+    public Class<?>[] getAdapterList() {
         return new Class[] { IToggleBreakpointsTarget.class };
     }
 
@@ -60,9 +61,10 @@ class PyDjangoToggleBreakpointsTarget implements IToggleBreakpointsTarget, ITogg
     }
 
     // --------------- All others point to this 2 methods!
+    @Override
     public void toggleBreakpoints(IWorkbenchPart part, ISelection selection) throws CoreException {
-        if (part instanceof BaseEditor && selection instanceof TextSelection
-                && PyToggleTargetAdapter.canToggleFor((BaseEditor) part)) {
+        if (part instanceof ITextEditor && selection instanceof TextSelection
+                && PyToggleTargetAdapter.canToggleFor((ITextEditor) part)) {
             TextSelection textSelection = (TextSelection) selection;
             BaseEditor pyEdit = (BaseEditor) part;
             int startLine = textSelection.getStartLine();
@@ -77,31 +79,38 @@ class PyDjangoToggleBreakpointsTarget implements IToggleBreakpointsTarget, ITogg
         }
     }
 
+    @Override
     public boolean canToggleBreakpoints(IWorkbenchPart part, ISelection selection) {
         return selection instanceof TextSelection && part instanceof ITextEditor
                 && PyToggleTargetAdapter.canToggleFor((ITextEditor) part);
     }
 
+    @Override
     public void toggleLineBreakpoints(IWorkbenchPart part, ISelection selection) throws CoreException {
         toggleBreakpoints(part, selection);
     }
 
+    @Override
     public boolean canToggleLineBreakpoints(IWorkbenchPart part, ISelection selection) {
         return canToggleBreakpoints(part, selection);
     }
 
+    @Override
     public void toggleMethodBreakpoints(IWorkbenchPart part, ISelection selection) throws CoreException {
         toggleBreakpoints(part, selection);
     }
 
+    @Override
     public boolean canToggleMethodBreakpoints(IWorkbenchPart part, ISelection selection) {
         return canToggleBreakpoints(part, selection);
     }
 
+    @Override
     public void toggleWatchpoints(IWorkbenchPart part, ISelection selection) throws CoreException {
         toggleBreakpoints(part, selection);
     }
 
+    @Override
     public boolean canToggleWatchpoints(IWorkbenchPart part, ISelection selection) {
         return canToggleBreakpoints(part, selection);
     }

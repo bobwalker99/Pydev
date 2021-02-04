@@ -28,9 +28,9 @@ import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
-import org.python.pydev.editor.autoedit.DefaultIndentPrefs;
+import org.python.pydev.core.autoedit.DefaultIndentPrefs;
 import org.python.pydev.editor.codefolding.PyAbstractIndentGuidePreferencesProvider;
-import org.python.pydev.plugin.preferences.PydevPrefs;
+import org.python.pydev.plugin.PyDevUiPrefs;
 import org.python.pydev.shared_ui.editor.BaseSourceViewer;
 
 /**
@@ -81,6 +81,7 @@ public class PythonSourceViewer extends BaseSourceViewer {
         });
         StyledText text = this.getTextWidget();
         text.addBidiSegmentListener(new BidiSegmentListener() {
+            @Override
             public void lineGetSegments(BidiSegmentEvent event) {
                 try {
                     event.segments = getBidiLineSegments(event.lineOffset);
@@ -250,7 +251,7 @@ public class PythonSourceViewer extends BaseSourceViewer {
      * @return the Java UI preferences
      */
     protected IPreferenceStore getPreferenceStore() {
-        return PydevPrefs.getChainedPrefStore();
+        return PyDevUiPrefs.getChainedPrefStore();
     }
 
     /**

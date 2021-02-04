@@ -28,12 +28,13 @@ import org.python.pydev.parser.jython.ast.decoratorsType;
 import org.python.pydev.parser.visitors.NodeUtils;
 import org.python.pydev.parser.visitors.scope.ASTEntry;
 import org.python.pydev.parser.visitors.scope.ASTEntryWithChildren;
-import org.python.pydev.plugin.PydevPlugin;
+import org.python.pydev.shared_core.image.IImageCache;
+import org.python.pydev.shared_core.image.UIConstants;
 import org.python.pydev.shared_core.model.ErrorDescription;
 import org.python.pydev.shared_core.string.FastStringBuffer;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_ui.ImageCache;
-import org.python.pydev.shared_ui.UIConstants;
+import org.python.pydev.shared_ui.SharedUiPlugin;
 import org.python.pydev.shared_ui.outline.BaseParsedItem;
 import org.python.pydev.shared_ui.outline.IParsedItem;
 
@@ -86,6 +87,7 @@ public class ParsedItem extends BaseParsedItem {
         super.updateTo(item);
     }
 
+    @Override
     public int getBeginLine() {
         ASTEntryWithChildren astThis = getAstThis();
         if (astThis != null && astThis.node != null) {
@@ -137,28 +139,31 @@ public class ParsedItem extends BaseParsedItem {
     }
 
     // returns images based upon element type
+    @Override
     public Image getImage() {
-        ImageCache imageCache = PydevPlugin.getImageCache();
+        IImageCache imageCache = SharedUiPlugin.getImageCache();
         if (astThis == null) {
-            return imageCache.get(UIConstants.ERROR);
+            return ImageCache.asImage(imageCache.get(UIConstants.ERROR));
         }
 
         SimpleNode token = astThis.node;
         return getImageForNode(imageCache, token, astThis.parent);
     }
 
-    public static Image getImageForNode(ImageCache imageCache, SimpleNode token, ASTEntry parent) {
+    public static Image getImageForNode(IImageCache imageCache, SimpleNode token, ASTEntry parent) {
         if (token instanceof ClassDef) {
             String className = NodeUtils.getNameFromNameTok((NameTok) ((ClassDef) token).name);
             switch (qualifierFromName(className)) {
                 case QUALIFIER_PROTECTED:
-                    return imageCache.getImageDecorated(UIConstants.CLASS_ICON, UIConstants.PROTECTED_ICON,
-                            ImageCache.DECORATION_LOCATION_BOTTOM_RIGHT);
+                    return ImageCache
+                            .asImage(imageCache.getImageDecorated(UIConstants.CLASS_ICON, UIConstants.PROTECTED_ICON,
+                                    ImageCache.DECORATION_LOCATION_BOTTOM_RIGHT));
                 case QUALIFIER_PRIVATE:
-                    return imageCache.getImageDecorated(UIConstants.CLASS_ICON, UIConstants.PRIVATE_ICON,
-                            ImageCache.DECORATION_LOCATION_BOTTOM_RIGHT);
+                    return ImageCache
+                            .asImage(imageCache.getImageDecorated(UIConstants.CLASS_ICON, UIConstants.PRIVATE_ICON,
+                                    ImageCache.DECORATION_LOCATION_BOTTOM_RIGHT));
                 default:
-                    return imageCache.get(UIConstants.CLASS_ICON);
+                    return ImageCache.asImage(imageCache.get(UIConstants.CLASS_ICON));
             }
         } else if (token instanceof FunctionDef) {
             FunctionDef functionDefToken = (FunctionDef) token;
@@ -188,25 +193,25 @@ public class ParsedItem extends BaseParsedItem {
             }
             if (qualifierIcon != null) {
                 //it's OK if the decorationIcon is null as that's properly handled in getImageDecorated.
-                return imageCache.getImageDecorated(UIConstants.METHOD_ICON, qualifierIcon,
+                return ImageCache.asImage(imageCache.getImageDecorated(UIConstants.METHOD_ICON, qualifierIcon,
                         ImageCache.DECORATION_LOCATION_BOTTOM_RIGHT, decorationIcon,
-                        ImageCache.DECORATION_LOCATION_TOP_RIGHT);
+                        ImageCache.DECORATION_LOCATION_TOP_RIGHT));
 
             } else if (decorationIcon != null) {
-                return imageCache.getImageDecorated(UIConstants.METHOD_ICON, decorationIcon,
-                        ImageCache.DECORATION_LOCATION_TOP_RIGHT);
+                return ImageCache.asImage(imageCache.getImageDecorated(UIConstants.METHOD_ICON, decorationIcon,
+                        ImageCache.DECORATION_LOCATION_TOP_RIGHT));
             }
 
-            return imageCache.get(UIConstants.METHOD_ICON);
+            return ImageCache.asImage(imageCache.get(UIConstants.METHOD_ICON));
 
         } else if (token instanceof Import) {
-            return imageCache.get(UIConstants.IMPORT_ICON);
+            return ImageCache.asImage(imageCache.get(UIConstants.IMPORT_ICON));
         } else if (token instanceof If && NodeUtils.isIfMAinNode((If) token)) {
-            return imageCache.get(UIConstants.MAIN_FUNCTION_ICON);
+            return ImageCache.asImage(imageCache.get(UIConstants.MAIN_FUNCTION_ICON));
         } else if (token instanceof ImportFrom) {
-            return imageCache.get(UIConstants.IMPORT_ICON);
+            return ImageCache.asImage(imageCache.get(UIConstants.IMPORT_ICON));
         } else if (token instanceof commentType) {
-            return imageCache.get(UIConstants.COMMENT);
+            return ImageCache.asImage(imageCache.get(UIConstants.COMMENT));
         } else if (token instanceof Attribute || token instanceof Name || token instanceof NameTok) {
             String name = null;
             if (token instanceof Attribute) {
@@ -234,15 +239,16 @@ public class ParsedItem extends BaseParsedItem {
             }
 
             if (parent != null && parent.node != null && parent.node instanceof ClassDef) {
-                return imageCache.getImageDecorated(image, UIConstants.DECORATION_CLASS);
+                return ImageCache.asImage(imageCache.getImageDecorated(image, UIConstants.DECORATION_CLASS));
             }
-            return imageCache.get(image);
+            return ImageCache.asImage(imageCache.get(image));
 
         } else {
-            return imageCache.get(UIConstants.ERROR);
+            return ImageCache.asImage(imageCache.get(UIConstants.ERROR));
         }
     }
 
+    @Override
     public IParsedItem[] getChildren() {
         if (children != null) {
             return children;
@@ -354,6 +360,7 @@ public class ParsedItem extends BaseParsedItem {
         return rank;
     }
 
+    @Override
     public int compareTo(Object o) {
         if (!(o instanceof ParsedItem)) {
             return 0;
@@ -374,6 +381,7 @@ public class ParsedItem extends BaseParsedItem {
         }
     }
 
+    @Override
     public boolean sameNodeType(IParsedItem newItem) {
         ASTEntryWithChildren astThisOld = this.getAstThis();
         ASTEntryWithChildren astThisNew = ((ParsedItem) newItem).getAstThis();
@@ -386,6 +394,7 @@ public class ParsedItem extends BaseParsedItem {
         return true; //still the same
     }
 
+    @Override
     public void updateShallow(IParsedItem newItem) {
         setAstThis(((ParsedItem) newItem).getAstThis());
         setErrorDesc(newItem.getErrorDesc());

@@ -6,7 +6,6 @@
  */
 package org.python.pydev.shared_core.structure;
 
-import java.util.AbstractCollection;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -14,12 +13,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
+import org.python.pydev.shared_core.string.FastStringBuffer;
+import org.python.pydev.shared_core.string.StringUtils;
+
 /**
  * An array list that has a null array backing it when created and cleared.
  *
  * @author Fabio
  */
-public class LowMemoryArrayList<E> extends AbstractCollection<E>implements List<E> {
+public class LowMemoryArrayList<E> implements List<E> {
 
     private transient E[] data;
     private int size;
@@ -49,6 +51,7 @@ public class LowMemoryArrayList<E> extends AbstractCollection<E>implements List<
         return new Iterator() {
             private int curr;
 
+            @Override
             public boolean hasNext() {
                 if (data == null) {
                     return false;
@@ -56,12 +59,14 @@ public class LowMemoryArrayList<E> extends AbstractCollection<E>implements List<
                 return curr < size;
             }
 
+            @Override
             public Object next() {
                 E e = data[curr];
                 curr++;
                 return e;
             }
 
+            @Override
             public void remove() {
                 throw new UnsupportedOperationException();
             }
@@ -195,6 +200,7 @@ public class LowMemoryArrayList<E> extends AbstractCollection<E>implements List<
         return numNew != 0;
     }
 
+    @Override
     public boolean addAll(int index, Collection<? extends E> c) {
         throw new RuntimeException("Not implemented");
     }
@@ -219,22 +225,21 @@ public class LowMemoryArrayList<E> extends AbstractCollection<E>implements List<
         size = 0;
     }
 
-    private void RangeCheck(int index) {
+    @Override
+    public E get(int index) {
         if (index >= size) {
             throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
         }
-    }
-
-    public E get(int index) {
-        RangeCheck(index);
         //No need to check for null here!
         return data[index];
     }
 
+    @Override
     public E set(int index, E element) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void add(int index, E element) {
         if (index > size || index < 0) {
             throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
@@ -246,8 +251,11 @@ public class LowMemoryArrayList<E> extends AbstractCollection<E>implements List<
         size++;
     }
 
+    @Override
     public E remove(int index) {
-        RangeCheck(index);
+        if (index >= size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
 
         E oldValue = data[index];
 
@@ -260,6 +268,7 @@ public class LowMemoryArrayList<E> extends AbstractCollection<E>implements List<
         return oldValue;
     }
 
+    @Override
     public int indexOf(Object elem) {
         if (data == null) {
             return -1;
@@ -280,6 +289,7 @@ public class LowMemoryArrayList<E> extends AbstractCollection<E>implements List<
         return -1;
     }
 
+    @Override
     public int lastIndexOf(Object elem) {
         if (data == null) {
             return -1;
@@ -300,16 +310,27 @@ public class LowMemoryArrayList<E> extends AbstractCollection<E>implements List<
         return -1;
     }
 
+    @Override
     public ListIterator<E> listIterator() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public ListIterator<E> listIterator(int index) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public List<E> subList(int fromIndex, int toIndex) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
+    public String toString() {
+        FastStringBuffer sb = new FastStringBuffer();
+        sb.append('[');
+        sb.append(StringUtils.join(", ", this));
+        sb.append(']');
+        return sb.toString();
+    }
 }
